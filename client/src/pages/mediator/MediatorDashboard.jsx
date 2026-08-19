@@ -15,7 +15,7 @@ export default function MediatorDashboard(){
             <button onClick={()=> navigate("/dashboard")}>Dashboard</button> <br /> <br />
 
             <button onClick={()=>navigate("/mediator-neworders")} >New Orders</button> <br /> <br />
-            <button >Pending Orders</button> <br /> <br />
+            <button onClick={()=>navigate("/mediator-pending-orders")} >Pending Orders</button> <br /> <br />
             <button >Pending Refund Orders</button> <br /> <br />
             <button >Completed Orders</button> <br /> <br />
 

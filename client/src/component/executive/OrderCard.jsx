@@ -12,7 +12,6 @@ export default function OrderCard({ order, mediators }) {
                 mediatorId: selectedMediator
             });
             console.log(response);
-            // navigate("/executive-pending-order");
             window.location.reload();
 
         }
@@ -34,6 +33,12 @@ export default function OrderCard({ order, mediators }) {
             </td>
             <td>{order.status}</td>
             <td>{order.teamCode}</td>
+            <td>{order.status !== "pending" &&
+                order.assignedTo.name
+            }</td>
+            <td>{order.status !== "pending" &&
+                order.assignedTo.mediatorCode
+            }</td>
             <td>
                 <button onClick={() => navigate(`/order/${order._id}`)}>View Details</button>
                 {order.status === "pending" && <button onClick={() => setShowAssign(!showAssign)} >Assign Mediator</button>}
@@ -54,12 +59,7 @@ export default function OrderCard({ order, mediators }) {
                     </div>
                 )}
             </td>
-            <td>{order.status !== "pending" &&
-                order.assignedTo.name
-            }</td>
-            <td>{order.status !== "pending" &&
-                order.assignedTo.mediatorCode
-            }</td>
+            
         </tr>
     )
 

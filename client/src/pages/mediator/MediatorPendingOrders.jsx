@@ -1,30 +1,29 @@
-import { useState, useEffect } from "react"
-import { fetchAllExecutiveIn_ProgressOrders } from "../../services/executive/order";
-import OrderCard from "../../component/executive/OrderCard";
+import { useEffect, useState } from "react"
+import { FetchAllPendingOrders } from "../../services/mediator/orders";
+import MediatorOrderCard from "../../component/mediator/MediatorOrderCard";
 
-export default function In_progressOrders() {
+export default function MediatorPendingOrders() {
     let [orders, setOrders] = useState([]);
 
     useEffect(() => {
-        fetchOrders();
-    }, []);
+        handleFetchAllPendingOrders();
+    }, [])
 
-    const fetchOrders = async () => {
+    const handleFetchAllPendingOrders = async () => {
         try {
-            let response = await fetchAllExecutiveIn_ProgressOrders();
+            console.log("hoo");
+            let response = await FetchAllPendingOrders();
             setOrders(response.data.orders);
 
         }
         catch (err) {
             console.log(err);
         }
-
-
-
     }
     return (
+        orders.length===0 ? <h1>No Pending Orders </h1> :
         <div>
-            <h1>In Progress Orders</h1>
+            <h1>Pending Orders</h1>
 
             <table>
                 <thead>
@@ -37,6 +36,7 @@ export default function In_progressOrders() {
                         <th>Created On</th>
                         <th>Status</th>
                         <th>Team Code</th>
+                        
                         <th>Assigned To</th>
                         <th>Mediator Code</th>
                         <th>Actions</th>
@@ -46,16 +46,13 @@ export default function In_progressOrders() {
                 <tbody>
                     {
                         orders.map((order) => (
-                            <OrderCard key={order._id} order={order}/> 
+                            <MediatorOrderCard key={order._id} order={order} />
                         )
-                    )
+                        )
                     }
 
                 </tbody>
             </table>
-
-
-
         </div>
     )
 }

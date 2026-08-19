@@ -7,6 +7,10 @@ import DisplayOrderDetails from "../pages/mediator/DisplayOrderDetails";
 import SignUP from "../pages/mediator/SignUp";
 import Login from "../pages/mediator/Login";
 import MediatorDashboard from "../pages/mediator/MediatorDashboard";
+import MediatorPendingOrders from "../pages/mediator/MediatorPendingOrders";
+
+
+
 import RoleSelection from "../pages/RoleSelection";
 import ExecutiveLogin from "../pages/executive/ExecutiveLogin";
 import ExecutiveSignup from "../pages/executive/ExecutiveSignup";
@@ -15,7 +19,7 @@ import AddNewOrder from "../pages/executive/AddNewOrder";
 import PendingOrders from "../pages/executive/PendingOrders";
 import AssignedOrders from "../pages/executive/AssignedOrders";
 import NewOrders from "../pages/mediator/NewOrders";
-
+import In_progressOrders from "../pages/executive/In_progressOrders";
 import AllMediator from "../pages/executive/AllMediators";
 
 
@@ -63,6 +67,14 @@ export default function AppRoutes() {
 
             } />
 
+            <Route path="/mediator-pending-orders" element={
+                <ProtectedRoutes>
+                    <MediatorPendingOrders />
+                </ProtectedRoutes>
+
+            } />
+
+
 
 
             {/* executive */}
@@ -96,6 +108,14 @@ export default function AppRoutes() {
 
                 <ProtectedRoutes>
                     <AssignedOrders />
+
+                </ProtectedRoutes>
+            } />
+
+            <Route path="/executive-in_progress-order" element={
+
+                <ProtectedRoutes>
+                    <In_progressOrders />
 
                 </ProtectedRoutes>
             } />

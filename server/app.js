@@ -38,7 +38,7 @@ const upload = multer({ storage });
 
 
 
-
+// mediator
 app.post("/api/orders/success", verifyToken, upload.single("orderedScreenshot"), async (req, res) => {
 
     try {
@@ -126,6 +126,78 @@ app.post("/api/order/refund/:id", verifyToken, upload.fields([
         })
     }
 
+})
+
+
+// fecth all mediators new Orders
+app.get("/api/mediator/new/orders",verifyToken,async (req,res)=>{
+    try{
+        let orders=await Order.find({
+            status:"assigned",
+            assignedTo:req.user.id,
+        }).populate("assignedTo");
+
+        res.status(200).json({
+            message:"Order fetched successfully",
+            orders,
+        })
+
+    }
+    catch(err){
+        console.log(err);
+        res.status(500).json({
+            message:err.message,
+        })
+    }
+
+})
+
+// assigne to inprogress statuts accept order button
+app.post("/api/mediator/order/in_progress/:orderId",verifyToken,async(req,res)=>{
+    try{
+        console.log("hoo");
+        let {orderId}=req.params;
+        
+        let order=await Order.findByIdAndUpdate(orderId,{
+            status:"in_progress",
+        },{ new: true });
+        console.log("order",order);
+        res.status(200).json({
+            message:"Order Accepted succeffully",
+            order
+        })
+        
+
+    }
+    catch(err){
+        console.log(err);
+        res.status(500).json({
+            message:err.message,
+        })
+    }
+})
+
+// pending orders
+app.get("/api/mediator/orders/pending",verifyToken,async(req,res)=>{
+    try{
+        console.log("yes ");
+        let orders=await Order.find({
+            status:"in_progress",
+            assignedTo:req.user.id,
+        }).populate("assignedTo");
+        res.status(200).json({
+            message:"Pending Orders fetched succeffully",
+            orders
+        })
+        
+
+    }
+    catch(err){
+        console.log(err);
+        res.status(500).json({
+            message:err.message,
+        })
+    }
 })
 
 // auth route mediator
@@ -367,7 +439,7 @@ app.get("/api/executive/orders/in_progress",verifyToken,async (req,res)=>{
         let orders=await Order.find({
             teamCode:req.user.teamCode,
             status:"in_progress"
-        });
+        }).populate("assignedTo");
         res.status(200).json({
             message:"Order fetched successfully",
             orders,

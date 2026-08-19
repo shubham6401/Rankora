@@ -37,11 +37,12 @@ export default function PendingOrders() {
                         <th>Created On</th>
                         <th>Status</th>
                         <th>Team Code</th>
-                        <th>Actions</th>
+                        
                         <th>Assigned To</th>
                         <th>Mediator Code</th>
+                        <th>Actions</th>
                     </tr>
-                </thead>
+                </thead> 
 
                 <tbody>
                     {

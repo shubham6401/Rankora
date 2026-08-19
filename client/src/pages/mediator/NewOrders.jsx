@@ -1,18 +1,18 @@
 import { useEffect, useState } from "react"
-import { fetchAllExecutiveAssignedOrders } from "../../services/executive/order"
+import { fetchMediatorNewOrders } from "../../services/mediator/orders";
 import MediatorOrderCard from "../../component/mediator/MediatorOrderCard";
 
 export default function NewOrders() {
     let [orders, setOrders] = useState([]);
 
     useEffect(() => {
-        handleFetchAllExecutiveAssignedOrders();
+        handleFetchMediatorNewOrders();
     }, [])
 
-    const handleFetchAllExecutiveAssignedOrders = async () => {
+    const handleFetchMediatorNewOrders = async () => {
         try {
-            let response = await fetchAllExecutiveAssignedOrders();
-            setOrders(response.data.orders)
+            let response = await fetchMediatorNewOrders();
+            setOrders(response.data.orders);
 
         }
         catch (err) {
@@ -20,6 +20,7 @@ export default function NewOrders() {
         }
     }
     return (
+        orders.length===0 ? <h1>No new Orders </h1> :
         <div>
             <h1>New Orders</h1>
 

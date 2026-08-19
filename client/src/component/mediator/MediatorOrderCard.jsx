@@ -1,10 +1,12 @@
-
+import { AcceptOrderByMediator } from "../../services/mediator/orders";
 import { useNavigate } from "react-router-dom"
 export default function MediatorOrderCard({ order }) {
     const navigate=useNavigate();
-    const handleAcceptButton=()=>{
+    const handleAcceptButton=async()=>{
         try{
-            
+            let response=await AcceptOrderByMediator(order._id);
+            console.log(response);
+            window.location.reload();
 
 
         }
@@ -14,6 +16,7 @@ export default function MediatorOrderCard({ order }) {
 
     }
     return (
+        
         <tr >
             <td>{order.productName}</td>
             <td>{order.brand}</td>
@@ -37,7 +40,9 @@ export default function MediatorOrderCard({ order }) {
             <td>
                 <div>
                     <button onClick={() => navigate(`/order/${order._id}`)}>View Details</button>
-                    <button>Accept Order</button>
+                    {order.status==="assigned" && <button onClick={handleAcceptButton}>Accept Order</button> }
+                    {order.status==="in_progress" && <button >Submit Order Details</button> } 
+
                 </div>
                 
 

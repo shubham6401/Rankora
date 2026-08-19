@@ -31,6 +31,8 @@ export default function ExecutiveDashboard(){
             <button onClick={()=> navigate("/executive-add-order")}>Add new order</button>  &nbsp;
             <button onClick={()=> navigate("/executive-pending-order")} >Pending Orders</button> <br /> <br />
             <button onClick={()=> navigate("/executive-assigned-order")}>Assigned Orders</button> &nbsp;
+            <button onClick={()=> navigate("/executive-in_progress-order")}>In Progress Orders</button> &nbsp;
+
             <button>Pending Refund</button>&nbsp;
             <button>Completed Orders</button>&nbsp; <br /> <br />
             <button onClick={()=> navigate("/signup-mediator")}>Create Mediator Account</button>&nbsp;  <br /> <br />
