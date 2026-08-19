@@ -1,0 +1,116 @@
+import { Route, Routes } from "react-router-dom";
+import ProtectedRoutes from "./ProtectedRoutes";
+import Dashboard from "../pages/mediator/Dashboard";
+import OrderSubmission from "../pages/mediator/OrderSubmission";
+import RefundSubmission from "../pages/mediator/RefundSubmission";
+import DisplayOrderDetails from "../pages/mediator/DisplayOrderDetails";
+import SignUP from "../pages/mediator/SignUp";
+import Login from "../pages/mediator/Login";
+import MediatorDashboard from "../pages/mediator/MediatorDashboard";
+import RoleSelection from "../pages/RoleSelection";
+import ExecutiveLogin from "../pages/executive/ExecutiveLogin";
+import ExecutiveSignup from "../pages/executive/ExecutiveSignup";
+import ExecutiveDashboard from "../pages/executive/ExecutiveDashboard";
+import AddNewOrder from "../pages/executive/AddNewOrder";
+import PendingOrders from "../pages/executive/PendingOrders";
+import AssignedOrders from "../pages/executive/AssignedOrders";
+import NewOrders from "../pages/mediator/NewOrders";
+
+import AllMediator from "../pages/executive/AllMediators";
+
+
+
+
+export default function AppRoutes() {
+    return (
+        <Routes>
+            <Route path="/dashboard" element={
+                <ProtectedRoutes>
+                    <Dashboard />
+                </ProtectedRoutes>
+
+            } />
+            <Route path="/add-new-order" element={
+                <ProtectedRoutes>
+                    <OrderSubmission />
+                </ProtectedRoutes>
+
+            } />
+            <Route path="/refund-submission/:id" element={
+                <ProtectedRoutes>
+                    <RefundSubmission />
+                </ProtectedRoutes>
+
+            } />
+            <Route path="/order/:id" element={
+                <ProtectedRoutes>
+                    <DisplayOrderDetails />
+                </ProtectedRoutes>
+
+            } />
+            <Route path="/panel-mediator" element={
+                <ProtectedRoutes>
+                    <MediatorDashboard />
+                </ProtectedRoutes>
+
+            } />
+            <Route path="/login-mediator" element={<Login />} />
+            <Route path="/signup-mediator" element={<SignUP />} />
+            <Route path="/mediator-neworders" element={
+                <ProtectedRoutes>
+                    <NewOrders />
+                </ProtectedRoutes>
+
+            } />
+
+
+
+            {/* executive */}
+            <Route path="/login-executive" element={<ExecutiveLogin />} />
+            <Route path="/signup-executive" element={<ExecutiveSignup />} />
+            <Route path="/dashboard-executive" element={
+
+                <ProtectedRoutes>
+                    <ExecutiveDashboard />
+
+                </ProtectedRoutes>
+            } />
+
+            <Route path="/executive-add-order" element={
+
+                <ProtectedRoutes>
+                    <AddNewOrder />
+
+                </ProtectedRoutes>
+            } />
+
+            <Route path="/executive-pending-order" element={
+
+                <ProtectedRoutes>
+                    <PendingOrders />
+
+                </ProtectedRoutes>
+            } />
+
+            <Route path="/executive-assigned-order" element={
+
+                <ProtectedRoutes>
+                    <AssignedOrders />
+
+                </ProtectedRoutes>
+            } />
+
+            <Route path="/executive-mediators" element={
+
+                <ProtectedRoutes>
+                    <AllMediator />
+
+                </ProtectedRoutes>
+            } />
+
+            <Route path="/role-selection" element={<RoleSelection />} />
+
+
+        </Routes>
+    )
+}  

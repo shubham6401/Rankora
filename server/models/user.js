@@ -1,0 +1,29 @@
+const mongoose=require("mongoose");
+const userSchema=new mongoose.Schema({
+    name:{
+        type:String,
+        required:true,
+
+    },
+    role:{
+        type:String,
+        enum:["executive","mediator"],
+        required:true,
+    },
+    
+    teamCode:{
+        type:String,
+        required:true,
+    },
+    mediatorCode:{
+        type:String,
+        sparse:true,
+        unique:true,
+    },
+    password:{
+        type:String,
+        required:true,
+    },
+});
+const User=mongoose.model("User",userSchema);
+module.exports=User;
