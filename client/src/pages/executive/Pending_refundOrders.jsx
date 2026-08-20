@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react"
-import { fetchAllExecutiveIn_ProgressOrders } from "../../services/executive/order";
+import { fetchAllExecutivePending_RefundOrders } from "../../services/executive/order";
 import OrderCard from "../../component/executive/OrderCard";
 
-export default function In_progressOrders() {
+export default function Pending_refundOrders() {
     let [orders, setOrders] = useState([]);
 
     useEffect(() => {
@@ -11,7 +11,7 @@ export default function In_progressOrders() {
 
     const fetchOrders = async () => {
         try {
-            let response = await fetchAllExecutiveIn_ProgressOrders();
+            let response = await fetchAllExecutivePending_RefundOrders();
             setOrders(response.data.orders);
 
         }
@@ -23,9 +23,9 @@ export default function In_progressOrders() {
 
     }
     return (
-        orders.length===0? <h1>No order in Progress</h1> :
+        orders.length===0? <h1>No Orders with Pending refund</h1> :
         <div>
-            <h1>In Progress Orders</h1>
+            <h1> Orders with Pending Refunds</h1>
 
             <table>
                 <thead>

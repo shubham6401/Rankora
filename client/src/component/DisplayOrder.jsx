@@ -1,6 +1,10 @@
 import { useState,useEffect } from "react";
 
 export default function DisplayOrder({ order }) {
+    useEffect(()=>{
+        console.log(order);
+    },[])
+
     return (
         <div>
             <h2>Order Details</h2>
@@ -64,7 +68,7 @@ export default function DisplayOrder({ order }) {
 
             <hr />
             <h3>Mediator Details</h3>
-            {order.status === "assigned" ? (
+            {order.status !== "pending" ? (
                 <div>
                     <p>
                         <b>Mediator ID:</b>{" "}

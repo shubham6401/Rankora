@@ -39,16 +39,17 @@ const upload = multer({ storage });
 
 
 // mediator
-app.post("/api/orders/success", verifyToken, upload.single("orderedScreenshot"), async (req, res) => {
+app.post("/api/mediator/order/submit/:id", verifyToken, upload.single("orderedScreenshot"), async (req, res) => {
 
     try {
-        let order = new Order({
-            ...req.body,
-            createdBy: req?.user?.id, 
-            orderedScreenshot: req.file.path,
-        });
-        await order.save();
 
+        let {id}=req.params;
+        let order=await Order.findByIdAndUpdate(id,{
+            ...req.body,
+            orderedScreenshot: req.file.path,
+            status:"pending_refund",
+
+        },{new:true});
         res.status(200).json({
             success: true,
             message: "Order added successfully",
@@ -59,6 +60,41 @@ app.post("/api/orders/success", verifyToken, upload.single("orderedScreenshot"),
         res.status(500).json({
             success: false,
             message: err.message,
+        })
+    }
+
+})
+
+app.post("/api/mediator/refund/submit/:id", verifyToken, upload.fields([
+    { name: "productReviewScreenshot", maxCount: 1 },
+    { name: "invoiceScreenshot", maxCount: 1 },
+    { name: "sellerFeedbackScreenShot", maxCount: 1 },
+]), async (req, res) => {
+
+    try {
+        const { id } = req.params;
+        let order = await Order.findByIdAndUpdate(id, {
+            postDeliveryDetails: {
+                success: true,
+                productReviewScreenshot: req.files.productReviewScreenshot?.[0]?.path,
+                invoiceScreenshot: req.files.invoiceScreenshot?.[0]?.path,
+                sellerFeedbackScreenShot: req.files.sellerFeedbackScreenShot?.[0]?.path,
+            },
+            status:"completed",
+        });
+        console.log(order);
+
+        res.status(200).json({
+            success: true,
+            message: "Successfully submitted refund",
+        })
+
+    }
+    catch (err) {
+        res.status(500).json({
+            message: err.message,
+            message2: "Error in refund form submit",
+
         })
     }
 
@@ -95,38 +131,7 @@ app.get("/api/order/:id", verifyToken, async (req, res) => {
     }
 })
 
-app.post("/api/order/refund/:id", verifyToken, upload.fields([
-    { name: "productReviewScreenshot", maxCount: 1 },
-    { name: "invoiceScreenshot", maxCount: 1 },
-    { name: "sellerFeedbackScreenShot", maxCount: 1 },
-]), async (req, res) => {
 
-    try {
-        const { id } = req.params;
-        let order = await Order.findByIdAndUpdate(id, {
-            postDeliveryDetails: {
-                success: true,
-                productReviewScreenshot: req.files.productReviewScreenshot?.[0]?.path,
-                invoiceScreenshot: req.files.invoiceScreenshot?.[0]?.path,
-                sellerFeedbackScreenShot: req.files.sellerFeedbackScreenShot?.[0]?.path,
-            },
-        });
-
-        res.status(200).json({
-            success: true,
-            message: "Successfully submitted refund",
-        })
-
-    }
-    catch (err) {
-        res.status(500).json({
-            message: err.message,
-            message2: "Error in refund form submit",
-
-        })
-    }
-
-})
 
 
 // fecth all mediators new Orders
@@ -180,13 +185,56 @@ app.post("/api/mediator/order/in_progress/:orderId",verifyToken,async(req,res)=>
 // pending orders
 app.get("/api/mediator/orders/pending",verifyToken,async(req,res)=>{
     try{
-        console.log("yes ");
         let orders=await Order.find({
             status:"in_progress",
             assignedTo:req.user.id,
         }).populate("assignedTo");
         res.status(200).json({
             message:"Pending Orders fetched succeffully",
+            orders
+        })
+        
+
+    }
+    catch(err){
+        console.log(err);
+        res.status(500).json({
+            message:err.message,
+        })
+    }
+})
+
+// refund pending orders
+app.get("/api/mediator/orders/refund_pending",verifyToken,async(req,res)=>{
+    try{
+        let orders=await Order.find({
+            status:"pending_refund",
+            assignedTo:req.user.id,
+        }).populate("assignedTo");
+        res.status(200).json({
+            message:" Orders with refund Pending are fetched succeffully",
+            orders
+        })
+        
+
+    }
+    catch(err){
+        console.log(err);
+        res.status(500).json({
+            message:err.message,
+        })
+    }
+})
+
+// Completed orders
+app.get("/api/mediator/orders/completed",verifyToken,async(req,res)=>{
+    try{
+        let orders=await Order.find({
+            status:"completed",
+            assignedTo:req.user.id,
+        }).populate("assignedTo");
+        res.status(200).json({
+            message:"Completed Orders fetched succeffully",
             orders
         })
         
@@ -417,7 +465,6 @@ app.get("/api/executive/orders/assigned",verifyToken,async (req,res)=>{
             teamCode:req.user.teamCode,
             status:"assigned"
         }).populate("assignedTo");
-        console.log(orders);
         res.status(200).json({
             message:"Order fetched successfully",
             orders,
@@ -461,7 +508,7 @@ app.get("/api/executive/orders/pending_refund",verifyToken,async (req,res)=>{
         let orders=await Order.find({
             teamCode:req.user.teamCode,
             status:"pending_refund"
-        });
+        }).populate("assignedTo");
         res.status(200).json({
             message:"Order fetched successfully",
             orders,
@@ -483,7 +530,7 @@ app.get("/api/executive/orders/completed",verifyToken,async (req,res)=>{
         let orders=await Order.find({
             teamCode:req.user.teamCode,
             status:"completed"
-        });
+        }).populate("assignedTo");
         res.status(200).json({
             message:"Order fetched successfully",
             orders,

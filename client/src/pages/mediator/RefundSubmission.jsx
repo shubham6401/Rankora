@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom"
 import { useState, useEffect } from "react"
-import { refundSubmit } from "../../services/orders";
+import { mediatorRefundSubmit } from "../../services/orders";
 import { useNavigate } from "react-router-dom";
 export default function RefundSubmission() {
     const { id } = useParams();
@@ -13,8 +13,10 @@ export default function RefundSubmission() {
             Object.keys(formData).forEach((key)=>{
                 data.append(key,formData[key]);
             });
-            const response= await refundSubmit(id,data);
-            navigate("/dashboard" ,{replace:true});
+            const response= await mediatorRefundSubmit(id,data);
+            console.log(response);
+            navigate("/mediator-refund_pending-orders" ,{replace:true});
+            console.log("hooo");
         }
         catch(err){
             console.log(err);

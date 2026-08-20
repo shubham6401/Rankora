@@ -11,13 +11,11 @@ export default function MediatorDashboard(){
             <h3>Team Code: <b> {user.teamCode}</b> </h3>
             <h3>Mediator Code: <b> {user.mediatorCode}</b> </h3>
 
-            <button onClick={()=> navigate("/add-new-order")}>Add new Order</button> &nbsp; &nbsp;
-            <button onClick={()=> navigate("/dashboard")}>Dashboard</button> <br /> <br />
 
             <button onClick={()=>navigate("/mediator-neworders")} >New Orders</button> <br /> <br />
             <button onClick={()=>navigate("/mediator-pending-orders")} >Pending Orders</button> <br /> <br />
-            <button >Pending Refund Orders</button> <br /> <br />
-            <button >Completed Orders</button> <br /> <br />
+            <button  onClick={()=>navigate("/mediator-refund_pending-orders")}   >Pending Refund Orders</button> <br /> <br />
+            <button  onClick={()=>navigate("/mediator-completed-orders")}>Completed Orders</button> <br /> <br />
 
             <Logout/>
         </div>

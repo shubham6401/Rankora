@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react"
-import { fetchAllExecutiveIn_ProgressOrders } from "../../services/executive/order";
+import { fetchAllExecutiveCompletedOrders } from "../../services/executive/order";
 import OrderCard from "../../component/executive/OrderCard";
 
-export default function In_progressOrders() {
+export default function CompletedOrders() {
     let [orders, setOrders] = useState([]);
 
     useEffect(() => {
@@ -11,7 +11,7 @@ export default function In_progressOrders() {
 
     const fetchOrders = async () => {
         try {
-            let response = await fetchAllExecutiveIn_ProgressOrders();
+            let response = await fetchAllExecutiveCompletedOrders();
             setOrders(response.data.orders);
 
         }
@@ -23,9 +23,9 @@ export default function In_progressOrders() {
 
     }
     return (
-        orders.length===0? <h1>No order in Progress</h1> :
+        orders.length===0? <h1>No Completed Orders</h1> :
         <div>
-            <h1>In Progress Orders</h1>
+            <h1> Completed Orders</h1>
 
             <table>
                 <thead>

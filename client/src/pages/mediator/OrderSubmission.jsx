@@ -1,19 +1,33 @@
-import { useState } from "react"
-import { orderSubmit } from "../../services/orders";
+import { useState,useEffect } from "react"
+import { mediatorOrderSubmit } from "../../services/orders";
+import { useParams } from "react-router-dom";
+import { getOrder } from "../../services/orders";
 import { useNavigate } from "react-router-dom";
 export default function OrderSubmission() {
     const navigate = useNavigate();
+    const {id}=useParams();
+
+    let [order,setOrder]=useState(null);
     const [formData, setFormData] = useState({
     });
-    let user=JSON.parse(localStorage.getItem("user"));
-    const platforms = [
-        "Amazon",
-        "Flipkart",
-        "Myntra",
-        "Ajio",
-        "Meesho"
-    ];
 
+
+    useEffect(()=>{
+        fetchOrder();
+        
+    },[]);
+
+    const fetchOrder=async ()=>{
+        let response =await getOrder(id);
+        setOrder(response.data.order);
+
+        console.log(response.data.order)
+    }
+     if (!order) {
+        return <h2>Loading...</h2>;
+    }
+
+   
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
@@ -22,10 +36,10 @@ export default function OrderSubmission() {
             Object.keys(formData).forEach((key) => {
                 data.append(key, formData[key]);
             });
-            data.append("teamCode",user["teamCode"]);
-            let response = await orderSubmit(data);
+
+            let response = await mediatorOrderSubmit(id,data);
             console.log(response);
-            navigate("/dashboard");
+            navigate("/mediator-pending-orders", { replace: true });
         }
         catch (err) {
             console.log("order data have issues...");
@@ -36,7 +50,7 @@ export default function OrderSubmission() {
         <div>
             <h1>Order Submit details</h1>
 
-
+ 
             <form onSubmit={handleSubmit}>
                 <label >OrderID</label>
                 <input type="text" onChange={(e) =>
@@ -50,9 +64,7 @@ export default function OrderSubmission() {
 
                 <label >Price</label>
                 <input type="text"
-                    onChange={(e) => setFormData({
-                        ...formData, price: e.target.value,
-                    })}
+                    value={order.price} disabled={true}
                     required />
                 <br /><br />
 
@@ -78,9 +90,7 @@ export default function OrderSubmission() {
 
                 <label >Product Name</label>
                 <input type="text"
-                    onChange={(e) => setFormData({
-                        ...formData, productName: e.target.value,
-                    })}
+                    value={order.productName} disabled={true}
                     required />
                 <br /><br />
 
@@ -93,6 +103,31 @@ export default function OrderSubmission() {
                     required />
                 <br /><br />
 
+                <label >Executive Name</label>
+                <input type="text"
+                    value={order.executiveName} disabled={true}
+                    required />
+                <br /><br />
+
+                <label >Team Code</label>
+                <input type="text"
+                    value={order.teamCode} disabled={true}
+                    required />
+                <br /><br />
+
+                <label >Mediator Name</label>
+                <input type="text"
+                    value={order.assignedTo.name} disabled={true}
+                    required />
+                <br /><br />
+
+                <label >Mediator Code</label>
+                <input type="text"
+                    value={order.assignedTo.mediatorCode} disabled={true}
+                    required />
+                <br /><br />
+
+
 
                 <label >Reviewer Name </label>
                 <input type="text"
@@ -103,34 +138,11 @@ export default function OrderSubmission() {
                 <br /><br />
 
 
-                {/* <label >Mediator Name</label>
-                <input type="text"
-                    onChange={(e) => setFormData({
-                        ...formData, mediatorName: e.target.value,
-                    })}
-                    required />
-                <br /><br /> */}
-
-
-                <label >Team Code</label>
-                <input type="text" value={user["teamCode"]} 
-                   disabled={true}
-                    required />
-                <br /><br />
-
-{/* 
-                <label >Mediator Code</label>
-                <input type="text"  onChange={(e) => setFormData({
-                        ...formData, mediatorCode: e.target.value,
-                    })}  required />
-                <br /><br /> */}
 
 
                 <label >Brand</label>
                 <input type="text"
-                    onChange={(e) => setFormData({
-                        ...formData, brand: e.target.value,
-                    })}
+                    value={order.brand} disabled={true}
                     required />
                 <br /><br />
 
@@ -144,21 +156,15 @@ export default function OrderSubmission() {
                     required />
                 <br /><br />
 
-
-
-                <label >Orders placed on </label>
-                <select
-                    value={formData.orderPlatform || ""}
-                    onChange={(e) => setFormData({
-                        ...formData, orderPlatform: e.target.value,
-                    })} required>
-                    <option value="">Select Platform</option>
-                    {platforms.map((platform)=>(
-                        <option key={platform} value={platform}>{platform}</option>
-                    ))}
-                </select>
-
+                <label >Order Placed on</label>
+                <input type="text"
+                    value={order.orderPlatform} disabled={true}
+                    required />
                 <br /><br />
+
+
+
+               
 
 
 

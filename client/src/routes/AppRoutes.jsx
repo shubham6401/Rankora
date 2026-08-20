@@ -8,6 +8,8 @@ import SignUP from "../pages/mediator/SignUp";
 import Login from "../pages/mediator/Login";
 import MediatorDashboard from "../pages/mediator/MediatorDashboard";
 import MediatorPendingOrders from "../pages/mediator/MediatorPendingOrders";
+import MediatorRefundPendingOrders from "../pages/mediator/MediatorRefundPendingOrders";
+import MediatorCompletedOrders from "../pages/mediator/MediatorCompletedOrders";
 
 
 
@@ -20,6 +22,8 @@ import PendingOrders from "../pages/executive/PendingOrders";
 import AssignedOrders from "../pages/executive/AssignedOrders";
 import NewOrders from "../pages/mediator/NewOrders";
 import In_progressOrders from "../pages/executive/In_progressOrders";
+import Pending_refundOrders from "../pages/executive/pending_refundOrders";
+import CompletedOrders from "../pages/executive/CompletedOrders";
 import AllMediator from "../pages/executive/AllMediators";
 
 
@@ -34,13 +38,13 @@ export default function AppRoutes() {
                 </ProtectedRoutes>
 
             } />
-            <Route path="/add-new-order" element={
+            <Route path="/mediator-order-submission/:id" element={
                 <ProtectedRoutes>
                     <OrderSubmission />
                 </ProtectedRoutes>
 
             } />
-            <Route path="/refund-submission/:id" element={
+            <Route path="/mediator-refund-submission/:id" element={
                 <ProtectedRoutes>
                     <RefundSubmission />
                 </ProtectedRoutes>
@@ -70,6 +74,20 @@ export default function AppRoutes() {
             <Route path="/mediator-pending-orders" element={
                 <ProtectedRoutes>
                     <MediatorPendingOrders />
+                </ProtectedRoutes>
+
+            } />
+
+             <Route path="/mediator-refund_pending-orders" element={
+                <ProtectedRoutes>
+                    <MediatorRefundPendingOrders />
+                </ProtectedRoutes>
+
+            } />
+
+             <Route path="/mediator-completed-orders" element={
+                <ProtectedRoutes>
+                    <MediatorCompletedOrders />
                 </ProtectedRoutes>
 
             } />
@@ -116,6 +134,22 @@ export default function AppRoutes() {
 
                 <ProtectedRoutes>
                     <In_progressOrders />
+
+                </ProtectedRoutes>
+            } />
+
+            <Route path="/executive-pending_refund-order" element={
+
+                <ProtectedRoutes>
+                    <Pending_refundOrders />
+
+                </ProtectedRoutes>
+            } />
+
+             <Route path="/executive-completed-order" element={
+
+                <ProtectedRoutes>
+                    <CompletedOrders />
 
                 </ProtectedRoutes>
             } />

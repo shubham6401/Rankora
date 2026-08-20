@@ -41,7 +41,9 @@ export default function MediatorOrderCard({ order }) {
                 <div>
                     <button onClick={() => navigate(`/order/${order._id}`)}>View Details</button>
                     {order.status==="assigned" && <button onClick={handleAcceptButton}>Accept Order</button> }
-                    {order.status==="in_progress" && <button >Submit Order Details</button> } 
+                    {order.status==="in_progress" && <button onClick={()=> navigate(`/mediator-order-submission/${order._id}`)} >Submit Order Details</button> }
+                    {order.status==="pending_refund" && <button onClick={()=> navigate(`/mediator-refund-submission/${order._id}`)} >Submit Refund Details</button> } 
+
 
                 </div>
                 

@@ -1,10 +1,10 @@
 import api from "./api";
 
-export const orderSubmit=(data)=>{
-    return api.post("orders/success",data);  
+export const mediatorOrderSubmit=(id,data)=>{
+    return api.post(`/mediator/order/submit/${id}`,data);  
 }
-export const refundSubmit=(id,data)=>{
-    return api.post(`order/refund/${id}`,data);
+export const mediatorRefundSubmit=(id,data)=>{
+    return api.post(`/mediator/refund/submit/${id}`,data);
 }
 
 export const getOrders=(data)=>{

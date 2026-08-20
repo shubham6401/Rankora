@@ -5,7 +5,7 @@ import { getOrder } from "../../services/orders";
 
 export default function DisplayOrderDetails(){
     const {id}=useParams();
-    let [order,setOrder]=useState({});
+    let [order,setOrder]=useState(null);
     useEffect(()=>{
         fetchOrder();
         
@@ -14,6 +14,9 @@ export default function DisplayOrderDetails(){
         let response =await getOrder(id);
         setOrder(response.data.order);
 
+    }
+     if (!order) {
+        return <h2>Loading...</h2>;
     }
     return (
         <div>
