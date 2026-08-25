@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { fetchAllExecutiveIn_ProgressOrders } from "../../services/executive/order";
 import OrderCard from "../../component/executive/OrderCard";
+import OrderFilters from "../../component/executive/OrderFilters";
 
 export default function In_progressOrders() {
     let [orders, setOrders] = useState([]);
@@ -8,6 +9,35 @@ export default function In_progressOrders() {
     useEffect(() => {
         fetchOrders();
     }, []);
+
+
+    let [appliedFilters, setAppliedFilters] = useState({
+        date: "",
+        brand: "",
+        reviewerName: "",
+        orderId: "",
+    })
+
+    const filteredOrders = orders.filter((order) => {
+        let orderIdMatch = !appliedFilters.orderId || order.orderId?.toLowerCase().includes(
+            appliedFilters.orderId.toLowerCase()
+        );
+
+
+        let brandMatch = !appliedFilters.brand || order.brand?.toLowerCase().includes(
+            appliedFilters.brand.toLowerCase()
+        );
+
+        let reviewerNameMatch = !appliedFilters.reviewerName || order.reviewerName?.toLowerCase().includes(
+            appliedFilters.reviewerName.toLowerCase()
+        );
+
+        let dateMatch = !appliedFilters.date || new Date(order.createdAt).toISOString().split("T")[0] ===
+            appliedFilters.date;
+
+
+        return orderIdMatch && brandMatch && reviewerNameMatch && dateMatch
+    })
 
     const fetchOrders = async () => {
         try {
@@ -23,9 +53,13 @@ export default function In_progressOrders() {
 
     }
     return (
-        orders.length===0? <h1>No order in Progress</h1> :
+        <>
+        {filteredOrders.length===0? <h1>No order in Progress</h1> :
         <div>
             <h1>In Progress Orders</h1>
+
+             <OrderFilters setAppliedFilters={setAppliedFilters} status={"in_progress"} />
+
 
             <table>
                 <thead>
@@ -46,7 +80,7 @@ export default function In_progressOrders() {
 
                 <tbody>
                     {
-                        orders.map((order) => (
+                        filteredOrders.map((order) => (
                             <OrderCard key={order._id} order={order}/> 
                         )
                     )
@@ -57,6 +91,6 @@ export default function In_progressOrders() {
 
 
 
-        </div>
+        </div>} </>
     )
 }

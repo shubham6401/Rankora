@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { fetchAllExecutivePending_RefundOrders } from "../../services/executive/order";
 import OrderCard from "../../component/executive/OrderCard";
+import OrderFilters from "../../component/executive/OrderFilters";
 
 export default function Pending_refundOrders() {
     let [orders, setOrders] = useState([]);
@@ -8,6 +9,38 @@ export default function Pending_refundOrders() {
     useEffect(() => {
         fetchOrders();
     }, []);
+
+
+
+    let [appliedFilters, setAppliedFilters] = useState({
+        date: "",
+        brand: "",
+        reviewerName: "",
+        orderId: "",
+    })
+
+    const filteredOrders = orders.filter((order) => {
+        let orderIdMatch = !appliedFilters.orderId || order.orderId?.toLowerCase().includes(
+            appliedFilters.orderId.toLowerCase()
+        );
+
+
+        let brandMatch = !appliedFilters.brand || order.brand?.toLowerCase().includes(
+            appliedFilters.brand.toLowerCase()
+        );
+
+        let reviewerNameMatch = !appliedFilters.reviewerName || order.reviewerName?.toLowerCase().includes(
+            appliedFilters.reviewerName.toLowerCase()
+        );
+
+        let dateMatch = !appliedFilters.date || new Date(order.createdAt).toISOString().split("T")[0] ===
+            appliedFilters.date;
+
+
+        return orderIdMatch && brandMatch && reviewerNameMatch && dateMatch
+    })
+
+
 
     const fetchOrders = async () => {
         try {
@@ -23,9 +56,12 @@ export default function Pending_refundOrders() {
 
     }
     return (
-        orders.length===0? <h1>No Orders with Pending refund</h1> :
+        filteredOrders.length===0? <h1>No Orders with Pending refund</h1> :
         <div>
             <h1> Orders with Pending Refunds</h1>
+
+            <OrderFilters setAppliedFilters={setAppliedFilters} status={"pending_refund"} />
+
 
             <table>
                 <thead>
@@ -46,7 +82,7 @@ export default function Pending_refundOrders() {
 
                 <tbody>
                     {
-                        orders.map((order) => (
+                        filteredOrders.map((order) => (
                             <OrderCard key={order._id} order={order}/> 
                         )
                     )

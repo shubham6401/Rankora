@@ -5,7 +5,7 @@ export default function RoleSelection(){
     return (
         <div>
             <h1>Role Selection</h1>
-            <button >Owner</button>
+            <button onClick={()=>navigate("/login-brand")} >Brand</button>
             <br />
             <button onClick={()=>navigate("/login-executive")}>Executive</button>
             <br />
