@@ -549,9 +549,12 @@ app.get("/api/executive/orders/completed",verifyToken,async (req,res)=>{
 app.post("/api/executive/order/add",verifyToken,async (req,res)=>{
     try{
 
+        let {brandUserId} =req.body;
+        let brandUser=await User.findById(brandUserId);
         let order=new Order({
             ...req.body,
             createdBy:req?.user?.id,
+            brand:brandUser.name,
             
         })
         await order.save();
@@ -623,6 +626,132 @@ app.post("/api/executive/order/assign/:orderId",verifyToken,async(req,res)=>{
         })
     }
 })
+
+// fetch all brand for drop down for executive
+app.get("/api/executive/brands",verifyToken,async (req,res)=>{
+    try{
+        let users=await User.find({role:"brand"});
+        res.status(200).json({
+            message:"brands were fetched successfully",
+            users,
+        })
+    }
+    catch(err){
+        console.log(err);
+        res.status(500).json({
+            error:err.message,
+            message:"Could not fetch all brands",
+        })
+    }
+})
+// brand
+
+app.post("/api/auth/login/brand", async (req, res) => {
+    try {
+        let { name, password, brand } = req.body;
+        let existingUser = await User.findOne({ brand,
+            role:"brand",
+         });
+        if (!existingUser) {
+            console.log("user not exist");
+            return res.status(401).json({
+                message: "User doesnot exist",
+            })
+        }
+
+        let isMatchedPassword = await bcrypt.compare(password,existingUser?.password);
+        if (!isMatchedPassword) {
+            console.log("password wrong");
+
+            return res.status(401).json({
+                message: "Incorrect password",
+            })
+        }
+
+        // token creation
+        let token = jwt.sign({
+            id: existingUser._id,
+            name: existingUser.name,
+            brand: existingUser.brand,
+        },
+            process.env.JWT_SECRET,
+            {
+                expiresIn: "7d",
+            }
+        )
+
+        return res.status(200).json({
+            message:"User logged in successfully",
+            token,
+            user:{
+                id:existingUser._id,
+                name:existingUser.name,
+                brand:existingUser.brand,
+            }
+
+        })
+
+    }
+    catch (err) {
+        console.log(err);
+        res.status(500).json({
+            message: err.message,
+        })
+    }
+})
+
+// signup executive
+app.post("/api/auth/signup/brand", async (req, res) => {
+
+    try {
+        let { name, password, brand } = req.body;
+        let existingUser = await User.findOne({ brand,role:"brand" });
+        if (existingUser) {
+            return res.status(401).json({
+                message: "User already registered",
+            })
+        }
+
+        const hashedPass = await bcrypt.hash(password, 10);
+        let user = await User.create({
+            name, password:hashedPass, brand, role: "brand",
+        })
+        console.log(user);
+        res.status(200).json({
+            message: "User registered Successfully",
+        })
+    }
+    catch (err) {
+        console.log(err);
+        res.status(400).json({
+            message: err.message,
+        })
+    }
+})
+
+// brand orders
+// app.get("/api/brand/order",verifyToken,async (req,res)=>{
+//     try{
+
+//         let orders=await Order.find({
+//             brand:req.user.brand,
+//             role:"brand"
+//         }).populate("assignedTo");
+//         res.status(200).json({
+//             message:"Order fetched successfully",
+//             orders,
+//         })
+
+//     }
+//     catch(err){
+//         console.log(err);
+//         res.status(500).json({
+//             message:err.message,
+//         })
+//     }
+
+// })
+
 
 // database connection
 mongoose.connect(process.env.MONGO_URI)

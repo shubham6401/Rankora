@@ -59,6 +59,9 @@ export default function ExecutiveLogin(){
                 <button type="Submit" disabled={loading}> {loading? "Signing in" : "Sign in" }</button>
             </form>
 
+
+            <button onClick={()=>navigate("/signup-executive")}>Signup Executive</button>
+
         </div>
     )
 }

@@ -4,7 +4,7 @@ import {fetchAllExecutiveOrders} from "../../services/executive/order"
 import OrderSummary from "../../component/executive/OrderSummary";
 import Logout from "../../component/Logout";
 
-export default function ExecutiveDashboard(){
+export default function BrandDashboard(){
     let [orders,setOrders]=useState([]);
     const navigate=useNavigate();
     const user=JSON.parse(localStorage.getItem("user"));
@@ -13,7 +13,7 @@ export default function ExecutiveDashboard(){
         fetchOrders();
     },[]);
     const fetchOrders=async ()=>{
-        let response=await fetchAllExecutiveOrders()
+        let response=await fetchAllBrandOrders()
         setOrders(response.data.orders);
 
     }
@@ -35,8 +35,6 @@ export default function ExecutiveDashboard(){
 
             <button onClick={()=>navigate("/executive-pending_refund-order")}>Pending Refund</button>&nbsp;
             <button onClick={()=>navigate("/executive-completed-order")}>Completed Orders</button>&nbsp; <br /> <br />
-            <button onClick={()=>navigate("/signup-brand")}>Add New brand</button>&nbsp; <br /> <br />
-
             <button onClick={()=> navigate("/signup-mediator")}>Create Mediator Account</button>&nbsp;  <br /> <br />
             <Logout/>
 

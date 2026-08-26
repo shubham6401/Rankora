@@ -36,3 +36,7 @@ export const fetchAllMediators=()=>{
 export const AssignOrderToMediator=(id,data)=>{
     return api.post(`/executive/order/assign/${id}`,data);
 }
+
+export const fetchAllBrands=()=>{
+    return api.get("/executive/brands");
+}

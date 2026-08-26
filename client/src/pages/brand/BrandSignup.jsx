@@ -1,6 +1,8 @@
 import { useState } from "react"
-import { loginExecutiveUser,signUpExecutiveUser } from "../../services/authService";
+import { replace, useNavigate } from "react-router-dom";
+import { signUpBrandUser } from "../../services/authService";
 export default function BrandSignup(){
+    const navigate=useNavigate();
     let [formData,setFormData]= useState({
         name:"",
         password:"",
@@ -12,20 +14,18 @@ export default function BrandSignup(){
 
 
         try{
-            let signupResponse=await signUpExecutiveUser(formData);
+            let signupResponse=await signUpBrandUser(formData);
             console.log(signupResponse);
+            navigate("/role-selection",{replace:true});
 
         }
         catch(err){
             console.log(err);
         }
-
-        console.log(formData);
-
     }
     return (
         <div>
-            <h1>Executive signup page</h1>
+            <h1>Brand signup page</h1>
             <form onSubmit={handleSubmit}>
                 <label >Name:</label>
                 <input value={formData.name} type="text" onChange={(e)=>

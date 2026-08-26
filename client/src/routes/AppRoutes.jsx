@@ -30,6 +30,7 @@ import AllMediator from "../pages/executive/AllMediators";
 
 import BrandLogin from "../pages/brand/BrandLogin";
 import BrandSignup from "../pages/brand/BrandSignup";
+import BrandDashboard from "../pages/brand/BrandDashboard";
 
 
 
@@ -169,7 +170,14 @@ export default function AppRoutes() {
 
             {/* brand */}
             <Route path="/login-brand" element={<BrandLogin />} />
-            <Route path="/signup-brand" element={<ExecutiveSignup />} />
+            <Route path="/signup-brand" element={<BrandSignup />} />
+            <Route path="/dashboard-brand" element={
+
+                <ProtectedRoutes>
+                    <BrandDashboard />
+
+                </ProtectedRoutes>
+            } />
 
 
             <Route path="/role-selection" element={<RoleSelection />} />

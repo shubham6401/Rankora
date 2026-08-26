@@ -50,6 +50,11 @@ const orderSchema = new mongoose.Schema({
     //     type:String,
     //     required:true,
     // },
+    brandUserId:{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required:true
+    },
     brand: {
         type: String,
         required: true,

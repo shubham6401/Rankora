@@ -10,10 +10,16 @@ const userSchema=new mongoose.Schema({
         enum:["executive","mediator","brand"],
         required:true,
     },
+    brand:{
+        type:String,
+        sparse:true,
+        unique:true,
+    },
     
     teamCode:{
         type:String,
-        required:true,
+        sparse:true,
+        unique:true,
     },
     mediatorCode:{
         type:String,

@@ -1,11 +1,12 @@
-import { useState } from "react"
-import { addExecutiveOrder } from "../../services/executive/order";
+import { useState, useEffect } from "react"
+import { addExecutiveOrder, fetchAllBrands } from "../../services/executive/order";
 import { useNavigate } from "react-router-dom";
 export default function AddNewOrder() {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
     });
-    let user=JSON.parse(localStorage.getItem("user"));
+    let [brands, setBrands] = useState([]);
+    let user = JSON.parse(localStorage.getItem("user"));
     const platforms = [
         "Amazon",
         "Flipkart",
@@ -14,15 +15,32 @@ export default function AddNewOrder() {
         "Meesho"
     ];
 
+    useEffect(() => {
+        handleFetchAllBrands();
+    }, [])
+
+    const handleFetchAllBrands = async () => {
+        try {
+            let response = await fetchAllBrands();
+            setBrands(response.data.users);
+            console.log(response.data.users)
+
+        }
+        catch (err) {
+            console.log(err);
+        }
+
+    }
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            let data={
+            let data = {
                 ...formData,
-                "teamCode":user["teamCode"],
-                "executiveName":user["name"],
+                "teamCode": user["teamCode"],
+                "executiveName": user["name"],
             }
-            
+
 
             let response = await addExecutiveOrder(data);
             console.log(response);
@@ -37,9 +55,8 @@ export default function AddNewOrder() {
         <div>
             <h1>Order Submit details</h1>
 
-
             <form onSubmit={handleSubmit}>
-               
+
 
 
 
@@ -80,19 +97,30 @@ export default function AddNewOrder() {
 
 
                 <label >Team Code</label>
-                <input type="text" value={user["teamCode"]} 
-                   disabled={true}
+                <input type="text" value={user["teamCode"]}
+                    disabled={true}
                     required />
                 <br /><br />
 
 
 
                 <label >Brand</label>
-                <input type="text"
-                    onChange={(e) => setFormData({
-                        ...formData, brand: e.target.value,
-                    })}
-                    required />
+                <select name="brandUserId"
+                    value={formData.brandUserId || ""}
+                    onChange={(e)=>
+                        setFormData({
+                            ...formData,
+                            brandUserId:e.target.value,
+                        })
+                    }
+                >
+                    <option value="">Select Brand</option>
+                    {brands.map((brand)=>(
+                        <option key={brand._id} value={brand._id}>{brand.brand}</option>
+                    ))}
+
+                </select>
+
                 <br /><br />
 
 
@@ -105,7 +133,7 @@ export default function AddNewOrder() {
                         ...formData, orderPlatform: e.target.value,
                     })} required>
                     <option value="">Select Platform</option>
-                    {platforms.map((platform)=>(
+                    {platforms.map((platform) => (
                         <option key={platform} value={platform}>{platform}</option>
                     ))}
                 </select>

@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { loginExecutiveUser } from "../../services/authService";
+import { loginBrandUser } from "../../services/authService";
 import { useNavigate } from "react-router-dom";
 
 export default function BrandLogin(){
@@ -13,7 +13,7 @@ export default function BrandLogin(){
     const handleSubmit=async(e)=>{
         e.preventDefault();
         try{
-            let loginResponse=await loginExecutiveUser(formData);
+            let loginResponse=await loginBrandUser(formData);
             localStorage.setItem("token",loginResponse.data.token);
             localStorage.setItem("user",JSON.stringify(loginResponse.data.user));
             navigate("/dashboard-brand");
@@ -25,7 +25,7 @@ export default function BrandLogin(){
     }
     return (
         <div>
-            <h1>Executive Login Page</h1>
+            <h1>Brand Login Page</h1>
             <form onSubmit={handleSubmit}>
                 <label >Name:</label>
                 <input value={formData.name} type="text" onChange={(e)=>
