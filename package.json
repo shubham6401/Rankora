@@ -1,0 +1,15 @@
+{
+  "name": "rankora",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Rankora - Multi-Role E-Commerce Operations & Settlement Platform",
+  "scripts": {
+    "start": "node server/app.js",
+    "build": "cd client && npm install && npm run build",
+    "server": "cd server && npm install && npm start",
+    "client": "cd client && npm install && npm run dev"
+  },
+  "keywords": ["ecommerce", "operations", "settlement", "platform"],
+  "author": "Rankora",
+  "license": "ISC"
+}

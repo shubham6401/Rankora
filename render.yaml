@@ -29,7 +29,7 @@ services:
     runtime: static
     plan: free
     rootDir: client
-    buildCommand: npm run build
+    buildCommand: npm install && npm run build
     staticPublishPath: dist
     routes:
       - type: rewrite
