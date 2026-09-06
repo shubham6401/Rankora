@@ -5,7 +5,7 @@
   "description": "Rankora - Multi-Role E-Commerce Operations & Settlement Platform",
   "scripts": {
     "start": "node server/app.js",
-    "build": "cd client && npm install && npm run build",
+    "build": "if [ -d \"client\" ]; then (cd client && npm run build); else npm run build; fi",
     "server": "cd server && npm install && npm start",
     "client": "cd client && npm install && npm run dev"
   },
