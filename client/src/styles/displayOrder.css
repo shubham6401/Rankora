@@ -1,9 +1,9 @@
 /* Display Order Details Stylesheet */
 
 .display-order-page {
-    max-width: 1240px;
+    max-width: 1400px;
     margin: 0 auto;
-    padding: 24px 20px 60px 20px;
+    padding: clamp(16px, 2.5vw, 24px) clamp(12px, 2vw, 20px) 60px;
     font-family: var(--font-body);
     box-sizing: border-box;
     animation: fadeIn 0.3s ease-out;
@@ -37,7 +37,7 @@
     background: #ffffff;
     border: 1px solid var(--slate-200);
     border-radius: var(--radius-lg);
-    padding: 24px;
+    padding: clamp(18px, 2.5vh, 26px) clamp(16px, 2.5vw, 24px);
     box-shadow: var(--shadow-sm);
     margin-bottom: 24px;
 }
@@ -96,8 +96,8 @@
 
 .master-order-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+    gap: 14px;
     margin-bottom: 20px;
 }
 
@@ -497,4 +497,36 @@
     display: block;
     margin-bottom: 4px;
     font-weight: 600;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .master-order-top {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .master-order-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    .proofs-columns {
+        grid-template-columns: 1fr;
+    }
+    .post-delivery-grid {
+        flex-direction: column;
+        gap: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .master-order-grid {
+        grid-template-columns: 1fr;
+    }
+    .master-order-title {
+        font-size: 20px;
+    }
+    .display-order-back-btn {
+        width: 100%;
+        justify-content: center;
+    }
 }

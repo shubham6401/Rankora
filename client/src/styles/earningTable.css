@@ -1,7 +1,7 @@
 /* Mediator Financial Breakdown & Earning Table Styles */
 
 .earning-wrapper {
-    max-width: 680px;
+    max-width: min(720px, 96vw);
     margin: 20px auto;
     font-family: var(--font-body);
     animation: fadeIn 0.3s ease-out;
@@ -145,7 +145,8 @@
 .spreadsheet-table-container {
     border: 2px solid #475569;
     border-radius: var(--radius-sm);
-    overflow: hidden;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
     box-shadow: var(--shadow-md);
 }
 

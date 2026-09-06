@@ -3,9 +3,9 @@
    ========================================================================== */
 
 .brand-dashboard-container {
-    max-width: 1280px;
+    max-width: 1400px;
     margin: 0 auto;
-    padding: 32px 24px 60px 24px;
+    padding: clamp(16px, 2.5vw, 32px) clamp(12px, 2vw, 24px) 60px;
     box-sizing: border-box;
     font-family: var(--font-body);
     animation: fadeIn 0.35s ease-out;
@@ -18,16 +18,16 @@
     background: #ffffff;
     border: 1px solid var(--slate-200);
     border-radius: var(--radius-xl);
-    padding: 28px 32px;
+    padding: clamp(18px, 2.5vh, 28px) clamp(16px, 2.5vw, 32px);
     box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
-    margin-bottom: 28px;
+    margin-bottom: 24px;
     position: relative;
     overflow: hidden;
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
-    gap: 20px;
+    gap: 16px;
 }
 
 /* Luxury Top Accent Stripe */
@@ -370,6 +370,7 @@
 .brand-table-responsive {
     width: 100%;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .brand-data-table {
@@ -593,4 +594,66 @@
     max-width: 440px;
     margin: 0 auto;
     line-height: 1.5;
+}
+
+/* ==========================================================================
+   RESPONSIVE BREAKPOINTS (BRAND PORTAL)
+   ========================================================================== */
+@media (max-width: 1024px) {
+    .brand-kpi-grid {
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+        gap: 14px;
+    }
+}
+
+@media (max-width: 768px) {
+    .brand-hero-card {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .brand-hero-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    .brand-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+    .brand-kpi-val {
+        font-size: 24px;
+    }
+    .brand-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    .brand-search-box {
+        min-width: 100%;
+        max-width: 100%;
+    }
+    .brand-filter-pills {
+        overflow-x: auto;
+        padding-bottom: 4px;
+        -webkit-overflow-scrolling: touch;
+        flex-wrap: nowrap;
+    }
+    .brand-table-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .brand-hero-left {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    .brand-kpi-grid {
+        grid-template-columns: 1fr;
+    }
+    .brand-hero-title {
+        font-size: 22px;
+    }
 }

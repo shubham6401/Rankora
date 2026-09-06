@@ -4,13 +4,14 @@
 
 .role-page-container {
     min-height: 100vh;
+    min-height: 100dvh;
     width: 100%;
     position: relative;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: 60px 24px;
+    padding: clamp(24px, 4vh, 48px) clamp(16px, 3vw, 28px);
     box-sizing: border-box;
     background-color: #080c14;
     background-image: 
@@ -104,19 +105,19 @@
 }
 
 .role-hero-subtitle {
-    font-size: clamp(15px, 1.8vw, 17px);
+    font-size: clamp(14px, 1.4vw, 16.5px);
     color: #94a3b8;
     max-width: 640px;
-    margin: 0 auto 52px auto;
-    line-height: 1.65;
+    margin: 0 auto clamp(20px, 3vh, 38px) auto;
+    line-height: 1.6;
     font-weight: 400;
 }
 
-/* Cards Grid */
+/* Cards Grid - 3 Columns on desktop for fit-to-screen */
 .role-cards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 28px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: clamp(16px, 2vw, 24px);
     width: 100%;
     text-align: left;
 }
@@ -125,8 +126,8 @@
 .role-card {
     background: rgba(17, 24, 39, 0.72);
     backdrop-filter: blur(20px);
-    border-radius: 24px;
-    padding: 36px 30px;
+    border-radius: 20px;
+    padding: clamp(22px, 3vh, 32px) clamp(18px, 2.5vw, 26px);
     box-sizing: border-box;
     border: 1px solid rgba(255, 255, 255, 0.09);
     display: flex;
@@ -455,14 +456,26 @@
 }
 
 /* Responsive adjustments */
+@media (max-width: 1024px) {
+    .role-cards-grid {
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+        gap: 18px;
+    }
+}
+
 @media (max-width: 768px) {
     .role-page-container {
-        padding: 40px 16px;
+        padding: 32px 16px;
+        min-height: auto;
     }
     .role-hero-title {
-        font-size: 32px;
+        font-size: clamp(26px, 6vw, 34px);
     }
     .role-cards-grid {
         grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    .role-portal-footer {
+        margin-top: 32px;
     }
 }

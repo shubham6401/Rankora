@@ -1,9 +1,9 @@
 /* Orders Table & List Views Stylesheet */
 
 .table-page-container {
-    max-width: 1280px;
+    max-width: 1400px;
     margin: 0 auto;
-    padding: 28px 24px 60px 24px;
+    padding: clamp(16px, 2.5vw, 28px) clamp(12px, 2vw, 24px) 60px;
     box-sizing: border-box;
     font-family: var(--font-body);
     animation: fadeIn 0.3s ease-out;
@@ -126,8 +126,8 @@
 /* Stat Metrics Bar */
 .table-metrics-bar {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+    gap: 14px;
     margin-bottom: 24px;
 }
 
@@ -182,6 +182,7 @@
 .data-table-responsive {
     width: 100%;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .data-table {
@@ -719,9 +720,10 @@
 .detail-modal-card {
     background: #ffffff;
     border-radius: var(--radius-lg);
-    padding: 24px;
-    max-width: 600px;
+    padding: clamp(16px, 3vh, 24px);
+    max-width: min(600px, 92vw);
     width: 100%;
+    box-sizing: border-box;
     box-shadow: var(--shadow-xl);
     max-height: 90vh;
     overflow-y: auto;
@@ -905,4 +907,56 @@
     grid-template-columns: 1fr 1fr;
     gap: 12px;
 }
+
+/* ==========================================================================
+   RESPONSIVE BREAKPOINTS (ORDERS TABLES & LISTS)
+   ========================================================================== */
+@media (max-width: 1024px) {
+    .table-metrics-bar {
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
+    }
+}
+
+@media (max-width: 768px) {
+    .table-page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    .table-header-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    .table-metrics-bar {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    .metric-value {
+        font-size: 20px;
+    }
+    .detail-modal-grid {
+        grid-template-columns: 1fr;
+    }
+    .modal-action-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .table-metrics-bar {
+        grid-template-columns: 1fr;
+    }
+    .table-page-title {
+        font-size: 22px;
+    }
+    .nav-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    .table-header-actions {
+        flex-direction: column;
+    }
+}
+
 

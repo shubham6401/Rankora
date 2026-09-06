@@ -77,11 +77,18 @@ body {
     padding: 0;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
+    -webkit-text-size-adjust: 100%;
 }
 
 h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
     letter-spacing: -0.02em;
+}
+
+/* Touch & Scroll Utilities */
+.table-scroll-touch {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 /* Animations */
@@ -114,3 +121,4 @@ h1, h2, h3, h4, h5, h6 {
 .pulsing-indicator {
     animation: pulseDot 2s infinite ease-in-out;
 }
+

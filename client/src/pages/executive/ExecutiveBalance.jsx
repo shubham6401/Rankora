@@ -172,7 +172,7 @@ export default function ExecutiveBalance() {
     }
 
     return (
-        <div style={{ maxWidth: "1150px", margin: "20px auto", padding: "20px", fontFamily: "sans-serif" }}>
+        <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "clamp(16px, 2.5vw, 24px) clamp(12px, 2vw, 20px) 48px", boxSizing: "border-box", fontFamily: "var(--font-body)" }}>
             {/* HEADER & NAV */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "20px" }}>
                 <div>
