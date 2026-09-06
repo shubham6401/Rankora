@@ -1,0 +1,205 @@
+/* Dashboard Layout & Action Cards Styles */
+
+.dashboard-container {
+    max-width: 1200px;
+    margin: 24px auto;
+    padding: 0 20px 40px 20px;
+    box-sizing: border-box;
+    animation: fadeIn 0.35s ease-out;
+}
+
+/* Header Card */
+.dashboard-header-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid var(--slate-200);
+    border-radius: var(--radius-lg);
+    padding: 24px 28px;
+    background: #ffffff;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 16px;
+    position: relative;
+    overflow: hidden;
+}
+
+.dashboard-header-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #2563eb 0%, #0d9488 50%, #7c3aed 100%);
+}
+
+.dashboard-header-title {
+    margin: 0 0 6px 0;
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--slate-900);
+    letter-spacing: -0.03em;
+}
+
+.dashboard-meta-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--slate-500);
+    font-size: 14px;
+    flex-wrap: wrap;
+}
+
+.dashboard-meta-pill {
+    font-weight: 700;
+    color: var(--primary-600);
+}
+
+/* Actions Section */
+.dashboard-actions-card {
+    border: 1px solid var(--slate-200);
+    border-radius: var(--radius-lg);
+    padding: 26px 28px;
+    background: #ffffff;
+    box-shadow: var(--shadow-sm);
+    margin-top: 24px;
+}
+
+.dashboard-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.dashboard-section-title {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--slate-800);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dashboard-action-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 14px;
+}
+
+/* Action Button Styles */
+.dash-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 18px;
+    border-radius: var(--radius-md);
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    text-align: center;
+    text-decoration: none;
+    user-select: none;
+}
+
+.dash-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.dash-btn:active {
+    transform: translateY(0);
+}
+
+.dash-btn-primary {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+}
+.dash-btn-primary:hover {
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
+}
+
+.dash-btn-amber {
+    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(217, 119, 6, 0.25);
+}
+
+.dash-btn-sky {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+}
+
+.dash-btn-teal {
+    background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(13, 148, 136, 0.25);
+}
+
+.dash-btn-emerald {
+    background: #f0fdf4;
+    color: #15803d;
+    border-color: #86efac;
+}
+.dash-btn-emerald:hover {
+    background: #dcfce7;
+}
+
+.dash-btn-purple {
+    background: #faf5ff;
+    color: #7e22ce;
+    border-color: #d8b4fe;
+}
+.dash-btn-purple:hover {
+    background: #f3e8ff;
+}
+
+.dash-btn-orange {
+    background: #fff7ed;
+    color: #c2410c;
+    border-color: #fdba74;
+}
+.dash-btn-orange:hover {
+    background: #ffedd5;
+}
+
+.dash-btn-slate {
+    background: #f8fafc;
+    color: #334155;
+    border-color: var(--slate-300);
+}
+.dash-btn-slate:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+.dash-btn-dashed {
+    background: #ffffff;
+    color: #475569;
+    border: 1px dashed #94a3b8;
+}
+.dash-btn-dashed:hover {
+    border-color: #2563eb;
+    color: #2563eb;
+    background: #f8fafc;
+}
+
+@media (max-width: 768px) {
+    .dashboard-header-card {
+        padding: 20px;
+    }
+    .dashboard-action-grid {
+        grid-template-columns: 1fr;
+    }
+}

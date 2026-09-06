@@ -1,112 +1,176 @@
-import { useState, useEffect } from "react"
-import { fetchAllExecutivePendingOrders } from "../../services/executive/order";
-import OrderCard from "../../component/executive/OrderCard";
-import { fetchAllMediators } from "../../services/executive/order";
+import { useState, useEffect } from "react";
+import { fetchAllExecutivePendingOrders, fetchAllMediators } from "../../services/executive/order";
+import { useNavigate } from "react-router-dom";
+import PendingOrderCard from "../../component/executive/PendingOrderCard";
 import OrderFilters from "../../component/executive/OrderFilters";
-
+import "../../styles/ordersTable.css";
 
 export default function PendingOrders() {
-    let [orders, setOrders] = useState([]);
-    let [mediators, setMediators] = useState([]);
+    const navigate = useNavigate();
+    const [orders, setOrders] = useState([]);
+    const [mediators, setMediators] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    let [appliedFilters, setAppliedFilters] = useState({
+    const [appliedFilters, setAppliedFilters] = useState({
         date: "",
         brand: "",
         reviewerName: "",
         orderId: "",
-    })
-
-    const filteredOrders=orders.filter((order)=>{
-        let orderIdMatch= !appliedFilters.orderId || order.orderId?.toLowerCase().includes(
-            appliedFilters.orderId.toLowerCase()
-        );
-
-
-        let brandMatch= !appliedFilters.brand || order.brand?.toLowerCase().includes(
-            appliedFilters.brand.toLowerCase()
-        );
-
-        let reviewerNameMatch= !appliedFilters.reviewerName ||  order.reviewerName?.toLowerCase().includes(
-            appliedFilters.reviewerName.toLowerCase()
-        );
-
-        let dateMatch=!appliedFilters.date || new Date(order.createdAt).toISOString().split("T")[0] ===
-        appliedFilters.date;
-
-
-        return orderIdMatch && brandMatch && reviewerNameMatch &&  dateMatch
-    })
-
-    
-
-
-
-
+    });
 
     useEffect(() => {
-        fetchOrders();
-        handleFetchAllMediator();
+        loadData();
     }, []);
 
-    const fetchOrders = async () => {
+    const loadData = async () => {
         try {
-            let response = await fetchAllExecutivePendingOrders();
-            setOrders(response.data.orders);
+            setLoading(true);
+            const [ordersRes, medRes] = await Promise.all([
+                fetchAllExecutivePendingOrders(),
+                fetchAllMediators(),
+            ]);
+            setOrders(ordersRes.data.orders || []);
+            setMediators(medRes.data.mediators || []);
+        } catch (err) {
+            console.error("Error loading pending orders data:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-        }
-        catch (err) {
-            console.log(err);
-        }
-    }
-    const handleFetchAllMediator = async () => {
-        try {
-            let response = await fetchAllMediators();
-            setMediators(response.data.mediators);
+    const filteredOrders = orders.filter((order) => {
+        const orderIdMatch =
+            !appliedFilters.orderId ||
+            order.orderId?.toLowerCase().includes(appliedFilters.orderId.toLowerCase());
 
-        }
-        catch (err) {
-            console.log(err);
-        }
-    }
+        const brandMatch =
+            !appliedFilters.brand ||
+            order.brand?.toLowerCase().includes(appliedFilters.brand.toLowerCase());
+
+        const reviewerNameMatch =
+            !appliedFilters.reviewerName ||
+            order.reviewerName?.toLowerCase().includes(appliedFilters.reviewerName.toLowerCase());
+
+        const dateMatch =
+            !appliedFilters.date ||
+            new Date(order.createdAt).toISOString().split("T")[0] === appliedFilters.date;
+
+        return orderIdMatch && brandMatch && reviewerNameMatch && dateMatch;
+    });
+
+    const totalUnassignedUnits = orders.reduce(
+        (acc, curr) => acc + (curr.summary?.unassigned || 0),
+        0
+    );
+
     return (
-        <>
-        {filteredOrders.length!==0 ? <div>
-            <h1>Pending Orders</h1>
+        <div className="table-page-container">
+            {/* Header */}
+            <div className="table-page-header">
+                <div className="table-header-info">
+                    <span className="table-page-badge">Allocation Pipeline</span>
+                    <h1 className="table-page-title">📦 Unassigned Pending Orders</h1>
+                    <p className="table-page-subtitle">
+                        Brand campaigns awaiting mediator allocation. Select a mediator and quantity to assign units.
+                    </p>
+                </div>
+                <div className="table-header-actions">
+                    <button
+                        type="button"
+                        className="nav-btn nav-btn-default"
+                        onClick={() => navigate("/dashboard-executive")}
+                    >
+                        ← Executive Dashboard
+                    </button>
+                    <button
+                        type="button"
+                        className="nav-btn nav-btn-primary"
+                        onClick={() => navigate("/executive-add-order")}
+                    >
+                        + Create New Order
+                    </button>
+                    <button
+                        type="button"
+                        className="nav-btn nav-btn-amber"
+                        onClick={() => navigate("/executive-pending-payment")}
+                    >
+                        Pending Payment Proofs →
+                    </button>
+                </div>
+            </div>
 
-        <OrderFilters setAppliedFilters={setAppliedFilters} status={"pending"} />
+            {/* Metrics */}
+            <div className="table-metrics-bar">
+                <div className="metric-card">
+                    <span className="metric-label">Active Pending Batches</span>
+                    <span className="metric-value metric-value-primary">{orders.length}</span>
+                </div>
+                <div className="metric-card">
+                    <span className="metric-label">Units Awaiting Mediator</span>
+                    <span className="metric-value metric-value-amber">{totalUnassignedUnits}</span>
+                </div>
+                <div className="metric-card">
+                    <span className="metric-label">Registered Mediators</span>
+                    <span className="metric-value metric-value-purple">{mediators.length}</span>
+                </div>
+            </div>
 
+            {/* Filters */}
+            <OrderFilters setAppliedFilters={setAppliedFilters} status="pending" />
 
-            
-
-            <table>
-                <thead>
-                    <tr>
-                        <th>Product</th>
-                        <th>Brand</th>
-                        <th>Platform</th>
-                        <th>Price</th>
-                        <th>Executive Name</th>
-                        <th>Created On</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    {
-                        filteredOrders.map((order) => (
-                            <OrderCard key={order._id} order={order} mediators={mediators}/> 
-                        )
-                    )
-                    }
-
-                </tbody>
-            </table>
-
-
-
-        </div> : <h1>No pending Orders</h1>}
-        </>
-        
-    )
+            {/* Data Table or Empty */}
+            {loading ? (
+                <div style={{ textAlign: "center", padding: "50px 0" }}>
+                    <h3>Loading pending orders...</h3>
+                </div>
+            ) : filteredOrders.length > 0 ? (
+                <div className="data-table-container">
+                    <div className="data-table-responsive">
+                        <table className="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Brand</th>
+                                    <th>Platform</th>
+                                    <th>Price</th>
+                                    <th>Executive</th>
+                                    <th>Created On</th>
+                                    <th>Status</th>
+                                    <th>Total Qty</th>
+                                    <th>Unassigned</th>
+                                    <th>Team Code</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredOrders.map((order) => (
+                                    <PendingOrderCard
+                                        key={order._id}
+                                        order={order}
+                                        status="unassigned"
+                                        mediators={mediators}
+                                    />
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            ) : (
+                <div className="empty-state-card">
+                    <div className="empty-state-icon">📋</div>
+                    <h3 className="empty-state-title">No Pending Orders Found</h3>
+                    <p className="empty-state-text">
+                        All campaign units have either been assigned to mediators or no matching orders exist with the current filters.
+                    </p>
+                    <button
+                        type="button"
+                        className="nav-btn nav-btn-primary"
+                        onClick={() => navigate("/executive-add-order")}
+                    >
+                        + Create a New Brand Order
+                    </button>
+                </div>
+            )}
+        </div>
+    );
 }

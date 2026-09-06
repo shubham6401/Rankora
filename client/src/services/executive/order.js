@@ -9,6 +9,10 @@ export const fetchAllExecutivePendingOrders=()=>{
     return api.get("/executive/orders/pending");
 }
 
+export const fetchAllExecutivePendingPaymentOrders=()=>{
+    return api.get("/executive/orders/pending_payment");
+}
+
 export const fetchAllExecutiveAssignedOrders=()=>{
     return api.get("/executive/orders/assigned");
 }
@@ -37,6 +41,26 @@ export const AssignOrderToMediator=(id,data)=>{
     return api.post(`/executive/order/assign/${id}`,data);
 }
 
-export const fetchAllBrands=()=>{
-    return api.get("/executive/brands");
+export const unassignExecutiveOrderUnit=(data)=>{
+    return api.post("/executive/order/unassign", data);
 }
+
+export const submitExecutivePaymentProof=(mediatorId, formData)=>{
+    return api.post(`/executive/order/submit-payment/${mediatorId}`, formData, {
+        headers: {
+            "Content-Type": "multipart/form-data",
+        },
+    });
+}
+
+export const fetchExecutiveMediatorSentOrders = () => {
+    return api.get("/executive/orders/mediator_sent");
+};
+
+export const acceptExecutiveMediatorPayment = (orderId, data) => {
+    return api.post(`/executive/order/accept-payment/${orderId}`, data);
+};
+
+export const fetchAllBrands = () => {
+    return api.get("/executive/brands");
+};

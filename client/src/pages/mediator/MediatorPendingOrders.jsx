@@ -1,58 +1,172 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState } from "react";
 import { FetchAllPendingOrders } from "../../services/mediator/orders";
-import MediatorOrderCard from "../../component/mediator/MediatorOrderCard";
+import { useNavigate } from "react-router-dom";
+import "../../styles/ordersTable.css";
 
 export default function MediatorPendingOrders() {
-    let [orders, setOrders] = useState([]);
+    const navigate = useNavigate();
+    const [orders, setOrders] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         handleFetchAllPendingOrders();
-    }, [])
+    }, []);
 
     const handleFetchAllPendingOrders = async () => {
         try {
-            console.log("hoo");
-            let response = await FetchAllPendingOrders();
-            setOrders(response.data.orders);
+            setLoading(true);
+            const response = await FetchAllPendingOrders();
+            setOrders(response.data.orders || []);
+        } catch (err) {
+            console.error("Failed to fetch pending orders:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-        }
-        catch (err) {
-            console.log(err);
-        }
+    if (loading) {
+        return (
+            <div className="table-page-container">
+                <div className="empty-state-card">
+                    <div className="empty-state-icon">⏳</div>
+                    <h2 className="empty-state-title">Loading In-Progress Orders...</h2>
+                    <p className="empty-state-text">Fetching orders currently active and accepted by you.</p>
+                </div>
+            </div>
+        );
     }
+
+    const totalActiveUnits = orders.reduce((acc, order) => {
+        const inProgress = (order.orderUnits || []).filter((u) => u.status === "in_progress");
+        return acc + (inProgress.length || 1);
+    }, 0);
+
     return (
-        orders.length===0 ? <h1>No Pending Orders </h1> :
-        <div>
-            <h1>Pending Orders</h1>
+        <div className="table-page-container">
+            {/* TOP HEADER */}
+            <div className="table-page-header">
+                <div className="table-header-info">
+                    <span className="table-page-badge">Mediator Portal</span>
+                    <h1 className="table-page-title">
+                        ⚡ In-Progress Orders
+                    </h1>
+                    <p className="table-page-subtitle">
+                        Active orders you have accepted. Review product specs, place orders on platforms, and submit order placement proofs.
+                    </p>
+                </div>
+                <div className="table-header-actions">
+                    <button
+                        onClick={() => navigate("/panel-mediator")}
+                        className="nav-btn nav-btn-default"
+                    >
+                        ← Dashboard
+                    </button>
+                    <button
+                        onClick={() => navigate("/mediator-new-orders")}
+                        className="nav-btn nav-btn-primary"
+                    >
+                        + View New Offers
+                    </button>
+                </div>
+            </div>
 
-            <table>
-                <thead>
-                    <tr>
-                        <th>Product</th>
-                        <th>Brand</th>
-                        <th>Platform</th>
-                        <th>Price</th>
-                        <th>Executive Name</th>
-                        <th>Created On</th>
-                        <th>Status</th>
-                        <th>Team Code</th>
-                        
-                        <th>Assigned To</th>
-                        <th>Mediator Code</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
+            {/* METRICS */}
+            <div className="table-metrics-bar">
+                <div className="metric-card">
+                    <span className="metric-label">Active Orders</span>
+                    <span className="metric-value metric-value-primary">{orders.length}</span>
+                </div>
+                <div className="metric-card">
+                    <span className="metric-label">Units in Progress</span>
+                    <span className="metric-value metric-value-amber">{totalActiveUnits} Units</span>
+                </div>
+            </div>
 
-                <tbody>
-                    {
-                        orders.map((order) => (
-                            <MediatorOrderCard key={order._id} order={order} />
-                        )
-                        )
-                    }
+            {/* DATA TABLE */}
+            {orders.length === 0 ? (
+                <div className="empty-state-card">
+                    <div className="empty-state-icon">📦</div>
+                    <h2 className="empty-state-title">No In-Progress Orders Found</h2>
+                    <p className="empty-state-text">
+                        Accept new orders from the New Assigned Orders panel to start placing and managing them here.
+                    </p>
+                    <button
+                        onClick={() => navigate("/mediator-new-orders")}
+                        className="table-btn table-btn-primary"
+                    >
+                        Check New Orders
+                    </button>
+                </div>
+            ) : (
+                <div className="data-table-container">
+                    <div className="data-table-responsive">
+                        <table className="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Brand</th>
+                                    <th>Platform</th>
+                                    <th>Price</th>
+                                    <th>Executive</th>
+                                    <th>Created On</th>
+                                    <th>Status</th>
+                                    <th>In-Progress Units</th>
+                                    <th>Team Code</th>
+                                    <th style={{ textAlign: "center" }}>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {orders.map((order) => {
+                                    const inProgressUnits = (order.orderUnits || []).filter(
+                                        (u) => u.status === "in_progress"
+                                    );
+                                    const count = inProgressUnits.length || 1;
 
-                </tbody>
-            </table>
+                                    return (
+                                        <tr key={order._id}>
+                                            <td className="product-name-cell">
+                                                {order.productName}
+                                            </td>
+                                            <td>{order.brand}</td>
+                                            <td>{order.orderPlatform}</td>
+                                            <td className="price-pill">₹{order.price}</td>
+                                            <td>{order.executiveName || "Executive"}</td>
+                                            <td>{new Date(order.createdAt).toLocaleDateString()}</td>
+                                            <td>
+                                                <span className="status-badge status-badge-in_progress">
+                                                    ● In Progress
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span className="qty-pill qty-pill-warning">
+                                                    {count} {count === 1 ? "Unit" : "Units"}
+                                                </span>
+                                            </td>
+                                            <td>{order.teamCode || "N/A"}</td>
+                                            <td style={{ textAlign: "center" }}>
+                                                <div className="action-btn-group" style={{ justifyContent: "center" }}>
+                                                    <button
+                                                        onClick={() => navigate(`/mediator-order-submission/${order._id}`)}
+                                                        className="table-btn table-btn-primary"
+                                                    >
+                                                        Submit Placement
+                                                    </button>
+                                                    <button
+                                                        onClick={() => navigate(`/order/${order._id}`)}
+                                                        className="table-btn table-btn-outline"
+                                                    >
+                                                        Details
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
         </div>
-    )
+    );
 }

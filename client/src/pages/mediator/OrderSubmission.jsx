@@ -1,190 +1,241 @@
-import { useState,useEffect } from "react"
-import { mediatorOrderSubmit } from "../../services/orders";
-import { useParams } from "react-router-dom";
-import { getOrder } from "../../services/orders";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { mediatorOrderSubmit, getOrder } from "../../services/orders";
+import { useParams, useNavigate } from "react-router-dom";
+import "../../styles/orderForm.css";
+
 export default function OrderSubmission() {
     const navigate = useNavigate();
-    const {id}=useParams();
+    const { id } = useParams();
 
-    let [order,setOrder]=useState(null);
-    const [formData, setFormData] = useState({
-    });
+    const [order, setOrder] = useState(null);
+    const [formData, setFormData] = useState({});
+    const [loading, setLoading] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState("");
 
-
-    useEffect(()=>{
+    useEffect(() => {
         fetchOrder();
-        
-    },[]);
+    }, [id]);
 
-    const fetchOrder=async ()=>{
-        let response =await getOrder(id);
-        setOrder(response.data.order);
+    const fetchOrder = async () => {
+        try {
+            setLoading(true);
+            const response = await getOrder(id);
+            setOrder(response.data.order);
+        } catch (err) {
+            console.error("Failed to load order:", err);
+            setError("Could not retrieve order details.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
-        console.log(response.data.order)
-    }
-     if (!order) {
-        return <h2>Loading...</h2>;
-    }
-
-   
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setError("");
         try {
-            let data=new FormData();
-            
+            setSubmitting(true);
+            const data = new FormData();
+
             Object.keys(formData).forEach((key) => {
-                data.append(key, formData[key]);
+                if (formData[key] !== undefined && formData[key] !== null) {
+                    data.append(key, formData[key]);
+                }
             });
 
-            let response = await mediatorOrderSubmit(id,data);
-            console.log(response);
-            navigate("/mediator-pending-orders", { replace: true });
+            await mediatorOrderSubmit(id, data);
+            navigate("/mediator-refund_pending-orders", { replace: true });
+        } catch (err) {
+            console.error("Error submitting order details:", err);
+            setError(err.response?.data?.message || "Error submitting order details. Please try again.");
+        } finally {
+            setSubmitting(false);
         }
-        catch (err) {
-            console.log("order data have issues...");
-            console.log(err);
-        }
+    };
+
+    if (loading) {
+        return (
+            <div className="form-page-container" style={{ textAlign: "center", padding: "60px 0" }}>
+                <h2>Loading order submission details...</h2>
+            </div>
+        );
     }
+
+    if (!order) {
+        return (
+            <div className="form-page-container">
+                <div className="form-card" style={{ textAlign: "center", padding: "40px" }}>
+                    <h2>Order Not Found</h2>
+                    <p>The requested order unit could not be located.</p>
+                    <button className="form-nav-back" onClick={() => navigate(-1)}>
+                        ← Return to Orders
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div>
-            <h1>Order Submit details</h1>
+        <div className="form-page-container">
+            <button
+                type="button"
+                className="form-nav-back"
+                onClick={() => navigate(-1)}
+            >
+                ← Back
+            </button>
 
- 
-            <form onSubmit={handleSubmit}>
-                <label >OrderID</label>
-                <input type="text" onChange={(e) =>
-                    setFormData({ ...formData, orderId: e.target.value })
-                }
-                    required />
+            <div className="form-card">
+                <div className="form-header">
+                    <span className="form-header-badge badge-emerald">Fulfillment Stage</span>
+                    <h1 className="form-title">Submit Order Placement Details</h1>
+                    <p className="form-subtitle">
+                        Record the e-commerce purchase details and order confirmation screenshot to move this order into In-Progress.
+                    </p>
+                </div>
 
-                <br /><br />
+                {error && (
+                    <div style={{ color: "#e11d48", padding: "10px", background: "#fff1f2", borderRadius: "6px", marginBottom: "16px", fontSize: "13px" }}>
+                        {error}
+                    </div>
+                )}
 
+                {/* Read-only Master Product Details */}
+                <div className="context-summary-box">
+                    <div className="context-summary-title">Product Campaign Information</div>
+                    <div className="context-grid">
+                        <div className="context-item">
+                            <span className="context-label">Product: </span>{order.productName}
+                        </div>
+                        <div className="context-item">
+                            <span className="context-label">Brand: </span>{order.brand}
+                        </div>
+                        <div className="context-item">
+                            <span className="context-label">Platform: </span>{order.orderPlatform}
+                        </div>
+                        <div className="context-item">
+                            <span className="context-label">Price: </span>₹{order.price}
+                        </div>
+                        <div className="context-item">
+                            <span className="context-label">Executive: </span>{order.executiveName || "N/A"}
+                        </div>
+                        <div className="context-item">
+                            <span className="context-label">Team Code: </span>{order.teamCode || "N/A"}
+                        </div>
+                    </div>
+                </div>
 
+                <form onSubmit={handleSubmit} className="form-body">
+                    <div className="form-field">
+                        <label className="form-field-label">
+                            E-Commerce Order ID <span className="form-field-req">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            className="form-input-text"
+                            placeholder="e.g. 402-1234567-8901234 (Amazon / Flipkart)"
+                            required
+                            onChange={(e) => setFormData({ ...formData, orderId: e.target.value })}
+                        />
+                    </div>
 
-                <label >Price</label>
-                <input type="text"
-                    value={order.price} disabled={true}
-                    required />
-                <br /><br />
+                    <div className="form-field">
+                        <label className="form-field-label">
+                            Order Confirmation Screenshot <span className="form-field-req">*</span>
+                        </label>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            className="form-file-input"
+                            required
+                            onChange={(e) => setFormData({ ...formData, orderedScreenshot: e.target.files[0] })}
+                        />
+                    </div>
 
+                    <div className="form-row-2col">
+                        <div className="form-field">
+                            <label className="form-field-label">
+                                Expected Arrival Date <span className="form-field-req">*</span>
+                            </label>
+                            <input
+                                type="date"
+                                className="form-input-text"
+                                required
+                                onChange={(e) => setFormData({ ...formData, expectedArrivalDate: e.target.value })}
+                            />
+                        </div>
 
-                <label >Ordered Screenshot</label>
-                <input type="file"
-                    onChange={(e) => setFormData({
-                        ...formData, orderedScreenshot: e.target.files[0],
-                    })}
-                    required />
-                <br /><br />
+                        <div className="form-field">
+                            <label className="form-field-label">
+                                Order Received On (Optional)
+                            </label>
+                            <input
+                                type="date"
+                                className="form-input-text"
+                                onChange={(e) => setFormData({ ...formData, orderReceivedOn: e.target.value })}
+                            />
+                        </div>
+                    </div>
 
+                    <div className="form-row-2col">
+                        <div className="form-field">
+                            <label className="form-field-label">
+                                Reviewer Account Name <span className="form-field-req">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                className="form-input-text"
+                                placeholder="Public reviewer profile name"
+                                required
+                                onChange={(e) => setFormData({ ...formData, reviewerName: e.target.value })}
+                            />
+                        </div>
 
-                <label >Expected Arrival Date </label>
-                <input type="date"
-                    onChange={(e) => setFormData({
-                        ...formData, expectedArrivalDate: e.target.value,
-                    })}
-                    required />
+                        <div className="form-field">
+                            <label className="form-field-label">
+                                Season / Campaign Tag
+                            </label>
+                            <input
+                                type="text"
+                                className="form-input-text"
+                                placeholder="e.g. Spring 2026 Promo"
+                                onChange={(e) => setFormData({ ...formData, season: e.target.value })}
+                            />
+                        </div>
+                    </div>
 
-                <br /><br />
+                    <div className="form-field">
+                        <label className="form-field-label">
+                            Delivery Shipping Address <span className="form-field-req">*</span>
+                        </label>
+                        <textarea
+                            className="form-textarea-input"
+                            rows="3"
+                            placeholder="Complete delivery address where product is shipped"
+                            required
+                            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                        />
+                    </div>
 
-
-                <label >Product Name</label>
-                <input type="text"
-                    value={order.productName} disabled={true}
-                    required />
-                <br /><br />
-
-
-                <label >Address</label>
-                <input type="text"
-                    onChange={(e) => setFormData({
-                        ...formData, address: e.target.value,
-                    })}
-                    required />
-                <br /><br />
-
-                <label >Executive Name</label>
-                <input type="text"
-                    value={order.executiveName} disabled={true}
-                    required />
-                <br /><br />
-
-                <label >Team Code</label>
-                <input type="text"
-                    value={order.teamCode} disabled={true}
-                    required />
-                <br /><br />
-
-                <label >Mediator Name</label>
-                <input type="text"
-                    value={order.assignedTo.name} disabled={true}
-                    required />
-                <br /><br />
-
-                <label >Mediator Code</label>
-                <input type="text"
-                    value={order.assignedTo.mediatorCode} disabled={true}
-                    required />
-                <br /><br />
-
-
-
-                <label >Reviewer Name </label>
-                <input type="text"
-                    onChange={(e) => setFormData({
-                        ...formData, reviewerName: e.target.value,
-                    })}
-                    required />
-                <br /><br />
-
-
-
-
-                <label >Brand</label>
-                <input type="text"
-                    value={order.brand} disabled={true}
-                    required />
-                <br /><br />
-
-
-
-                <label >Orders Received Date</label>
-                <input type="date"
-                    onChange={(e) => setFormData({
-                        ...formData, orderReceivedOn: e.target.value,
-                    })}
-                    required />
-                <br /><br />
-
-                <label >Order Placed on</label>
-                <input type="text"
-                    value={order.orderPlatform} disabled={true}
-                    required />
-                <br /><br />
-
-
-
-               
-
-
-
-                <label >Season </label>
-                <input type="text"
-                    onChange={(e) => setFormData({
-                        ...formData, season: e.target.value,
-                    })}
-                    required />
-                <br /><br />
-
-                <button type="submit">Submit</button>
-
-
-
-            </form>
-
-
-
-
+                    <div className="form-submit-row">
+                        <button
+                            type="button"
+                            className="form-nav-back"
+                            onClick={() => navigate(-1)}
+                            style={{ margin: 0 }}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            className="form-btn-submit btn-theme-blue"
+                            disabled={submitting}
+                        >
+                            {submitting ? "Submitting Placement..." : "Confirm & Submit Placement →"}
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
-    )
+    );
 }

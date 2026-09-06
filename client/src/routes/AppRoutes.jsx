@@ -10,6 +10,11 @@ import MediatorDashboard from "../pages/mediator/MediatorDashboard";
 import MediatorPendingOrders from "../pages/mediator/MediatorPendingOrders";
 import MediatorRefundPendingOrders from "../pages/mediator/MediatorRefundPendingOrders";
 import MediatorCompletedOrders from "../pages/mediator/MediatorCompletedOrders";
+import MediatorEarnings from "../pages/mediator/MediatorEarnings";
+import MediatorPendingPayment from "../pages/mediator/MediatorPendingPayment";
+import MediatorBalance from "../pages/mediator/MediatorBalance";
+import MediatorDetailedOrdersBreakdown from "../pages/mediator/MediatorDetailedOrdersBreakdown";
+import ExecutiveBalance from "../pages/executive/ExecutiveBalance";
 
 
 
@@ -19,6 +24,8 @@ import ExecutiveSignup from "../pages/executive/ExecutiveSignup";
 import ExecutiveDashboard from "../pages/executive/ExecutiveDashboard";
 import AddNewOrder from "../pages/executive/AddNewOrder";
 import PendingOrders from "../pages/executive/PendingOrders";
+import PendingPaymentOrders from "../pages/executive/PendingPaymentOrders";
+import MediatorSentOrders from "../pages/executive/MediatorSentOrders";
 import AssignedOrders from "../pages/executive/AssignedOrders";
 import NewOrders from "../pages/mediator/NewOrders";
 import In_progressOrders from "../pages/executive/In_progressOrders";
@@ -66,7 +73,11 @@ export default function AppRoutes() {
                 <ProtectedRoutes>
                     <MediatorDashboard />
                 </ProtectedRoutes>
-
+            } />
+            <Route path="/mediator-dashboard" element={
+                <ProtectedRoutes>
+                    <MediatorDashboard />
+                </ProtectedRoutes>
             } />
             <Route path="/login-mediator" element={<Login />} />
             <Route path="/signup-mediator" element={<SignUP />} />
@@ -98,6 +109,34 @@ export default function AppRoutes() {
 
             } />
 
+            <Route path="/mediator-earnings" element={
+                <ProtectedRoutes>
+                    <MediatorEarnings />
+                </ProtectedRoutes>
+            } />
+
+            <Route path="/mediator-pending-payment" element={
+                <ProtectedRoutes>
+                    <MediatorPendingPayment />
+                </ProtectedRoutes>
+            } />
+
+            <Route path="/mediator-balance" element={
+                <ProtectedRoutes>
+                    <MediatorBalance />
+                </ProtectedRoutes>
+            } />
+            <Route path="/mediator-assigned-orders-breakdown" element={
+                <ProtectedRoutes>
+                    <MediatorDetailedOrdersBreakdown />
+                </ProtectedRoutes>
+            } />
+            <Route path="/mediator-detailed-orders" element={
+                <ProtectedRoutes>
+                    <MediatorDetailedOrdersBreakdown />
+                </ProtectedRoutes>
+            } />
+
 
 
 
@@ -105,10 +144,13 @@ export default function AppRoutes() {
             <Route path="/login-executive" element={<ExecutiveLogin />} />
             <Route path="/signup-executive" element={<ExecutiveSignup />} />
             <Route path="/dashboard-executive" element={
-
                 <ProtectedRoutes>
                     <ExecutiveDashboard />
-
+                </ProtectedRoutes>
+            } />
+            <Route path="/executive-dashboard" element={
+                <ProtectedRoutes>
+                    <ExecutiveDashboard />
                 </ProtectedRoutes>
             } />
 
@@ -125,6 +167,24 @@ export default function AppRoutes() {
                 <ProtectedRoutes>
                     <PendingOrders />
 
+                </ProtectedRoutes>
+            } />
+
+            <Route path="/executive-pending-payment" element={
+                <ProtectedRoutes>
+                    <PendingPaymentOrders />
+                </ProtectedRoutes>
+            } />
+
+            <Route path="/executive-mediator-sent-payment" element={
+                <ProtectedRoutes>
+                    <MediatorSentOrders />
+                </ProtectedRoutes>
+            } />
+
+            <Route path="/executive-balance" element={
+                <ProtectedRoutes>
+                    <ExecutiveBalance />
                 </ProtectedRoutes>
             } />
 
@@ -180,8 +240,8 @@ export default function AppRoutes() {
             } />
 
 
+            <Route path="/" element={<RoleSelection />} />
             <Route path="/role-selection" element={<RoleSelection />} />
-
 
         </Routes>
     )

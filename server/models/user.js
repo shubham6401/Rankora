@@ -1,35 +1,39 @@
-const mongoose=require("mongoose");
-const userSchema=new mongoose.Schema({
-    name:{
-        type:String,
-        required:true,
+const mongoose = require("mongoose");
 
+const userSchema = new mongoose.Schema({
+    name: {
+        type: String,
+        required: true,
+        trim: true,
     },
-    role:{
-        type:String,
-        enum:["executive","mediator","brand"],
-        required:true,
+    role: {
+        type: String,
+        enum: ["executive", "mediator", "brand"],
+        required: true,
     },
-    brand:{
-        type:String,
-        sparse:true,
-        unique:true,
+    brand: {
+        type: String,
+        trim: true,
     },
-    
-    teamCode:{
-        type:String,
-        sparse:true,
-        unique:true,
+    teamCode: {
+        type: String,
+        trim: true,
     },
-    mediatorCode:{
-        type:String,
-        sparse:true,
-        unique:true,
+    mediatorCode: {
+        type: String,
+        trim: true,
     },
-    password:{
-        type:String,
-        required:true,
+    password: {
+        type: String,
+        required: true,
     },
+}, {
+    timestamps: true,
 });
-const User=mongoose.model("User",userSchema);
-module.exports=User;
+
+// Sparse unique indexes for mediatorCode and brand
+userSchema.index({ mediatorCode: 1 }, { unique: true, sparse: true });
+userSchema.index({ brand: 1 }, { unique: true, sparse: true });
+
+const User = mongoose.model("User", userSchema);
+module.exports = User;

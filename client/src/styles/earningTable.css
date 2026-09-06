@@ -1,0 +1,228 @@
+/* Mediator Financial Breakdown & Earning Table Styles */
+
+.earning-wrapper {
+    max-width: 680px;
+    margin: 20px auto;
+    font-family: var(--font-body);
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Sync Header Bar */
+.earning-sync-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.sync-status-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sync-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.sync-dot-live {
+    background-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+
+.sync-dot-manual {
+    background-color: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+}
+
+.sync-status-text {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--slate-700);
+}
+
+.sync-subtext {
+    font-size: 12px;
+    color: var(--slate-500);
+}
+
+.earning-controls {
+    display: flex;
+    gap: 8px;
+}
+
+.earning-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border: 1px solid var(--slate-300);
+    background: #ffffff;
+    color: var(--slate-700);
+}
+
+.earning-btn:hover {
+    background: var(--slate-100);
+    border-color: var(--slate-400);
+}
+
+.earning-btn-active {
+    background: var(--primary-600);
+    color: #ffffff;
+    border-color: var(--primary-700);
+}
+
+/* Metric Chips Header */
+.earning-metrics-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.earning-metric-card {
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+    text-align: center;
+    border: 1px solid var(--slate-200);
+    background: #ffffff;
+    box-shadow: var(--shadow-xs);
+}
+
+.earning-metric-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 4px;
+    color: var(--slate-500);
+}
+
+.earning-metric-num {
+    font-size: 16px;
+    font-weight: 800;
+    font-family: var(--font-heading);
+    color: var(--slate-900);
+}
+
+/* Card Variations */
+.em-card-blue {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+}
+.em-card-blue .earning-metric-title { color: #1e40af; }
+.em-card-blue .earning-metric-num { color: #1d4ed8; }
+
+.em-card-green {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+}
+.em-card-green .earning-metric-title { color: #166534; }
+.em-card-green .earning-metric-num { color: #15803d; }
+
+.em-card-amber {
+    background: #fefce8;
+    border-color: #fef08a;
+}
+.em-card-amber .earning-metric-title { color: #854d0e; }
+.em-card-amber .earning-metric-num { color: #a16207; }
+
+.em-card-emerald {
+    background: #ecfdf5;
+    border-color: #a7f3d0;
+}
+.em-card-emerald .earning-metric-title { color: #065f46; }
+.em-card-emerald .earning-metric-num { color: #047857; }
+
+/* Authentic Spreadsheet Table */
+.spreadsheet-table-container {
+    border: 2px solid #475569;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+}
+
+.spreadsheet-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.spreadsheet-header-th {
+    background-color: #c48bb5;
+    color: #1e293b;
+    padding: 12px 18px;
+    font-size: 18px;
+    font-weight: 800;
+    text-align: left;
+    border-bottom: 2px solid #475569;
+    font-family: var(--font-heading);
+}
+
+.spreadsheet-row {
+    border-bottom: 1px solid #94a3b8;
+}
+
+.cell-label {
+    padding: 9px 14px;
+    width: 55%;
+    font-weight: 600;
+    border-right: 1px solid #94a3b8;
+    color: #1e293b;
+}
+
+.cell-val {
+    padding: 9px 14px;
+    text-align: right;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+/* Row Palette Accents */
+.bg-sky { background-color: #cfe2f3; }
+.bg-mint { background-color: #d9ead3; }
+.bg-lavender { background-color: #b4a7d6; }
+.bg-cornflower { background-color: #a4c2f4; }
+.bg-banana { background-color: #ffe599; }
+.bg-leaf { background-color: #93c47d; }
+.bg-apricot { background-color: #f6b26b; }
+.bg-neon { background-color: #00ff00; }
+
+.cell-bold {
+    font-weight: 800;
+}
+
+.cell-exact-total {
+    font-weight: 900;
+    font-size: 17px;
+    color: #000000;
+    letter-spacing: -0.01em;
+}
+
+/* Edit Inputs */
+.spreadsheet-input {
+    width: 90%;
+    text-align: right;
+    padding: 4px 8px;
+    font-size: 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid #94a3b8;
+    background: #ffffff;
+    box-sizing: border-box;
+    font-family: inherit;
+    font-weight: 600;
+}
+
+.earning-footer-tip {
+    margin-top: 10px;
+    font-size: 11px;
+    color: var(--slate-500);
+    text-align: right;
+}
