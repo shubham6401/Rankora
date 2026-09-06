@@ -21,7 +21,16 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Health check endpoint
+// Root & Health check endpoints
+app.get("/", (req, res) => {
+    res.status(200).json({
+        success: true,
+        message: "Rankora Backend API is active and operational",
+        version: "1.0.0",
+        timestamp: new Date().toISOString(),
+    });
+});
+
 app.get("/api/health", (req, res) => {
     res.status(200).json({
         success: true,
