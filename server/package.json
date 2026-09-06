@@ -4,6 +4,7 @@
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
+    "build": "echo 'Server build ready'",
     "test": "node test_backend.js"
   },
   "keywords": [],
