@@ -18,6 +18,7 @@ import ExecutiveBalance from "../pages/executive/ExecutiveBalance";
 
 
 
+import LandingPage from "../pages/LandingPage";
 import RoleSelection from "../pages/RoleSelection";
 import ExecutiveLogin from "../pages/executive/ExecutiveLogin";
 import ExecutiveSignup from "../pages/executive/ExecutiveSignup";
@@ -240,7 +241,7 @@ export default function AppRoutes() {
             } />
 
 
-            <Route path="/" element={<RoleSelection />} />
+            <Route path="/" element={<LandingPage />} />
             <Route path="/role-selection" element={<RoleSelection />} />
 
         </Routes>
