@@ -30,6 +30,14 @@ export default function BrandLogin() {
         }
     };
 
+    const handleFillDemo = () => {
+        setFormData({
+            name: "Aura Audio Global",
+            brand: "DEMO_BRAND",
+            password: "demo1234",
+        });
+    };
+
     return (
         <div className="auth-page-container">
             <div className="auth-card">
@@ -37,6 +45,24 @@ export default function BrandLogin() {
                     <span className="auth-role-pill pill-brand">Brand Portal</span>
                     <h1 className="auth-title">Brand Sign In</h1>
                     <p className="auth-subtitle">Monitor your brand campaigns & live fulfillment pipeline</p>
+                </div>
+
+                {/* DEMO CREDENTIALS QUICK FILL */}
+                <div className="auth-demo-box">
+                    <div className="auth-demo-header">
+                        <span className="auth-demo-badge">✨ Try Demo Account</span>
+                        <button 
+                            type="button" 
+                            className="auth-demo-btn auth-demo-btn-brand"
+                            onClick={handleFillDemo}
+                        >
+                            ⚡ Fill Demo Details
+                        </button>
+                    </div>
+                    <div className="auth-demo-details">
+                        <div><b>Brand Name:</b> <code>DEMO_BRAND</code></div>
+                        <div><b>Password:</b> <code>demo1234</code></div>
+                    </div>
                 </div>
 
                 {error && <div className="auth-error-alert">{error}</div>}

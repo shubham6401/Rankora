@@ -30,6 +30,14 @@ export default function Login() {
         }
     };
 
+    const handleFillDemo = () => {
+        setFormData({
+            name: "Sarah Chen (Demo Mediator)",
+            mediatorCode: "DEMO_MED",
+            password: "demo1234",
+        });
+    };
+
     return (
         <div className="auth-page-container">
             <div className="auth-card">
@@ -37,6 +45,24 @@ export default function Login() {
                     <span className="auth-role-pill pill-mediator">Mediator Portal</span>
                     <h1 className="auth-title">Mediator Sign In</h1>
                     <p className="auth-subtitle">Access your assigned orders and financial settlements</p>
+                </div>
+
+                {/* DEMO CREDENTIALS QUICK FILL */}
+                <div className="auth-demo-box">
+                    <div className="auth-demo-header">
+                        <span className="auth-demo-badge">✨ Try Demo Account</span>
+                        <button 
+                            type="button" 
+                            className="auth-demo-btn auth-demo-btn-mediator"
+                            onClick={handleFillDemo}
+                        >
+                            ⚡ Fill Demo Details
+                        </button>
+                    </div>
+                    <div className="auth-demo-details">
+                        <div><b>Mediator Code:</b> <code>DEMO_MED</code></div>
+                        <div><b>Password:</b> <code>demo1234</code></div>
+                    </div>
                 </div>
 
                 {error && <div className="auth-error-alert">{error}</div>}

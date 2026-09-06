@@ -1,8 +1,40 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { loginExecutiveUser, loginUser, loginBrandUser } from "../services/authService";
 import "../styles/roleSelection.css";
 
 export default function RoleSelection() {
     const navigate = useNavigate();
+    const [loggingInRole, setLoggingInRole] = useState(null);
+
+    const handleInstantDemo = async (role) => {
+        try {
+            setLoggingInRole(role);
+            if (role === "executive") {
+                const res = await loginExecutiveUser({ teamCode: "DEMO_EXEC", password: "demo1234" });
+                localStorage.setItem("token", res.data.token);
+                localStorage.setItem("user", JSON.stringify(res.data.user));
+                navigate("/dashboard-executive");
+            } else if (role === "mediator") {
+                const res = await loginUser({ mediatorCode: "DEMO_MED", password: "demo1234" });
+                localStorage.setItem("token", res.data.token);
+                localStorage.setItem("user", JSON.stringify(res.data.user));
+                navigate("/panel-mediator");
+            } else if (role === "brand") {
+                const res = await loginBrandUser({ brand: "DEMO_BRAND", password: "demo1234" });
+                localStorage.setItem("token", res.data.token);
+                localStorage.setItem("user", JSON.stringify(res.data.user));
+                navigate("/dashboard-brand");
+            }
+        } catch (err) {
+            console.error("Instant demo login error:", err);
+            if (role === "executive") navigate("/login-executive");
+            else if (role === "mediator") navigate("/login-mediator");
+            else if (role === "brand") navigate("/login-brand");
+        } finally {
+            setLoggingInRole(null);
+        }
+    };
 
     return (
         <div className="role-page-container">
@@ -11,6 +43,14 @@ export default function RoleSelection() {
                 <div className="role-hero-badge">
                     <span className="badge-dot"></span>
                     <span>Rankora Operations Platform</span>
+                </div>
+
+                {/* DEMO SHOWCASE BANNER */}
+                <div className="role-demo-banner">
+                    <span className="demo-banner-badge">💡 Live Demo Mode</span>
+                    <span className="demo-banner-text">
+                        Explore with pre-loaded campaigns and orders. Click <b>Instant Demo Preview</b> on any role below!
+                    </span>
                 </div>
 
                 {/* HERO TITLE & SUBTITLE */}
@@ -53,14 +93,24 @@ export default function RoleSelection() {
                                 </li>
                             </ul>
                         </div>
-                        <button 
-                            id="role-btn-executive"
-                            className="role-action-btn"
-                            onClick={() => navigate("/login-executive")}
-                        >
-                            <span>Enter Executive Workspace</span>
-                            <span className="arrow-symbol">→</span>
-                        </button>
+                        <div className="role-card-actions">
+                            <button 
+                                id="role-btn-executive"
+                                className="role-action-btn"
+                                onClick={() => navigate("/login-executive")}
+                            >
+                                <span>Enter Executive Workspace</span>
+                                <span className="arrow-symbol">→</span>
+                            </button>
+                            <button
+                                type="button"
+                                className="role-demo-action-btn"
+                                disabled={loggingInRole === "executive"}
+                                onClick={() => handleInstantDemo("executive")}
+                            >
+                                {loggingInRole === "executive" ? "Launching Demo..." : "✨ Instant Demo Preview (1-Click)"}
+                            </button>
+                        </div>
                     </div>
 
                     {/* MEDIATOR CARD (Vibrant Teal / Emerald Mint) */}
@@ -93,14 +143,24 @@ export default function RoleSelection() {
                                 </li>
                             </ul>
                         </div>
-                        <button 
-                            id="role-btn-mediator"
-                            className="role-action-btn"
-                            onClick={() => navigate("/login-mediator")}
-                        >
-                            <span>Enter Mediator Workspace</span>
-                            <span className="arrow-symbol">→</span>
-                        </button>
+                        <div className="role-card-actions">
+                            <button 
+                                id="role-btn-mediator"
+                                className="role-action-btn"
+                                onClick={() => navigate("/login-mediator")}
+                            >
+                                <span>Enter Mediator Workspace</span>
+                                <span className="arrow-symbol">→</span>
+                            </button>
+                            <button
+                                type="button"
+                                className="role-demo-action-btn"
+                                disabled={loggingInRole === "mediator"}
+                                onClick={() => handleInstantDemo("mediator")}
+                            >
+                                {loggingInRole === "mediator" ? "Launching Demo..." : "✨ Instant Demo Preview (1-Click)"}
+                            </button>
+                        </div>
                     </div>
 
                     {/* BRAND CARD (Sunset Amber / Crimson Rose) */}
@@ -133,14 +193,24 @@ export default function RoleSelection() {
                                 </li>
                             </ul>
                         </div>
-                        <button 
-                            id="role-btn-brand"
-                            className="role-action-btn"
-                            onClick={() => navigate("/login-brand")}
-                        >
-                            <span>Enter Brand Workspace</span>
-                            <span className="arrow-symbol">→</span>
-                        </button>
+                        <div className="role-card-actions">
+                            <button 
+                                id="role-btn-brand"
+                                className="role-action-btn"
+                                onClick={() => navigate("/login-brand")}
+                            >
+                                <span>Enter Brand Workspace</span>
+                                <span className="arrow-symbol">→</span>
+                            </button>
+                            <button
+                                type="button"
+                                className="role-demo-action-btn"
+                                disabled={loggingInRole === "brand"}
+                                onClick={() => handleInstantDemo("brand")}
+                            >
+                                {loggingInRole === "brand" ? "Launching Demo..." : "✨ Instant Demo Preview (1-Click)"}
+                            </button>
+                        </div>
                     </div>
                 </div>
 

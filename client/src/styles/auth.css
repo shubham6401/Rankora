@@ -419,3 +419,101 @@
     background: #6d28d9;
     box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
 }
+
+/* =========================================================
+   DEMO ACCOUNT HELPER WIDGET
+========================================================= */
+.auth-demo-box {
+    margin-bottom: 20px;
+    padding: 14px 16px;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: var(--radius-md);
+    text-align: left;
+    transition: all 0.2s ease;
+}
+
+.auth-demo-box:hover {
+    border-color: #94a3b8;
+    background: #f1f5f9;
+}
+
+.auth-demo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.auth-demo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #1e293b;
+    background: #e2e8f0;
+    padding: 3px 8px;
+    border-radius: var(--radius-full);
+}
+
+.auth-demo-btn {
+    padding: 6px 12px;
+    background: #2563eb;
+    color: #ffffff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+    font-family: inherit;
+}
+
+.auth-demo-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.35);
+}
+
+.auth-demo-btn-mediator {
+    background: #0d9488;
+    box-shadow: 0 2px 6px rgba(13, 148, 136, 0.25);
+}
+.auth-demo-btn-mediator:hover {
+    background: #0f766e;
+    box-shadow: 0 4px 10px rgba(13, 148, 136, 0.35);
+}
+
+.auth-demo-btn-brand {
+    background: #7c3aed;
+    box-shadow: 0 2px 6px rgba(124, 58, 237, 0.25);
+}
+.auth-demo-btn-brand:hover {
+    background: #6d28d9;
+    box-shadow: 0 4px 10px rgba(124, 58, 237, 0.35);
+}
+
+.auth-demo-details {
+    font-size: 12px;
+    color: #475569;
+    line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.auth-demo-details code {
+    background: #ffffff;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid #cbd5e1;
+    font-weight: 800;
+    color: #0f172a;
+    font-size: 11.5px;
+}
+

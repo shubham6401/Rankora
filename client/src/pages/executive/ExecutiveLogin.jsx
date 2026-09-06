@@ -30,6 +30,14 @@ export default function ExecutiveLogin() {
         }
     };
 
+    const handleFillDemo = () => {
+        setFormData({
+            name: "Alex Rivera (Demo Executive)",
+            teamCode: "DEMO_EXEC",
+            password: "demo1234",
+        });
+    };
+
     return (
         <div className="auth-page-container">
             <div className="auth-card">
@@ -37,6 +45,24 @@ export default function ExecutiveLogin() {
                     <span className="auth-role-pill pill-executive">Executive Portal</span>
                     <h1 className="auth-title">Executive Sign In</h1>
                     <p className="auth-subtitle">Access executive operations and campaign pipelines</p>
+                </div>
+
+                {/* DEMO CREDENTIALS QUICK FILL */}
+                <div className="auth-demo-box">
+                    <div className="auth-demo-header">
+                        <span className="auth-demo-badge">✨ Try Demo Account</span>
+                        <button 
+                            type="button" 
+                            className="auth-demo-btn auth-demo-btn-executive"
+                            onClick={handleFillDemo}
+                        >
+                            ⚡ Fill Demo Details
+                        </button>
+                    </div>
+                    <div className="auth-demo-details">
+                        <div><b>Team Code:</b> <code>DEMO_EXEC</code></div>
+                        <div><b>Password:</b> <code>demo1234</code></div>
+                    </div>
                 </div>
 
                 {error && <div className="auth-error-alert">{error}</div>}

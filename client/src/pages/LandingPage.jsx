@@ -24,7 +24,7 @@ export default function LandingPage() {
                         onClick={() => navigate("/role-selection")}
                         className="landing-nav-cta"
                     >
-                        <span>Launch Platform</span>
+                        <span>Try Demo / Launch</span>
                         <span>→</span>
                     </button>
                 </nav>
@@ -35,7 +35,7 @@ export default function LandingPage() {
                 <section className="landing-hero">
                     <div className="hero-pill-badge">
                         <span className="pulse-point"></span>
-                        <span>Next-Gen E-Commerce Operations Platform</span>
+                        <span>Interactive Demo Accounts Available • 3 Roles</span>
                     </div>
 
                     <h1 className="hero-main-title">
@@ -58,10 +58,12 @@ export default function LandingPage() {
                             <span>Enter Operational Portals</span>
                             <span>→</span>
                         </button>
-                        <a href="#workspaces" className="hero-btn-secondary">
-                            <span>Explore 3 Roles</span>
-                            <span>↓</span>
-                        </a>
+                        <button 
+                            onClick={() => navigate("/role-selection")} 
+                            className="hero-btn-secondary"
+                        >
+                            <span>⚡ Try 1-Click Demo</span>
+                        </button>
                     </div>
 
                     {/* HERO STATS BANNER */}

@@ -433,6 +433,85 @@
     transform: translateX(4px);
 }
 
+/* Card Button Group */
+.role-card-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+}
+
+.role-demo-action-btn {
+    width: 100%;
+    padding: 11px 16px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 13.5px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.06);
+    color: #e2e8f0;
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(10px);
+    font-family: inherit;
+}
+
+.role-demo-action-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.4);
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+.role-demo-action-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Demo Announcement Banner */
+.role-demo-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 18px;
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: var(--radius-full);
+    margin-bottom: 28px;
+    max-width: 780px;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.15);
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.demo-banner-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+    background: linear-gradient(135deg, #4f46e5, #06b6d4);
+    color: #ffffff;
+    font-size: 11.5px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.demo-banner-text {
+    font-size: 13px;
+    color: #cbd5e1;
+}
+
+.demo-banner-text b {
+    color: #ffffff;
+}
+
 /* Footer Credits */
 .role-portal-footer {
     margin-top: 50px;
