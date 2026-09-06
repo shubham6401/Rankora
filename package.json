@@ -9,6 +9,9 @@
     "server": "cd server && npm install && npm start",
     "client": "cd client && npm install && npm run dev"
   },
+  "workspaces": [
+    "client"
+  ],
   "keywords": ["ecommerce", "operations", "settlement", "platform"],
   "author": "Rankora",
   "license": "ISC"
