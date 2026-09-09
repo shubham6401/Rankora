@@ -1,11 +1,12 @@
 /* Dashboard Layout & Action Cards Styles */
 
 .dashboard-container {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: clamp(16px, 2.5vw, 24px) clamp(12px, 2vw, 20px) 48px;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 24px 24px 48px;
     box-sizing: border-box;
-    animation: fadeIn 0.35s ease-out;
+    animation: fadeIn 0.25s ease-out;
 }
 
 /* Header Card */
@@ -31,8 +32,8 @@
     top: 0;
     left: 0;
     right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, #2563eb 0%, #0d9488 50%, #7c3aed 100%);
+    height: 3px;
+    background: #2563eb;
 }
 
 .dashboard-header-title {
@@ -121,67 +122,59 @@
 }
 
 .dash-btn-primary {
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    background: #2563eb;
     color: #ffffff;
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+    box-shadow: 0 1px 3px rgba(37, 99, 235, 0.2);
 }
 .dash-btn-primary:hover {
-    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
+    background: #1d4ed8;
+    box-shadow: 0 3px 8px rgba(37, 99, 235, 0.3);
 }
 
-.dash-btn-amber {
-    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
-    color: #ffffff;
-    box-shadow: 0 4px 12px rgba(217, 119, 6, 0.25);
+.dash-btn-amber,
+.dash-btn-sky,
+.dash-btn-teal,
+.dash-btn-slate {
+    background: #ffffff;
+    color: var(--slate-700);
+    border-color: var(--slate-300);
+    box-shadow: var(--shadow-xs);
 }
-
-.dash-btn-sky {
-    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-    color: #ffffff;
-    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
-}
-
-.dash-btn-teal {
-    background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
-    color: #ffffff;
-    box-shadow: 0 4px 12px rgba(13, 148, 136, 0.25);
+.dash-btn-amber:hover,
+.dash-btn-sky:hover,
+.dash-btn-teal:hover,
+.dash-btn-slate:hover {
+    background: #f8fafc;
+    color: #0f172a;
+    border-color: #94a3b8;
 }
 
 .dash-btn-emerald {
     background: #f0fdf4;
-    color: #15803d;
-    border-color: #86efac;
+    color: #16a34a;
+    border-color: #dcfce7;
 }
 .dash-btn-emerald:hover {
     background: #dcfce7;
+    color: #15803d;
 }
 
 .dash-btn-purple {
     background: #faf5ff;
     color: #7e22ce;
-    border-color: #d8b4fe;
+    border-color: #f3e8ff;
 }
 .dash-btn-purple:hover {
     background: #f3e8ff;
 }
 
 .dash-btn-orange {
-    background: #fff7ed;
-    color: #c2410c;
-    border-color: #fdba74;
+    background: #fffbeb;
+    color: #b45309;
+    border-color: #fef3c7;
 }
 .dash-btn-orange:hover {
-    background: #ffedd5;
-}
-
-.dash-btn-slate {
-    background: #f8fafc;
-    color: #334155;
-    border-color: var(--slate-300);
-}
-.dash-btn-slate:hover {
-    background: #f1f5f9;
-    color: #0f172a;
+    background: #fef3c7;
 }
 
 .dash-btn-dashed {

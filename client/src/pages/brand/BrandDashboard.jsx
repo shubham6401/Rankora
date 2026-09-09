@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchBrandOrders } from "../../services/brand/orders";
 import Logout from "../../component/Logout";
+import BrandProductBreakdownModal from "../../component/brand/BrandProductBreakdownModal";
 import "../../styles/brandDashboard.css";
 
 export default function BrandDashboard() {
@@ -9,6 +10,10 @@ export default function BrandDashboard() {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [filterStatus, setFilterStatus] = useState("all");
+    const [filterPlatform, setFilterPlatform] = useState("all");
+    const [filterDate, setFilterDate] = useState("");
+    const [sortBy, setSortBy] = useState("newest");
+    const [selectedOrderForBreakdown, setSelectedOrderForBreakdown] = useState(null);
     const navigate = useNavigate();
     const user = JSON.parse(localStorage.getItem("user")) || {};
 
@@ -35,22 +40,99 @@ export default function BrandDashboard() {
     const totalPendingRefund = orders.reduce((acc, o) => acc + (o.summary?.pendingRefund || 0), 0);
     const completionRate = totalUnits > 0 ? Math.round((totalCompleted / totalUnits) * 100) : 0;
 
-    // Filter orders based on search & status
-    const filteredOrders = orders.filter((order) => {
-        const matchesSearch = !searchQuery.trim() || 
-            (order.productName || "").toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
-            (order.orderPlatform || "").toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
-            (order.executiveName || "").toLowerCase().includes(searchQuery.toLowerCase().trim());
+    // Extract unique platforms from active orders
+    const platformList = useMemo(() => {
+        const set = new Set();
+        orders.forEach((o) => {
+            if (o.orderPlatform && typeof o.orderPlatform === "string") {
+                set.add(o.orderPlatform.trim());
+            }
+        });
+        return Array.from(set);
+    }, [orders]);
 
-        if (!matchesSearch) return false;
+    // Multi-attribute filtering and sorting
+    const filteredOrders = useMemo(() => {
+        return orders
+            .filter((order) => {
+                // Search query
+                if (searchQuery.trim()) {
+                    const q = searchQuery.toLowerCase().trim();
+                    const name = (order.productName || "").toLowerCase();
+                    const platform = (order.orderPlatform || "").toLowerCase();
+                    const exec = (order.executiveName || "").toLowerCase();
+                    if (!name.includes(q) && !platform.includes(q) && !exec.includes(q)) {
+                        return false;
+                    }
+                }
 
-        if (filterStatus === "all") return true;
-        const summary = order.summary || {};
-        if (filterStatus === "in_progress") return (summary.inProgress || 0) > 0;
-        if (filterStatus === "pending_refund") return (summary.pendingRefund || 0) > 0;
-        if (filterStatus === "completed") return (summary.completed || 0) > 0;
-        return true;
-    });
+                // Platform filter
+                if (filterPlatform !== "all") {
+                    const p = (order.orderPlatform || "").toLowerCase();
+                    if (filterPlatform.toLowerCase() === "other") {
+                        if (p.includes("amazon") || p.includes("flipkart") || p.includes("myntra")) {
+                            return false;
+                        }
+                    } else if (!p.includes(filterPlatform.toLowerCase())) {
+                        return false;
+                    }
+                }
+
+                // Status filter
+                if (filterStatus !== "all") {
+                    const summary = order.summary || {};
+                    if (filterStatus === "in_progress" && !(summary.inProgress > 0)) return false;
+                    if (filterStatus === "pending_refund" && !(summary.pendingRefund > 0)) return false;
+                    if (filterStatus === "completed" && !(summary.completed > 0)) return false;
+                    if (filterStatus === "unassigned" && !(summary.unassigned > 0)) return false;
+                }
+
+                // Date filter
+                if (filterDate) {
+                    const orderDate = new Date(order.createdAt).toISOString().split("T")[0];
+                    if (orderDate !== filterDate) return false;
+                }
+
+                return true;
+            })
+            .sort((a, b) => {
+                if (sortBy === "oldest") {
+                    return new Date(a.createdAt) - new Date(b.createdAt);
+                }
+                if (sortBy === "quantity") {
+                    const aQty = a.quantity || (a.orderUnits || []).length || 0;
+                    const bQty = b.quantity || (b.orderUnits || []).length || 0;
+                    return bQty - aQty;
+                }
+                if (sortBy === "price") {
+                    return (b.price || 0) - (a.price || 0);
+                }
+                if (sortBy === "completion") {
+                    const aDone = a.summary?.completed || 0;
+                    const aTot = a.quantity || (a.orderUnits || []).length || 1;
+                    const bDone = b.summary?.completed || 0;
+                    const bTot = b.quantity || (b.orderUnits || []).length || 1;
+                    return (bDone / bTot) - (aDone / aTot);
+                }
+                // default "newest"
+                return new Date(b.createdAt) - new Date(a.createdAt);
+            });
+    }, [orders, searchQuery, filterPlatform, filterStatus, filterDate, sortBy]);
+
+    const isAnyFilterActive =
+        searchQuery.trim() !== "" ||
+        filterStatus !== "all" ||
+        filterPlatform !== "all" ||
+        filterDate !== "" ||
+        sortBy !== "newest";
+
+    const clearAllFilters = () => {
+        setSearchQuery("");
+        setFilterStatus("all");
+        setFilterPlatform("all");
+        setFilterDate("");
+        setSortBy("newest");
+    };
 
     const getPlatformBadgeClass = (platform = "") => {
         const lower = platform.toLowerCase();
@@ -171,44 +253,122 @@ export default function BrandDashboard() {
                 </div>
             </div>
 
-            {/* TOOLBAR: SEARCH & STATUS FILTERS */}
+            {/* TOOLBAR: MULTI-ATTRIBUTE FILTERING & CONTROLS */}
             <div className="brand-toolbar">
-                <div className="brand-search-box">
-                    <span className="brand-search-icon">🔍</span>
-                    <input
-                        type="text"
-                        placeholder="Search product campaigns, platform, or executive..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="brand-search-input"
-                    />
+                {/* Top Row: Search + Platform + Date + Sort + Reset */}
+                <div className="brand-toolbar-top">
+                    <div className="brand-search-box">
+                        <span className="brand-search-icon">🔍</span>
+                        <input
+                            type="text"
+                            placeholder="Search campaign, platform, or executive..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="brand-search-input"
+                        />
+                    </div>
+
+                    <div className="brand-toolbar-controls">
+                        {/* Platform Selector */}
+                        <select
+                            value={filterPlatform}
+                            onChange={(e) => setFilterPlatform(e.target.value)}
+                            className="brand-select"
+                            title="Filter by storefront platform"
+                        >
+                            <option value="all">🏷️ All Platforms</option>
+                            <option value="amazon">Amazon</option>
+                            <option value="flipkart">Flipkart</option>
+                            <option value="myntra">Myntra</option>
+                            {platformList
+                                .filter(p => !["amazon", "flipkart", "myntra"].includes(p.toLowerCase()))
+                                .map(p => (
+                                    <option key={p} value={p}>{p}</option>
+                                ))
+                            }
+                        </select>
+
+                        {/* Date Picker Filter */}
+                        <input
+                            type="date"
+                            value={filterDate}
+                            onChange={(e) => setFilterDate(e.target.value)}
+                            className="brand-date-input"
+                            title="Filter by campaign creation date"
+                        />
+
+                        {/* Sort Order Selector */}
+                        <select
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value)}
+                            className="brand-select"
+                            title="Sort campaigns"
+                        >
+                            <option value="newest">⇅ Newest First</option>
+                            <option value="oldest">⇅ Oldest First</option>
+                            <option value="quantity">⇅ Highest Units</option>
+                            <option value="price">⇅ Highest Price</option>
+                            <option value="completion">⇅ Highest Completion %</option>
+                        </select>
+
+                        {/* Reset All Filters Button */}
+                        {isAnyFilterActive && (
+                            <button
+                                type="button"
+                                onClick={clearAllFilters}
+                                className="brand-reset-filters-btn"
+                                title="Reset all applied search and filters"
+                            >
+                                <span>↺</span>
+                                <span>Reset Filters</span>
+                            </button>
+                        )}
+                    </div>
                 </div>
 
-                <div className="brand-filter-pills">
-                    <button
-                        onClick={() => setFilterStatus("all")}
-                        className={`brand-filter-pill-btn ${filterStatus === "all" ? "active" : ""}`}
-                    >
-                        All Campaigns ({orders.length})
-                    </button>
-                    <button
-                        onClick={() => setFilterStatus("in_progress")}
-                        className={`brand-filter-pill-btn ${filterStatus === "in_progress" ? "active" : ""}`}
-                    >
-                        In Progress ({orders.filter(o => (o.summary?.inProgress || 0) > 0).length})
-                    </button>
-                    <button
-                        onClick={() => setFilterStatus("pending_refund")}
-                        className={`brand-filter-pill-btn ${filterStatus === "pending_refund" ? "active" : ""}`}
-                    >
-                        Pending Reviews ({orders.filter(o => (o.summary?.pendingRefund || 0) > 0).length})
-                    </button>
-                    <button
-                        onClick={() => setFilterStatus("completed")}
-                        className={`brand-filter-pill-btn ${filterStatus === "completed" ? "active" : ""}`}
-                    >
-                        Completed ({orders.filter(o => (o.summary?.completed || 0) > 0).length})
-                    </button>
+                {/* Bottom Row: Status Filter Pills + Stats */}
+                <div className="brand-toolbar-bottom">
+                    <div className="brand-filter-pills">
+                        <button
+                            type="button"
+                            onClick={() => setFilterStatus("all")}
+                            className={`brand-filter-pill-btn ${filterStatus === "all" ? "active" : ""}`}
+                        >
+                            All Campaigns ({orders.length})
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setFilterStatus("in_progress")}
+                            className={`brand-filter-pill-btn ${filterStatus === "in_progress" ? "active" : ""}`}
+                        >
+                            In Progress ({orders.filter(o => (o.summary?.inProgress || 0) > 0).length})
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setFilterStatus("pending_refund")}
+                            className={`brand-filter-pill-btn ${filterStatus === "pending_refund" ? "active" : ""}`}
+                        >
+                            Pending Reviews ({orders.filter(o => (o.summary?.pendingRefund || 0) > 0).length})
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setFilterStatus("completed")}
+                            className={`brand-filter-pill-btn ${filterStatus === "completed" ? "active" : ""}`}
+                        >
+                            Completed ({orders.filter(o => (o.summary?.completed || 0) > 0).length})
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setFilterStatus("unassigned")}
+                            className={`brand-filter-pill-btn ${filterStatus === "unassigned" ? "active" : ""}`}
+                        >
+                            Open / Unassigned ({orders.filter(o => (o.summary?.unassigned || 0) > 0).length})
+                        </button>
+                    </div>
+
+                    <div className="brand-filter-stats-text">
+                        Showing <b>{filteredOrders.length}</b> of <b>{orders.length}</b> Campaigns
+                    </div>
                 </div>
             </div>
 
@@ -374,11 +534,13 @@ export default function BrandDashboard() {
                                             {/* Action Column */}
                                             <td style={{ textAlign: "center" }}>
                                                 <button
-                                                    onClick={() => navigate(`/order/${order._id}`)}
-                                                    className="brand-inspect-btn"
+                                                    type="button"
+                                                    onClick={() => setSelectedOrderForBreakdown(order)}
+                                                    className="brand-breakdown-btn"
+                                                    title="View product units and fulfillment verification breakdown"
                                                 >
-                                                    <span>Inspect</span>
-                                                    <span>↗</span>
+                                                    <span>📊</span>
+                                                    <span>View Breakdown</span>
                                                 </button>
                                             </td>
                                         </tr>
@@ -389,6 +551,14 @@ export default function BrandDashboard() {
                     </div>
                 )}
             </div>
+
+            {/* PRODUCT BREAKDOWN & EXCEL EXPORT MODAL */}
+            {selectedOrderForBreakdown && (
+                <BrandProductBreakdownModal
+                    order={selectedOrderForBreakdown}
+                    onClose={() => setSelectedOrderForBreakdown(null)}
+                />
+            )}
         </div>
     );
 }

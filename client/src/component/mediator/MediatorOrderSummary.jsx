@@ -50,108 +50,99 @@ export default function MediatorOrderSummary() {
 
     const cards = [
         {
-            title: "New Assigned Orders",
-            subtitle: "Awaiting Accept/Reject",
+            title: "New Offers",
+            subtitle: "Stage 1",
             icon: "📥",
             units: summary.newAssignedUnits || 0,
             ordersCount: summary.newAssignedOrders || 0,
             path: "/mediator-neworders",
             actionLabel: "Review & Accept",
             className: "status-card-pending",
-            barColor: "var(--status-pending-bar)",
+            barColor: "#94a3b8",
         },
         {
-            title: "Payment Pending",
-            subtitle: "Refund to Executive",
-            icon: "💳",
-            units: summary.pendingPaymentUnits || 0,
-            ordersCount: summary.pendingPaymentOrders || 0,
-            path: "/mediator-pending-payment",
-            actionLabel: "Upload Refund SS",
-            className: "status-card-pay",
-            barColor: "var(--status-pay-bar)",
-        },
-        {
-            title: "In-Progress Orders",
-            subtitle: "Active Ordering",
-            icon: "⏳",
+            title: "In Progress",
+            subtitle: "Stage 2",
+            icon: "🚀",
             units: summary.inProgressUnits || 0,
             ordersCount: summary.inProgressOrders || 0,
             path: "/mediator-pending-orders",
             actionLabel: "Submit Details",
             className: "status-card-inprog",
-            barColor: "var(--status-inprog-bar)",
+            barColor: "#2563eb",
         },
         {
-            title: "Pending Refund Orders",
-            subtitle: "Awaiting Verification",
+            title: "Pending Refund",
+            subtitle: "Stage 3",
             icon: "🔄",
             units: summary.pendingRefundUnits || 0,
             ordersCount: summary.pendingRefundOrders || 0,
             path: "/mediator-refund_pending-orders",
             actionLabel: "Submit Reviews",
             className: "status-card-refund",
-            barColor: "var(--status-refund-bar)",
+            barColor: "#8b5cf6",
         },
         {
-            title: "Completed Orders",
-            subtitle: "Fully Executed",
+            title: "Completed",
+            subtitle: "Stage 4",
             icon: "✅",
             units: summary.completedUnits || 0,
             ordersCount: summary.completedOrders || 0,
             path: "/mediator-completed-orders",
             actionLabel: "View Completed",
             className: "status-card-completed",
-            barColor: "var(--status-completed-bar)",
+            barColor: "#10b981",
+        },
+        {
+            title: "Return Refunds",
+            subtitle: "Stage 5",
+            icon: "💳",
+            units: summary.pendingPaymentUnits || 0,
+            ordersCount: summary.pendingPaymentOrders || 0,
+            path: "/mediator-pending-payment",
+            actionLabel: "Upload Refund SS",
+            className: "status-card-pay",
+            barColor: "#f59e0b",
         },
     ];
 
     return (
         <div className="summary-wrapper">
-            {/* TOP HEADER WITH SUMMARY BADGES */}
+            {/* HEADER WITH SUMMARY BADGES */}
             <div className="summary-header">
                 <div>
                     <h2 className="summary-title">
-                        📊 Mediator Order & Quantity Summary
+                        📊 Mediator Summary
                     </h2>
                     <p className="summary-subtitle">
-                        Your assigned orders pipeline, unit counts, progress stages, and earnings snapshot
+                        Assigned orders pipeline, unit counts, and earnings
                     </p>
                 </div>
 
                 <div className="summary-metric-chips">
                     <div className="summary-chip">
-                        <div className="summary-chip-label">Assigned Orders</div>
+                        <div className="summary-chip-label">Total Orders</div>
                         <div className="summary-chip-val">{summary.totalOrders || 0}</div>
                     </div>
                     <div className="summary-chip summary-chip-blue">
-                        <div className="summary-chip-label">Assigned Units</div>
+                        <div className="summary-chip-label">Total Units</div>
                         <div className="summary-chip-val">
                             {totalUnits} <span className="summary-chip-val-sub">Units</span>
                         </div>
                     </div>
                     <div className="summary-chip summary-chip-green">
-                        <div className="summary-chip-label">Total Handled</div>
+                        <div className="summary-chip-label">Handled Value</div>
                         <div className="summary-chip-val">₹{(summary.totalValue || 0).toLocaleString()}</div>
                     </div>
                     <div className="summary-chip">
                         <div className="summary-chip-label">Completed</div>
-                        <div className="summary-chip-val" style={{ color: "#4ade80" }}>{completionRate}%</div>
+                        <div className="summary-chip-val" style={{ color: "#16a34a" }}>{completionRate}%</div>
                     </div>
                     <button
                         type="button"
                         onClick={loadSummary}
                         disabled={loading}
-                        style={{
-                            padding: "8px 14px",
-                            backgroundColor: "rgba(255,255,255,0.15)",
-                            border: "1px solid rgba(255,255,255,0.25)",
-                            borderRadius: "var(--radius-sm)",
-                            color: "#ffffff",
-                            cursor: "pointer",
-                            fontSize: "12px",
-                            fontWeight: "700",
-                        }}
+                        className="btn-quick-preview"
                     >
                         {loading ? "..." : "↻ Refresh"}
                     </button>

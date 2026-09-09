@@ -1,313 +1,324 @@
-/* Order Summary Component Styles (Executive & Mediator) */
+/* ==========================================================================
+   ORDER SUMMARY COMPONENT - UNIFIED SAAS COLOR SYSTEM
+   Clean, minimal slate + cohesive blue brand accent
+   ========================================================================== */
 
 .summary-wrapper {
     margin: 20px 0;
     background-color: #ffffff;
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--slate-200);
-    box-shadow: var(--shadow-md);
+    border-radius: var(--radius-lg, 12px);
+    border: 1px solid var(--slate-200, #e2e8f0);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
     overflow: hidden;
     animation: fadeIn 0.3s ease-out;
 }
 
-/* Hero Top Bar */
+/* Light, Elegant Header */
 .summary-header {
-    padding: clamp(16px, 2vh, 22px) clamp(16px, 2.5vw, 28px);
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-    color: #ffffff;
+    padding: 18px 24px;
+    background: #ffffff;
+    color: var(--slate-900, #0f172a);
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
-    gap: 14px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    gap: 16px;
+    border-bottom: 1px solid var(--slate-200, #e2e8f0);
 }
 
 .summary-title {
-    margin: 0 0 6px 0;
-    font-size: 20px;
-    font-weight: 800;
+    margin: 0 0 4px 0;
+    font-size: 18px;
+    font-weight: 700;
     display: flex;
     align-items: center;
     gap: 8px;
-    color: #f8fafc;
+    color: var(--slate-900, #0f172a);
+    letter-spacing: -0.02em;
 }
 
 .summary-subtitle {
     margin: 0;
     font-size: 13px;
-    color: var(--slate-400);
+    color: var(--slate-500, #64748b);
 }
 
 .summary-metric-chips {
     display: flex;
-    gap: 12px;
+    gap: 10px;
     flex-wrap: wrap;
     align-items: center;
 }
 
 .summary-chip {
-    background: rgba(255, 255, 255, 0.07);
-    backdrop-filter: blur(8px);
-    padding: 8px 14px;
-    border-radius: var(--radius-sm);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: var(--slate-50, #f8fafc);
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--slate-200, #e2e8f0);
     text-align: center;
-    min-width: 80px;
-}
-
-.summary-chip-blue {
-    background: rgba(59, 130, 246, 0.18);
-    border-color: rgba(59, 130, 246, 0.35);
-}
-
-.summary-chip-green {
-    background: rgba(16, 185, 129, 0.18);
-    border-color: rgba(16, 185, 129, 0.35);
+    min-width: 90px;
+    transition: all 0.15s ease;
 }
 
 .summary-chip-label {
     font-size: 11px;
-    color: var(--slate-400);
+    color: var(--slate-500, #64748b);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.05em;
     font-weight: 600;
-}
-
-.summary-chip-blue .summary-chip-label {
-    color: #93c5fd;
-}
-
-.summary-chip-green .summary-chip-label {
-    color: #6ee7b7;
+    margin-bottom: 2px;
 }
 
 .summary-chip-val {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 800;
-    color: #ffffff;
-    font-family: var(--font-heading);
+    color: var(--slate-900, #0f172a);
+    font-family: var(--font-heading, sans-serif);
 }
 
 .summary-chip-val-sub {
-    font-size: 12px;
-    font-weight: normal;
-    color: #cbd5e1;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--slate-500, #64748b);
+}
+
+.summary-chip-blue {
+    background: #eff6ff;
+    border-color: #dbeafe;
+}
+
+.summary-chip-blue .summary-chip-label {
+    color: #2563eb;
+}
+
+.summary-chip-blue .summary-chip-val {
+    color: #1d4ed8;
+}
+
+.summary-chip-green {
+    background: #f0fdf4;
+    border-color: #dcfce7;
+}
+
+.summary-chip-green .summary-chip-label {
+    color: #16a34a;
+}
+
+.summary-chip-green .summary-chip-val {
+    color: #15803d;
 }
 
 /* Stacked Pipeline Progress Bar */
 .summary-pipeline-bar-wrapper {
-    padding: 16px 28px 10px 28px;
-    background-color: var(--slate-50);
-    border-bottom: 1px solid var(--slate-200);
+    padding: 14px 24px 12px 24px;
+    background-color: var(--slate-50, #f8fafc);
+    border-bottom: 1px solid var(--slate-200, #e2e8f0);
 }
 
 .summary-pipeline-header {
     display: flex;
     justify-content: space-between;
     font-size: 12px;
-    color: var(--slate-600);
+    color: var(--slate-600, #475569);
     margin-bottom: 8px;
     font-weight: 600;
 }
 
 .summary-pipeline-progress {
     display: flex;
-    height: 10px;
-    border-radius: var(--radius-full);
+    height: 8px;
+    border-radius: 999px;
     overflow: hidden;
-    background-color: var(--slate-200);
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+    background-color: #e2e8f0;
 }
 
 .summary-pipeline-segment {
     height: 100%;
-    transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: width 0.35s ease;
 }
 
 /* Cards Grid */
 .summary-body {
-    padding: 24px 28px;
+    padding: 20px 24px;
 }
 
 .summary-cards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
 }
 
+/* Clean, Unified Status Card - Crisp White with Subtle Border */
 .summary-status-card {
-    padding: 18px 16px;
-    border-radius: var(--radius-md);
+    padding: 16px;
+    border-radius: 10px;
+    background-color: #ffffff;
+    border: 1px solid var(--slate-200, #e2e8f0);
     cursor: pointer;
-    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: var(--shadow-xs);
+    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
     position: relative;
-    border: 1px solid transparent;
     user-select: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
 .summary-status-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+    border-color: #2563eb;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.08);
 }
 
-/* Status Variations */
-.status-card-pending {
-    background-color: var(--status-pending-bg);
-    border-color: var(--status-pending-border);
-    color: var(--status-pending-text);
-}
-.status-card-pay {
-    background-color: var(--status-pay-bg);
-    border-color: var(--status-pay-border);
-    color: var(--status-pay-text);
-}
-.status-card-assigned {
-    background-color: var(--status-assigned-bg);
-    border-color: var(--status-assigned-border);
-    color: var(--status-assigned-text);
-}
-.status-card-inprog {
-    background-color: var(--status-inprog-bg);
-    border-color: var(--status-inprog-border);
-    color: var(--status-inprog-text);
-}
-.status-card-refund {
-    background-color: var(--status-refund-bg);
-    border-color: var(--status-refund-border);
-    color: var(--status-refund-text);
-}
-.status-card-completed {
-    background-color: var(--status-completed-bg);
-    border-color: var(--status-completed-border);
-    color: var(--status-completed-text);
-}
+/* Subtle Stage Color Accents (Left border or small tag, never garish full background) */
+.status-card-pending:hover { border-color: #94a3b8; }
+.status-card-pay:hover { border-color: #f59e0b; }
+.status-card-assigned:hover { border-color: #3b82f6; }
+.status-card-inprog:hover { border-color: #2563eb; }
+.status-card-refund:hover { border-color: #8b5cf6; }
+.status-card-completed:hover { border-color: #10b981; }
 
 .summary-card-top {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 10px;
+    align-items: center;
+    margin-bottom: 8px;
 }
 
 .summary-card-icon {
-    font-size: 22px;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
 }
 
 .summary-card-badge {
     font-size: 11px;
-    font-weight: 800;
+    font-weight: 700;
     padding: 2px 7px;
-    border-radius: var(--radius-full);
-    background: rgba(255, 255, 255, 0.85);
-    border: 1px solid currentColor;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
 }
 
 .summary-card-title {
-    font-size: 13px;
+    font-size: 13.5px;
     font-weight: 700;
+    color: #0f172a;
     margin-bottom: 2px;
     line-height: 1.3;
 }
 
 .summary-card-subtitle {
-    font-size: 11px;
-    color: var(--slate-500);
+    font-size: 11.5px;
+    color: #64748b;
     margin-bottom: 6px;
 }
 
 .summary-card-units {
     display: flex;
     align-items: baseline;
-    gap: 6px;
-    margin: 6px 0 2px 0;
+    gap: 5px;
+    margin: 4px 0 2px 0;
 }
 
 .summary-card-unit-num {
-    font-size: 26px;
-    font-weight: 900;
-    font-family: var(--font-heading);
-    letter-spacing: -0.03em;
+    font-size: 24px;
+    font-weight: 800;
+    font-family: var(--font-heading, sans-serif);
+    color: #0f172a;
+    letter-spacing: -0.02em;
 }
 
 .summary-card-unit-label {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
-    color: var(--slate-500);
+    color: #64748b;
 }
 
 .summary-card-orders {
     font-size: 12px;
-    color: var(--slate-500);
-    margin-top: 2px;
+    color: #64748b;
+    margin-bottom: 8px;
 }
 
 .summary-card-action {
-    margin-top: 12px;
-    font-size: 11px;
+    margin-top: 10px;
+    font-size: 12px;
     font-weight: 700;
     display: flex;
     align-items: center;
-    gap: 4px;
-    opacity: 0.85;
+    justify-content: space-between;
+    color: #2563eb;
+    padding-top: 8px;
+    border-top: 1px solid #f8fafc;
 }
 
 /* Footer & Toolbar */
 .summary-footer-bar {
-    margin-top: 20px;
+    margin-top: 18px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
     gap: 12px;
+    padding-top: 14px;
+    border-top: 1px solid #f1f5f9;
 }
 
 .btn-breakdown-page {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 18px;
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    padding: 8px 16px;
+    background: #2563eb;
     color: #ffffff;
     border: none;
-    border-radius: var(--radius-sm);
+    border-radius: 7px;
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
-    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(37, 99, 235, 0.2);
+    transition: all 0.15s ease;
 }
 
 .btn-breakdown-page:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+    background: #1d4ed8;
+    box-shadow: 0 3px 8px rgba(37, 99, 235, 0.3);
 }
 
 .btn-quick-preview {
-    padding: 8px 14px;
-    background: var(--slate-100);
-    border: 1px solid var(--slate-300);
-    border-radius: var(--radius-sm);
-    font-size: 12px;
+    padding: 7px 14px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    font-size: 12.5px;
     font-weight: 600;
-    color: var(--slate-700);
+    color: #334155;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
 }
 
 .btn-quick-preview:hover {
-    background: var(--slate-200);
+    background: #f8fafc;
+    color: #0f172a;
+    border-color: #94a3b8;
 }
 
 /* Detailed Orders Inline Preview Table */
 .summary-table-container {
     margin-top: 16px;
-    border: 1px solid var(--slate-200);
-    border-radius: var(--radius-md);
+    border: 1px solid var(--slate-200, #e2e8f0);
+    border-radius: 8px;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    box-shadow: var(--shadow-xs);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
 .summary-table {
@@ -319,24 +330,25 @@
 
 .summary-table th {
     padding: 11px 14px;
-    background-color: var(--slate-50);
-    color: var(--slate-600);
+    background-color: var(--slate-50, #f8fafc);
+    color: var(--slate-600, #475569);
     font-weight: 700;
-    border-bottom: 2px solid var(--slate-200);
+    border-bottom: 1px solid var(--slate-200, #e2e8f0);
 }
 
 .summary-table td {
     padding: 11px 14px;
-    border-bottom: 1px solid var(--slate-100);
+    border-bottom: 1px solid var(--slate-100, #f1f5f9);
+    color: var(--slate-700, #334155);
 }
 
 .summary-table tr:hover {
-    background-color: var(--slate-50);
+    background-color: #f8fafc;
 }
 
 .status-pill {
     padding: 2px 7px;
-    border-radius: var(--radius-sm);
+    border-radius: 4px;
     font-size: 11px;
     font-weight: 600;
     display: inline-block;
@@ -354,6 +366,6 @@
     }
     .summary-chip {
         flex: 1;
-        min-width: 100px;
+        min-width: 90px;
     }
 }

@@ -215,15 +215,15 @@ async function runTests() {
         });
         assert(assignRes.status === 200, "Order assignment returns 200");
         assert(assignRes.data.order.summary.unassigned === 1, "Unassigned count updated to 1");
-        assert(assignRes.data.order.summary.pendingPayment === 3, "Pending payment count updated to 3");
+        assert(assignRes.data.order.summary.assigned === 3, "Assigned count updated to 3");
 
-        // 9. Executive Fetching Pending Payment Orders
-        console.log("\n👉 Test 9: Executive Fetching Pending Payment Orders");
-        const execPendingPayment = await request("/executive/orders/pending_payment", {
+        // 9. Executive Fetching Assigned Orders
+        console.log("\n👉 Test 9: Executive Fetching Assigned Orders");
+        const execAssignedCheck = await request("/executive/orders/assigned", {
             headers: execHeaders,
         });
-        assert(execPendingPayment.status === 200, "Pending payment orders returns 200");
-        assert(execPendingPayment.data.orders.some((o) => o._id === orderId), "Assigned order appears in pending payment list");
+        assert(execAssignedCheck.status === 200, "Assigned orders returns 200");
+        assert(execAssignedCheck.data.orders.some((o) => o._id === orderId), "Assigned order appears in assigned list");
 
         // 10. Executive Altering / Unassigning 1 Wrongly Assigned Unit Back to Pending
         console.log("\n👉 Test 10: Executive Reverting Wrongly Assigned Unit Back to Pending");
@@ -238,7 +238,7 @@ async function runTests() {
         });
         assert(unassignRes.status === 200, "Unassign returns 200");
         assert(unassignRes.data.order.summary.unassigned === 2, "Unassigned count increased back to 2");
-        assert(unassignRes.data.order.summary.pendingPayment === 2, "Pending payment count decreased to 2");
+        assert(unassignRes.data.order.summary.assigned === 2, "Assigned count decreased to 2");
 
         // Reassign that unit back to mediator (now 3 units in pending_payment)
         await request(`/executive/order/assign/${orderId}`, {

@@ -11,6 +11,7 @@ if (!rawApiUrl.endsWith("/api")) {
 
 const api = axios.create({
     baseURL: rawApiUrl,
+    timeout: 30000,
 });
 
 api.interceptors.request.use((config)=>{
@@ -19,5 +20,13 @@ api.interceptors.request.use((config)=>{
         config.headers.Authorization=`Bearer ${token}`;
     }
     return config;
-})
+});
+
+// Non-blocking background health check to pre-warm backend connection
+if (typeof window !== "undefined") {
+    setTimeout(() => {
+        api.get("/health").catch(() => {});
+    }, 50);
+}
+
 export default api;

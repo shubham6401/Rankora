@@ -3,6 +3,7 @@ import { fetchAllExecutiveCompletedOrders } from "../../services/executive/order
 import { useNavigate } from "react-router-dom";
 import OrderCard from "../../component/executive/OrderCard";
 import OrderFilters from "../../component/executive/OrderFilters";
+import PipelineStepper from "../../component/layout/PipelineStepper";
 import "../../styles/ordersTable.css";
 
 export default function CompletedOrders() {
@@ -60,13 +61,16 @@ export default function CompletedOrders() {
 
     return (
         <div className="table-page-container">
+            {/* Visual Pipeline Stepper */}
+            <PipelineStepper role="executive" />
+
             {/* Header */}
             <div className="table-page-header">
                 <div className="table-header-info">
-                    <span className="table-page-badge">Settled & Delivered</span>
-                    <h1 className="table-page-title">🎉 Completed Orders Archive</h1>
+                    <span className="table-page-badge">Stage 6</span>
+                    <h1 className="table-page-title">Completed Orders</h1>
                     <p className="table-page-subtitle">
-                        Successfully fulfilled campaigns with verified product reviews, delivery receipts, and finalized refunds.
+                        Archived orders with verified reviews and refunds.
                     </p>
                 </div>
                 <div className="table-header-actions">
@@ -75,7 +79,7 @@ export default function CompletedOrders() {
                         className="nav-btn nav-btn-default"
                         onClick={() => navigate("/dashboard-executive")}
                     >
-                        ← Executive Dashboard
+                        ← Dashboard
                     </button>
                     <button
                         type="button"
@@ -90,12 +94,12 @@ export default function CompletedOrders() {
             {/* Metrics */}
             <div className="table-metrics-bar">
                 <div className="metric-card">
-                    <span className="metric-label">Completed Batches</span>
+                    <span className="metric-label">Orders</span>
                     <span className="metric-value metric-value-primary">{orders.length}</span>
                 </div>
                 <div className="metric-card">
-                    <span className="metric-label">Total Verified & Delivered Units</span>
-                    <span className="metric-value metric-value-emerald">{totalUnits} Units</span>
+                    <span className="metric-label">Total Units</span>
+                    <span className="metric-value">{totalUnits}</span>
                 </div>
             </div>
 

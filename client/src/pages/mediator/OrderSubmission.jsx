@@ -44,7 +44,8 @@ export default function OrderSubmission() {
             });
 
             await mediatorOrderSubmit(id, data);
-            navigate("/mediator-refund_pending-orders", { replace: true });
+            alert("✓ Unit placement details submitted successfully!");
+            navigate("/mediator-pending-orders", { replace: true });
         } catch (err) {
             console.error("Error submitting order details:", err);
             setError(err.response?.data?.message || "Error submitting order details. Please try again.");
@@ -75,6 +76,8 @@ export default function OrderSubmission() {
         );
     }
 
+    const unitsLeft = (order.orderUnits || []).filter((u) => u.status === "in_progress").length;
+
     return (
         <div className="form-page-container">
             <button
@@ -90,7 +93,7 @@ export default function OrderSubmission() {
                     <span className="form-header-badge badge-emerald">Fulfillment Stage</span>
                     <h1 className="form-title">Submit Order Placement Details</h1>
                     <p className="form-subtitle">
-                        Record the e-commerce purchase details and order confirmation screenshot to move this order into In-Progress.
+                        Record the e-commerce purchase details and order confirmation screenshot for this unit.
                     </p>
                 </div>
 
@@ -115,6 +118,10 @@ export default function OrderSubmission() {
                         </div>
                         <div className="context-item">
                             <span className="context-label">Price: </span>₹{order.price}
+                        </div>
+                        <div className="context-item">
+                            <span className="context-label">Units Left: </span>
+                            <b style={{ color: "var(--primary-600)" }}>{unitsLeft || 1} Unit(s) Remaining</b>
                         </div>
                         <div className="context-item">
                             <span className="context-label">Executive: </span>{order.executiveName || "N/A"}

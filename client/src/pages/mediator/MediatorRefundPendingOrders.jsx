@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { FetchAllRefund_PendingOrders } from "../../services/mediator/orders";
 import { useNavigate } from "react-router-dom";
+import PipelineStepper from "../../component/layout/PipelineStepper";
 import "../../styles/ordersTable.css";
 
 export default function MediatorRefundPendingOrders() {
@@ -43,17 +44,20 @@ export default function MediatorRefundPendingOrders() {
 
     return (
         <div className="table-page-container">
+            {/* Visual Pipeline Stepper */}
+            <PipelineStepper role="mediator" />
+
             {/* TOP HEADER */}
             <div className="table-page-header">
                 <div className="table-header-info">
                     <span className="table-page-badge" style={{ background: "#faf5ff", color: "#7c3aed", borderColor: "#e9d8fd" }}>
-                        Mediator Portal
+                        Stage 3 of Mediator Pipeline
                     </span>
                     <h1 className="table-page-title">
-                        📦 Orders with Refund Pending
+                        📦 Stage 3: Orders with Refund Pending
                     </h1>
                     <p className="table-page-subtitle">
-                        Placed orders currently awaiting delivery and review proof submissions for refund reimbursement.
+                        Placed orders awaiting delivery and review proof submissions for refund reimbursement.
                     </p>
                 </div>
                 <div className="table-header-actions">
@@ -109,6 +113,7 @@ export default function MediatorRefundPendingOrders() {
                                     <th>Brand</th>
                                     <th>Platform</th>
                                     <th>Price</th>
+                                    <th>Units Left</th>
                                     <th>Order ID</th>
                                     <th>Reviewer</th>
                                     <th>Created On</th>
@@ -122,6 +127,7 @@ export default function MediatorRefundPendingOrders() {
                                     const pendingRefundUnits = (order.orderUnits || []).filter(
                                         (u) => u.status === "pending_refund"
                                     );
+                                    const count = pendingRefundUnits.length;
                                     const primaryUnit = pendingRefundUnits[0] || {};
                                     const orderIdDisplay = primaryUnit.orderId || order.orderId || "Submitted";
                                     const reviewerDisplay = primaryUnit.reviewerName || order.reviewerName || "N/A";
@@ -134,6 +140,11 @@ export default function MediatorRefundPendingOrders() {
                                             <td>{order.brand}</td>
                                             <td>{order.orderPlatform}</td>
                                             <td className="price-pill">₹{order.price}</td>
+                                            <td>
+                                                <span className="qty-pill qty-pill-warning">
+                                                    {count} {count === 1 ? "Unit Left" : "Units Left"}
+                                                </span>
+                                            </td>
                                             <td style={{ fontWeight: 700, color: "var(--primary-600)" }}>
                                                 {orderIdDisplay}
                                             </td>
@@ -146,15 +157,18 @@ export default function MediatorRefundPendingOrders() {
                                             </td>
                                             <td>{order.teamCode || "N/A"}</td>
                                             <td style={{ textAlign: "center" }}>
-                                                <div className="action-btn-group" style={{ justifyContent: "center" }}>
+                                                <div className="action-btn-group" style={{ justifyContent: "center", flexWrap: "wrap", gap: "6px" }}>
                                                     <button
-                                                        onClick={() => navigate(`/mediator-refund-submission/${order._id}`)}
+                                                        type="button"
+                                                        onClick={() => navigate(`/mediator-refund-submission/${pendingRefundUnits[0]?._id || order._id}`)}
                                                         className="table-btn table-btn-primary"
                                                         style={{ background: "#7c3aed" }}
+                                                        title={count > 1 ? `Submit delivery review proof (${count} units remaining)` : "Submit delivery review proof"}
                                                     >
                                                         Submit Delivery Proof
                                                     </button>
                                                     <button
+                                                        type="button"
                                                         onClick={() => navigate(`/order/${order._id}`)}
                                                         className="table-btn table-btn-outline"
                                                     >

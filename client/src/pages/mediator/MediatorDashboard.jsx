@@ -1,115 +1,203 @@
 import { useNavigate } from "react-router-dom";
-import Logout from "../../component/Logout";
 import EarningTable from "../../component/mediator/EarningTable";
 import MediatorOrderSummary from "../../component/mediator/MediatorOrderSummary";
+import PipelineStepper from "../../component/layout/PipelineStepper";
 import "../../styles/dashboard.css";
+import "../../styles/appLayout.css";
 
 export default function MediatorDashboard() {
     const navigate = useNavigate();
     const user = JSON.parse(localStorage.getItem("user")) || {};
 
     return (
-        <div className="dashboard-container">
-            {/* HEADER CARD */}
-            <div className="dashboard-header-card">
+        <div className="dashboard-container" style={{ padding: 0 }}>
+            {/* HEADER */}
+            <div className="dashboard-header-card" style={{ marginBottom: "20px" }}>
                 <div>
-                    <h1 className="dashboard-header-title">Mediator Dashboard</h1>
+                    <h1 className="dashboard-header-title">
+                        Mediator Dashboard
+                    </h1>
                     <div className="dashboard-meta-bar">
-                        <span>Welcome: <b>{user.name || "Mediator"}</b></span> &nbsp;|&nbsp;
-                        <span>Team Code: <b>{user.teamCode || "N/A"}</b></span> &nbsp;|&nbsp;
-                        <span>Mediator Code: <b className="dashboard-meta-pill">{user.mediatorCode || "N/A"}</b></span>
+                        <span>User: <b>{user.name || "Mediator"}</b></span>
+                        <span style={{ color: "#cbd5e1" }}>•</span>
+                        <span>Team: <b>{user.teamCode || "N/A"}</b></span>
+                        <span style={{ color: "#cbd5e1" }}>•</span>
+                        <span>Code: <b className="dashboard-meta-pill">{user.mediatorCode || "N/A"}</b></span>
                     </div>
                 </div>
 
                 <div>
-                    <Logout />
-                </div>
-            </div>
-
-            {/* ORDER & QUANTITY SUMMARY */}
-            <MediatorOrderSummary />
-
-            {/* QUICK NAVIGATION ACTION CARDS */}
-            <div className="dashboard-actions-card" style={{ marginTop: 0, marginBottom: "24px" }}>
-                <div className="dashboard-section-header">
-                    <h2 className="dashboard-section-title">⚡ Navigation & Order Stages</h2>
-                </div>
-
-                <div className="dashboard-action-grid">
                     <button
                         type="button"
                         onClick={() => navigate("/mediator-neworders")}
-                        className="dash-btn dash-btn-primary"
-                        style={{ background: "#ebf8ff", color: "#2b6cb0", borderColor: "#bee3f8" }}
+                        className="app-btn app-btn-primary app-btn-lg"
+                        style={{ fontWeight: "700" }}
                     >
-                        📥 New Assigned Orders
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() => navigate("/mediator-pending-payment")}
-                        className="dash-btn dash-btn-amber"
-                        style={{ background: "#fffaf0", color: "#c05621", borderColor: "#feebc8" }}
-                    >
-                        💳 Payment Pending (Refunds)
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() => navigate("/mediator-pending-orders")}
-                        className="dash-btn dash-btn-orange"
-                        style={{ background: "#feebc8", color: "#c05621", borderColor: "#fbd38d" }}
-                    >
-                        ⏳ In-Progress Orders
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() => navigate("/mediator-refund_pending-orders")}
-                        className="dash-btn dash-btn-purple"
-                    >
-                        🔄 Pending Refund Orders
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() => navigate("/mediator-completed-orders")}
-                        className="dash-btn dash-btn-emerald"
-                    >
-                        ✅ Completed Orders
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() => navigate("/mediator-earnings")}
-                        className="dash-btn"
-                        style={{ background: "#fefcbf", color: "#744210", borderColor: "#faf089" }}
-                    >
-                        💰 View Earning Table
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() => navigate("/mediator-balance")}
-                        className="dash-btn dash-btn-teal"
-                        style={{ background: "#f0fdfa", color: "#0f766e", borderColor: "#99f6e4" }}
-                    >
-                        ⚖️ Balance Settlement
+                        📥 New Offers
                     </button>
                 </div>
             </div>
 
-            {/* EMBEDDED EARNING TABLE SECTION */}
-            <div className="dashboard-actions-card" style={{ marginTop: 0 }}>
-                <div className="dashboard-section-header">
-                    <h2 className="dashboard-section-title">📊 Financial Breakdown & Earnings</h2>
+            {/* METRICS */}
+            <MediatorOrderSummary />
+
+            {/* PIPELINE STEPPER */}
+            <PipelineStepper role="mediator" />
+
+            {/* ACTION HUBS */}
+            <div className="action-hubs-container" style={{ marginBottom: "24px" }}>
+                {/* STAGES */}
+                <div className="action-hub-section">
+                    <div className="action-hub-header" style={{ marginBottom: "14px", paddingBottom: "10px" }}>
+                        <h2 className="action-hub-title">
+                            📦 Order Stages
+                        </h2>
+                    </div>
+
+                    <div className="action-cards-grid">
+                        <div
+                            className="action-card"
+                            onClick={() => navigate("/mediator-neworders")}
+                        >
+                            <div className="action-card-top">
+                                <div className="action-card-icon">📥</div>
+                                <div>
+                                    <span style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>Stage 1</span>
+                                    <h3 className="action-card-title">New Offers</h3>
+                                </div>
+                            </div>
+                            <div className="action-card-footer">
+                                <span>Review</span>
+                                <span>→</span>
+                            </div>
+                        </div>
+
+                        <div
+                            className="action-card"
+                            onClick={() => navigate("/mediator-pending-orders")}
+                        >
+                            <div className="action-card-top">
+                                <div className="action-card-icon">🚀</div>
+                                <div>
+                                    <span style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>Stage 2</span>
+                                    <h3 className="action-card-title">In Progress</h3>
+                                </div>
+                            </div>
+                            <div className="action-card-footer">
+                                <span>Manage</span>
+                                <span>→</span>
+                            </div>
+                        </div>
+
+                        <div
+                            className="action-card"
+                            onClick={() => navigate("/mediator-refund_pending-orders")}
+                        >
+                            <div className="action-card-top">
+                                <div className="action-card-icon">🔄</div>
+                                <div>
+                                    <span style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>Stage 3</span>
+                                    <h3 className="action-card-title">Pending Refund</h3>
+                                </div>
+                            </div>
+                            <div className="action-card-footer">
+                                <span>Track</span>
+                                <span>→</span>
+                            </div>
+                        </div>
+
+                        <div
+                            className="action-card"
+                            onClick={() => navigate("/mediator-completed-orders")}
+                        >
+                            <div className="action-card-top">
+                                <div className="action-card-icon">✅</div>
+                                <div>
+                                    <span style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>Stage 4</span>
+                                    <h3 className="action-card-title">Completed</h3>
+                                </div>
+                            </div>
+                            <div className="action-card-footer">
+                                <span>View</span>
+                                <span>→</span>
+                            </div>
+                        </div>
+
+                        <div
+                            className="action-card"
+                            onClick={() => navigate("/mediator-pending-payment")}
+                        >
+                            <div className="action-card-top">
+                                <div className="action-card-icon">💳</div>
+                                <div>
+                                    <span style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>Stage 5</span>
+                                    <h3 className="action-card-title">Return Refunds</h3>
+                                </div>
+                            </div>
+                            <div className="action-card-footer">
+                                <span>Upload</span>
+                                <span>→</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* FINANCE */}
+                <div className="action-hub-section">
+                    <div className="action-hub-header" style={{ marginBottom: "14px", paddingBottom: "10px" }}>
+                        <h2 className="action-hub-title">
+                            💰 Finance & Earnings
+                        </h2>
+                    </div>
+
+                    <div className="action-cards-grid">
+                        <div
+                            className="action-card"
+                            onClick={() => navigate("/mediator-earnings")}
+                        >
+                            <div className="action-card-top">
+                                <div className="action-card-icon">📊</div>
+                                <div>
+                                    <h3 className="action-card-title">Earnings</h3>
+                                </div>
+                            </div>
+                            <div className="action-card-footer">
+                                <span>Open</span>
+                                <span>→</span>
+                            </div>
+                        </div>
+
+                        <div
+                            className="action-card"
+                            onClick={() => navigate("/mediator-balance")}
+                        >
+                            <div className="action-card-top">
+                                <div className="action-card-icon">⚖️</div>
+                                <div>
+                                    <h3 className="action-card-title">Balance Settlement</h3>
+                                </div>
+                            </div>
+                            <div className="action-card-footer">
+                                <span>Manage</span>
+                                <span>→</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* EARNING TABLE */}
+            <div className="action-hub-section">
+                <div className="action-hub-header" style={{ marginBottom: "14px" }}>
+                    <div>
+                        <h2 className="action-hub-title">📊 Earnings Preview</h2>
+                    </div>
                     <button
                         type="button"
                         onClick={() => navigate("/mediator-earnings")}
-                        className="btn-quick-preview"
-                        style={{ backgroundColor: "var(--primary-600)", color: "#ffffff", border: "none", fontWeight: "700" }}
+                        className="app-btn app-btn-primary app-btn-sm"
                     >
-                        Open Full Earning Page ↗
+                        Full Page ↗
                     </button>
                 </div>
 

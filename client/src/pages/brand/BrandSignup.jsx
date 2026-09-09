@@ -38,7 +38,7 @@ export default function BrandSignup() {
             setSuccessMsg("Brand account registered successfully! Redirecting to login...");
             setTimeout(() => {
                 navigate("/login-brand", { replace: true });
-            }, 1200);
+            }, 300);
         } catch (err) {
             console.error("Brand signup error:", err);
             setError(err.response?.data?.message || "Failed to register brand partner. Please check details.");

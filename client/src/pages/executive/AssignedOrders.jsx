@@ -3,6 +3,7 @@ import { fetchAllExecutiveAssignedOrders } from "../../services/executive/order"
 import { useNavigate } from "react-router-dom";
 import AssignedOrderCard from "../../component/executive/AssignedOrderCard";
 import OrderFilters from "../../component/executive/OrderFilters";
+import PipelineStepper from "../../component/layout/PipelineStepper";
 import "../../styles/ordersTable.css";
 
 export default function AssignedOrders() {
@@ -60,13 +61,16 @@ export default function AssignedOrders() {
 
     return (
         <div className="table-page-container">
+            {/* Visual Pipeline Stepper */}
+            <PipelineStepper role="executive" />
+
             {/* Header */}
             <div className="table-page-header">
                 <div className="table-header-info">
-                    <span className="table-page-badge">Fulfillment Pipeline</span>
-                    <h1 className="table-page-title">🤝 Mediator Assigned Orders</h1>
+                    <span className="table-page-badge">Stage 3</span>
+                    <h1 className="table-page-title">Assigned Orders</h1>
                     <p className="table-page-subtitle">
-                        Units assigned with advance payment proof forwarded to mediators for order placement.
+                        Orders forwarded to mediators, awaiting acceptance.
                     </p>
                 </div>
                 <div className="table-header-actions">
@@ -75,14 +79,14 @@ export default function AssignedOrders() {
                         className="nav-btn nav-btn-default"
                         onClick={() => navigate("/dashboard-executive")}
                     >
-                        ← Executive Dashboard
+                        ← Dashboard
                     </button>
                     <button
                         type="button"
-                        className="nav-btn nav-btn-emerald"
+                        className="nav-btn nav-btn-default"
                         onClick={() => navigate("/executive-in_progress-order")}
                     >
-                        In Progress Orders →
+                        In Progress →
                     </button>
                 </div>
             </div>
@@ -90,12 +94,12 @@ export default function AssignedOrders() {
             {/* Metrics */}
             <div className="table-metrics-bar">
                 <div className="metric-card">
-                    <span className="metric-label">Assigned Batches</span>
+                    <span className="metric-label">Orders</span>
                     <span className="metric-value metric-value-primary">{orders.length}</span>
                 </div>
                 <div className="metric-card">
-                    <span className="metric-label">Total Assigned Units</span>
-                    <span className="metric-value metric-value-amber">{totalAssignedUnits} Units</span>
+                    <span className="metric-label">Total Units</span>
+                    <span className="metric-value">{totalAssignedUnits}</span>
                 </div>
             </div>
 

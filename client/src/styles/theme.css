@@ -23,36 +23,36 @@
     --slate-800: #1e293b;
     --slate-900: #0f172a;
 
-    /* Status Color Tokens */
+    /* Status Color Tokens (Refined, Subtle, Modern SaaS Palette) */
     --status-pending-bg: #f8fafc;
-    --status-pending-border: #cbd5e1;
-    --status-pending-text: #334155;
+    --status-pending-border: #e2e8f0;
+    --status-pending-text: #475569;
     --status-pending-bar: #94a3b8;
 
-    --status-pay-bg: #fffbeb;
-    --status-pay-border: #fcd34d;
+    --status-pay-bg: #ffffff;
+    --status-pay-border: #e2e8f0;
     --status-pay-text: #b45309;
     --status-pay-bar: #f59e0b;
 
-    --status-assigned-bg: #fff7ed;
-    --status-assigned-border: #fdba74;
-    --status-assigned-text: #c2410c;
-    --status-assigned-bar: #f97316;
+    --status-assigned-bg: #ffffff;
+    --status-assigned-border: #e2e8f0;
+    --status-assigned-text: #1d4ed8;
+    --status-assigned-bar: #3b82f6;
 
-    --status-inprog-bg: #f0fdfa;
-    --status-inprog-border: #99f6e4;
-    --status-inprog-text: #0f766e;
-    --status-inprog-bar: #14b8a6;
+    --status-inprog-bg: #ffffff;
+    --status-inprog-border: #e2e8f0;
+    --status-inprog-text: #2563eb;
+    --status-inprog-bar: #2563eb;
 
-    --status-refund-bg: #faf5ff;
-    --status-refund-border: #d8b4fe;
+    --status-refund-bg: #ffffff;
+    --status-refund-border: #e2e8f0;
     --status-refund-text: #7e22ce;
-    --status-refund-bar: #a855f7;
+    --status-refund-bar: #8b5cf6;
 
-    --status-completed-bg: #f0fdf4;
-    --status-completed-border: #86efac;
+    --status-completed-bg: #ffffff;
+    --status-completed-border: #e2e8f0;
     --status-completed-text: #15803d;
-    --status-completed-bar: #22c55e;
+    --status-completed-bar: #10b981;
 
     /* Elevation & Shadows */
     --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);

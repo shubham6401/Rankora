@@ -4,6 +4,7 @@ import {
     fetchMediatorPendingPaymentOrders,
     submitMediatorPaymentProof,
 } from "../../services/mediator/orders";
+import PipelineStepper from "../../component/layout/PipelineStepper";
 import "../../styles/ordersTable.css";
 
 export default function MediatorPendingPayment() {
@@ -106,17 +107,20 @@ export default function MediatorPendingPayment() {
 
     return (
         <div className="table-page-container">
+            {/* Visual Pipeline Stepper */}
+            <PipelineStepper role="mediator" />
+
             {/* TOP HEADER */}
             <div className="table-page-header">
                 <div className="table-header-info">
                     <span className="table-page-badge" style={{ background: "#fff1f2", color: "#e11d48", borderColor: "#fecdd3" }}>
-                        Mediator Refunds
+                        Stage 5 of Mediator Pipeline
                     </span>
                     <h1 className="table-page-title">
-                        💳 Payment Pending (Refunds to Executive)
+                        💳 Stage 5: Payment Pending (Refunds to Executive)
                     </h1>
                     <p className="table-page-subtitle">
-                        Orders where you rejected units and need to submit the refund payment screenshot and message to the executive.
+                        Units where you rejected offers and need to upload refund payment proof to the executive.
                     </p>
                 </div>
                 <div className="table-header-actions">

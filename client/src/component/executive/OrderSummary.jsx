@@ -83,76 +83,77 @@ export default function OrderSummary({ orders = [] }) {
 
     const statusCards = [
         {
-            title: "Pending / Unassigned",
-            icon: "⏳",
+            title: "Unassigned",
+            subtitle: "Stage 1",
+            icon: "📦",
             units: unassignedUnits,
             ordersCount: unassignedOrders,
             path: "/executive-pending-order",
             className: "status-card-pending",
-            barColor: "var(--status-pending-bar)",
+            barColor: "#94a3b8",
         },
         {
-            title: "Pending Payment",
-            subtitle: "Advance to Mediator",
+            title: "Advance Payment",
+            subtitle: "Stage 2",
             icon: "💳",
             units: pendingPaymentUnits,
             ordersCount: pendingPaymentOrders,
             path: "/executive-pending-payment",
             className: "status-card-pay",
-            barColor: "var(--status-pay-bar)",
+            barColor: "#f59e0b",
         },
         {
             title: "Assigned",
-            subtitle: "Awaiting Acceptance",
+            subtitle: "Stage 3",
             icon: "📤",
             units: assignedUnits,
             ordersCount: assignedOrders,
             path: "/executive-assigned-order",
             className: "status-card-assigned",
-            barColor: "var(--status-assigned-bar)",
+            barColor: "#3b82f6",
         },
         {
             title: "In Progress",
-            subtitle: "Active Ordering",
+            subtitle: "Stage 4",
             icon: "🚀",
             units: inProgressUnits,
             ordersCount: inProgressOrders,
             path: "/executive-in_progress-order",
             className: "status-card-inprog",
-            barColor: "var(--status-inprog-bar)",
+            barColor: "#2563eb",
         },
         {
             title: "Pending Refund",
-            subtitle: "Verification",
+            subtitle: "Stage 5",
             icon: "🔄",
             units: pendingRefundUnits,
             ordersCount: pendingRefundOrders,
             path: "/executive-pending_refund-order",
             className: "status-card-refund",
-            barColor: "var(--status-refund-bar)",
+            barColor: "#8b5cf6",
         },
         {
             title: "Completed",
-            subtitle: "Fully Executed",
+            subtitle: "Stage 6",
             icon: "✅",
             units: completedUnits,
             ordersCount: completedOrders,
             path: "/executive-completed-order",
             className: "status-card-completed",
-            barColor: "var(--status-completed-bar)",
+            barColor: "#10b981",
         },
     ];
 
     return (
         <div className="summary-wrapper">
-            {/* HERO HEADER & KEY METRIC PILLS */}
+            {/* HEADER & KEY METRICS */}
             <div className="summary-header">
                 <div>
                     <h2 className="summary-title">
-                        📊 Executive Order Portfolio & Quantity Summary
+                        📊 Order Summary
                     </h2>
                     <p className="summary-subtitle">
-                        Real-time tracking of orders, individual unit quantities, pipeline stages, and valuations
+                        Units, pipeline stages, and total value
                     </p>
                 </div>
 
@@ -162,7 +163,7 @@ export default function OrderSummary({ orders = [] }) {
                         <div className="summary-chip-val">{totalOrders}</div>
                     </div>
                     <div className="summary-chip summary-chip-blue">
-                        <div className="summary-chip-label">Total Quantity</div>
+                        <div className="summary-chip-label">Total Units</div>
                         <div className="summary-chip-val">
                             {totalQuantity} <span className="summary-chip-val-sub">Units</span>
                         </div>
@@ -172,8 +173,8 @@ export default function OrderSummary({ orders = [] }) {
                         <div className="summary-chip-val">₹{totalValue.toLocaleString()}</div>
                     </div>
                     <div className="summary-chip">
-                        <div className="summary-chip-label">Completed Rate</div>
-                        <div className="summary-chip-val" style={{ color: "#4ade80" }}>{completionRate}%</div>
+                        <div className="summary-chip-label">Completed</div>
+                        <div className="summary-chip-val" style={{ color: "#16a34a" }}>{completionRate}%</div>
                     </div>
                 </div>
             </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { FetchAllCompletedOrders } from "../../services/mediator/orders";
 import { useNavigate } from "react-router-dom";
+import PipelineStepper from "../../component/layout/PipelineStepper";
 import "../../styles/ordersTable.css";
 
 export default function MediatorCompletedOrders() {
@@ -43,14 +44,17 @@ export default function MediatorCompletedOrders() {
 
     return (
         <div className="table-page-container">
+            {/* Visual Pipeline Stepper */}
+            <PipelineStepper role="mediator" />
+
             {/* TOP HEADER */}
             <div className="table-page-header">
                 <div className="table-header-info">
                     <span className="table-page-badge" style={{ background: "#ecfdf5", color: "#059669", borderColor: "#a7f3d0" }}>
-                        Mediator Portal
+                        Stage 4 of Mediator Pipeline
                     </span>
                     <h1 className="table-page-title">
-                        ✅ Completed Orders
+                        ✅ Stage 4: Completed Orders Archive
                     </h1>
                     <p className="table-page-subtitle">
                         Archived orders where order placement and refund post-delivery details were successfully fulfilled.

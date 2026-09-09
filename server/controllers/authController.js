@@ -22,7 +22,7 @@ const loginMediator = async (req, res, next) => {
             });
         }
 
-        const existingUser = await User.findOne({ mediatorCode, role: "mediator" });
+        const existingUser = await User.findOne({ mediatorCode, role: "mediator" }).lean();
         if (!existingUser) {
             return res.status(401).json({
                 success: false,
@@ -83,7 +83,7 @@ const signupMediator = async (req, res, next) => {
             });
         }
 
-        const existingUser = await User.findOne({ mediatorCode });
+        const existingUser = await User.exists({ mediatorCode });
         if (existingUser) {
             return res.status(400).json({
                 success: false,
@@ -91,7 +91,7 @@ const signupMediator = async (req, res, next) => {
             });
         }
 
-        const hashedPass = await bcrypt.hash(password, 10);
+        const hashedPass = await bcrypt.hash(password, 8);
         const newUser = await User.create({
             name,
             mediatorCode,
@@ -133,7 +133,7 @@ const loginExecutive = async (req, res, next) => {
         const existingUser = await User.findOne({
             teamCode,
             role: "executive",
-        });
+        }).lean();
 
         if (!existingUser) {
             return res.status(401).json({
@@ -184,7 +184,7 @@ const signupExecutive = async (req, res, next) => {
             });
         }
 
-        const existingUser = await User.findOne({ teamCode });
+        const existingUser = await User.exists({ teamCode });
         if (existingUser) {
             return res.status(400).json({
                 success: false,
@@ -192,7 +192,7 @@ const signupExecutive = async (req, res, next) => {
             });
         }
 
-        const hashedPass = await bcrypt.hash(password, 10);
+        const hashedPass = await bcrypt.hash(password, 8);
         const user = await User.create({
             name,
             password: hashedPass,
@@ -232,7 +232,7 @@ const loginBrand = async (req, res, next) => {
         const existingUser = await User.findOne({
             brand,
             role: "brand",
-        });
+        }).lean();
 
         if (!existingUser) {
             return res.status(401).json({
@@ -283,7 +283,7 @@ const signupBrand = async (req, res, next) => {
             });
         }
 
-        const existingUser = await User.findOne({ brand, role: "brand" });
+        const existingUser = await User.exists({ brand, role: "brand" });
         if (existingUser) {
             return res.status(400).json({
                 success: false,
@@ -291,7 +291,7 @@ const signupBrand = async (req, res, next) => {
             });
         }
 
-        const hashedPass = await bcrypt.hash(password, 10);
+        const hashedPass = await bcrypt.hash(password, 8);
         const user = await User.create({
             name,
             password: hashedPass,

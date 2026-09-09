@@ -3,6 +3,7 @@ import { fetchAllExecutivePending_RefundOrders } from "../../services/executive/
 import { useNavigate } from "react-router-dom";
 import OrderCard from "../../component/executive/OrderCard";
 import OrderFilters from "../../component/executive/OrderFilters";
+import PipelineStepper from "../../component/layout/PipelineStepper";
 import "../../styles/ordersTable.css";
 
 export default function Pending_refundOrders() {
@@ -60,13 +61,16 @@ export default function Pending_refundOrders() {
 
     return (
         <div className="table-page-container">
+            {/* Visual Pipeline Stepper */}
+            <PipelineStepper role="executive" />
+
             {/* Header */}
             <div className="table-page-header">
                 <div className="table-header-info">
-                    <span className="table-page-badge">Refund Pipeline</span>
-                    <h1 className="table-page-title">💰 Orders with Pending Refunds</h1>
+                    <span className="table-page-badge">Stage 5</span>
+                    <h1 className="table-page-title">Pending Refund Orders</h1>
                     <p className="table-page-subtitle">
-                        Units where mediators have submitted purchase order details and are awaiting delivery & review verification.
+                        Orders awaiting review and refund verification.
                     </p>
                 </div>
                 <div className="table-header-actions">
@@ -75,11 +79,11 @@ export default function Pending_refundOrders() {
                         className="nav-btn nav-btn-default"
                         onClick={() => navigate("/dashboard-executive")}
                     >
-                        ← Executive Dashboard
+                        ← Dashboard
                     </button>
                     <button
                         type="button"
-                        className="nav-btn nav-btn-emerald"
+                        className="nav-btn nav-btn-default"
                         onClick={() => navigate("/executive-completed-order")}
                     >
                         Completed Orders →
@@ -90,12 +94,12 @@ export default function Pending_refundOrders() {
             {/* Metrics */}
             <div className="table-metrics-bar">
                 <div className="metric-card">
-                    <span className="metric-label">Batches with Pending Refund</span>
+                    <span className="metric-label">Orders</span>
                     <span className="metric-value metric-value-primary">{orders.length}</span>
                 </div>
                 <div className="metric-card">
-                    <span className="metric-label">Units in Review Verification</span>
-                    <span className="metric-value metric-value-rose">{totalUnits} Units</span>
+                    <span className="metric-label">Total Units</span>
+                    <span className="metric-value">{totalUnits}</span>
                 </div>
             </div>
 

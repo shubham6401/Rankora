@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
-import "../styles/ordersTable.css";
+import "../styles/appLayout.css";
 
-export default function Logout() {
+export default function Logout({ className }) {
     const navigate = useNavigate();
     const handleLogout = () => {
         localStorage.clear();
@@ -9,14 +9,15 @@ export default function Logout() {
     };
 
     return (
-        <div>
-            <button
-                onClick={handleLogout}
-                className="table-btn table-btn-danger"
-                style={{ padding: "8px 16px", fontSize: "13px", fontWeight: 700 }}
-            >
-                🚪 Logout
-            </button>
-        </div>
+        <button
+            type="button"
+            onClick={handleLogout}
+            className={className || "topbar-logout-btn"}
+            title="Sign out of Rankora"
+            aria-label="Logout"
+        >
+            <span>🚪</span>
+            <span>Logout</span>
+        </button>
     );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { FetchAllPendingOrders } from "../../services/mediator/orders";
 import { useNavigate } from "react-router-dom";
+import PipelineStepper from "../../component/layout/PipelineStepper";
 import "../../styles/ordersTable.css";
 
 export default function MediatorPendingOrders() {
@@ -43,12 +44,15 @@ export default function MediatorPendingOrders() {
 
     return (
         <div className="table-page-container">
+            {/* Visual Pipeline Stepper */}
+            <PipelineStepper role="mediator" />
+
             {/* TOP HEADER */}
             <div className="table-page-header">
                 <div className="table-header-info">
-                    <span className="table-page-badge">Mediator Portal</span>
+                    <span className="table-page-badge">Stage 2 of Mediator Pipeline</span>
                     <h1 className="table-page-title">
-                        ⚡ In-Progress Orders
+                        ⚡ Stage 2: In-Progress Orders
                     </h1>
                     <p className="table-page-subtitle">
                         Active orders you have accepted. Review product specs, place orders on platforms, and submit order placement proofs.
@@ -62,7 +66,7 @@ export default function MediatorPendingOrders() {
                         ← Dashboard
                     </button>
                     <button
-                        onClick={() => navigate("/mediator-new-orders")}
+                        onClick={() => navigate("/mediator-neworders")}
                         className="nav-btn nav-btn-primary"
                     >
                         + View New Offers
@@ -91,7 +95,7 @@ export default function MediatorPendingOrders() {
                         Accept new orders from the New Assigned Orders panel to start placing and managing them here.
                     </p>
                     <button
-                        onClick={() => navigate("/mediator-new-orders")}
+                        onClick={() => navigate("/mediator-neworders")}
                         className="table-btn table-btn-primary"
                     >
                         Check New Orders
@@ -110,7 +114,7 @@ export default function MediatorPendingOrders() {
                                     <th>Executive</th>
                                     <th>Created On</th>
                                     <th>Status</th>
-                                    <th>In-Progress Units</th>
+                                    <th>Units Left</th>
                                     <th>Team Code</th>
                                     <th style={{ textAlign: "center" }}>Actions</th>
                                 </tr>
@@ -120,7 +124,7 @@ export default function MediatorPendingOrders() {
                                     const inProgressUnits = (order.orderUnits || []).filter(
                                         (u) => u.status === "in_progress"
                                     );
-                                    const count = inProgressUnits.length || 1;
+                                    const count = inProgressUnits.length;
 
                                     return (
                                         <tr key={order._id}>
@@ -139,19 +143,22 @@ export default function MediatorPendingOrders() {
                                             </td>
                                             <td>
                                                 <span className="qty-pill qty-pill-warning">
-                                                    {count} {count === 1 ? "Unit" : "Units"}
+                                                    {count} {count === 1 ? "Unit Left" : "Units Left"}
                                                 </span>
                                             </td>
                                             <td>{order.teamCode || "N/A"}</td>
                                             <td style={{ textAlign: "center" }}>
-                                                <div className="action-btn-group" style={{ justifyContent: "center" }}>
+                                                <div className="action-btn-group" style={{ justifyContent: "center", flexWrap: "wrap", gap: "6px" }}>
                                                     <button
-                                                        onClick={() => navigate(`/mediator-order-submission/${order._id}`)}
+                                                        type="button"
+                                                        onClick={() => navigate(`/mediator-order-submission/${inProgressUnits[0]?._id || order._id}`)}
                                                         className="table-btn table-btn-primary"
+                                                        title={count > 1 ? `Submit details for next unit (${count} units remaining)` : "Submit placement details"}
                                                     >
-                                                        Submit Placement
+                                                        Submit Details
                                                     </button>
                                                     <button
+                                                        type="button"
                                                         onClick={() => navigate(`/order/${order._id}`)}
                                                         className="table-btn table-btn-outline"
                                                     >

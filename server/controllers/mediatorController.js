@@ -397,9 +397,21 @@ const rejectOrder = async (req, res, next) => {
             : assignedUnits.length;
 
         const now = new Date();
+        let refundRequired = false;
         for (let i = 0; i < countToReject; i++) {
-            assignedUnits[i].status = "pending_payment";
-            assignedUnits[i].rejectedAt = now;
+            const unit = assignedUnits[i];
+            if (unit.paymentScreenshot) {
+                // Advance payment exists, requires refund proof from mediator
+                unit.status = "pending_payment";
+                unit.rejectedAt = now;
+                refundRequired = true;
+            } else {
+                // Clean rejection: revert unit back to unassigned so executive can reassign
+                unit.status = "unassigned";
+                unit.mediatorId = null;
+                unit.assignedAt = null;
+                unit.rejectedAt = now;
+            }
         }
 
         order.recalculateSummary();
@@ -410,9 +422,14 @@ const rejectOrder = async (req, res, next) => {
             .populate("createdBy", "name email teamCode")
             .populate("orderUnits.mediatorId", "name mediatorCode teamCode");
 
+        const message = refundRequired
+            ? `Successfully rejected ${countToReject} unit(s). Moved to Payment Pending section for refund proof submission.`
+            : `Order offer rejected (${countToReject} units). Units returned to Unassigned pool for executive reassignment.`;
+
         return res.status(200).json({
             success: true,
-            message: `Successfully rejected ${countToReject} unit(s). Moved to Payment Pending section for refund proof submission.`,
+            message,
+            refundRequired,
             order: populatedOrder,
         });
     } catch (err) {

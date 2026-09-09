@@ -1,12 +1,13 @@
 /* Detailed Assigned Orders Breakdown Page Styles */
 
 .breakdown-page-container {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: clamp(16px, 2.5vw, 24px) clamp(12px, 2vw, 20px) 48px;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 24px 24px 48px;
     box-sizing: border-box;
     font-family: var(--font-body);
-    animation: fadeIn 0.35s ease-out;
+    animation: fadeIn 0.25s ease-out;
 }
 
 /* Header Card */

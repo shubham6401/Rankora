@@ -138,11 +138,16 @@ const assignOrder = async (req, res, next) => {
         const unitsToAssign = unassignedUnits.slice(0, assignQty);
         const now = new Date();
 
+        const paymentScreenshot = req.file?.path || req.body.paymentScreenshot || null;
+        const paymentMessage = req.body.paymentMessage || req.body.message || null;
+
         unitsToAssign.forEach((unit) => {
-            unit.status = "pending_payment";
+            unit.status = "assigned";
             unit.mediatorId = mediator._id;
             unit.assignedAt = now;
             unit.rejectedAt = null;
+            if (paymentScreenshot) unit.paymentScreenshot = paymentScreenshot;
+            if (paymentMessage) unit.paymentMessage = paymentMessage;
         });
 
         order.recalculateSummary();
@@ -471,7 +476,7 @@ const submitExecutivePayment = async (req, res, next) => {
         const teamCode = req.user.teamCode;
         const query = {
             "orderUnits.mediatorId": mediatorId,
-            "orderUnits.status": "pending_payment",
+            "orderUnits.status": { $in: ["pending_payment", "assigned"] },
             "orderUnits.rejectedAt": null,
         };
         if (teamCode) query.teamCode = teamCode;
@@ -481,7 +486,7 @@ const submitExecutivePayment = async (req, res, next) => {
         if (!orders || orders.length === 0) {
             return res.status(404).json({
                 success: false,
-                message: "No pending payment orders found for this mediator",
+                message: "No orders found to attach payment proof for this mediator",
             });
         }
 
@@ -494,7 +499,7 @@ const submitExecutivePayment = async (req, res, next) => {
             for (const unit of order.orderUnits) {
                 if (
                     unit.mediatorId?.toString() === mediatorId.toString() &&
-                    unit.status === "pending_payment" &&
+                    (unit.status === "pending_payment" || unit.status === "assigned") &&
                     !unit.rejectedAt
                 ) {
                     unit.status = "assigned";

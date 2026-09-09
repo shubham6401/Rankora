@@ -38,7 +38,7 @@ export default function SignUP() {
             setSuccessMsg("Mediator registered successfully! Redirecting to login...");
             setTimeout(() => {
                 navigate("/login-mediator");
-            }, 1200);
+            }, 300);
         } catch (err) {
             console.error("Mediator signup error:", err);
             setError(err.response?.data?.message || "Failed to register mediator. Please check your credentials.");

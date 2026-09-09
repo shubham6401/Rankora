@@ -5,6 +5,7 @@ import {
     unassignExecutiveOrderUnit,
     submitExecutivePaymentProof,
 } from "../../services/executive/order";
+import PipelineStepper from "../../component/layout/PipelineStepper";
 import "../../styles/ordersTable.css";
 
 export default function PendingPaymentOrders() {
@@ -173,13 +174,16 @@ export default function PendingPaymentOrders() {
 
     return (
         <div className="table-page-container">
+            {/* Visual Pipeline Stepper */}
+            <PipelineStepper role="executive" />
+
             {/* Header */}
             <div className="table-page-header">
                 <div className="table-header-info">
-                    <span className="table-page-badge">Settlement Queue</span>
-                    <h1 className="table-page-title">💳 Advance Payment to Mediator</h1>
+                    <span className="table-page-badge">Stage 2</span>
+                    <h1 className="table-page-title">Advance Payment</h1>
                     <p className="table-page-subtitle">
-                        Units assigned to mediators awaiting executive advance payment screenshot. Once submitted, orders are released to Assigned Orders.
+                        Upload advance payment proof for assigned mediators.
                     </p>
                 </div>
                 <div className="table-header-actions">
@@ -188,18 +192,18 @@ export default function PendingPaymentOrders() {
                         className="nav-btn nav-btn-default"
                         onClick={() => navigate("/dashboard-executive")}
                     >
-                        ← Executive Dashboard
+                        ← Dashboard
                     </button>
                     <button
                         type="button"
                         className="nav-btn nav-btn-primary"
                         onClick={() => navigate("/executive-mediator-sent-payment")}
                     >
-                        📥 Verify Mediator Refunds
+                        Verify Refunds
                     </button>
                     <button
                         type="button"
-                        className="nav-btn nav-btn-amber"
+                        className="nav-btn nav-btn-default"
                         onClick={() => navigate("/executive-assigned-order")}
                     >
                         Assigned Orders →
@@ -210,16 +214,16 @@ export default function PendingPaymentOrders() {
             {/* Metrics */}
             <div className="table-metrics-bar">
                 <div className="metric-card">
-                    <span className="metric-label">Mediators Awaiting Advance</span>
+                    <span className="metric-label">Mediators</span>
                     <span className="metric-value metric-value-primary">{mediatorGroups.length}</span>
                 </div>
                 <div className="metric-card">
-                    <span className="metric-label">Total Assigned Units</span>
-                    <span className="metric-value metric-value-amber">{totalUnitsCount} Units</span>
+                    <span className="metric-label">Total Units</span>
+                    <span className="metric-value">{totalUnitsCount}</span>
                 </div>
                 <div className="metric-card">
-                    <span className="metric-label">Total Advance Amount Due</span>
-                    <span className="metric-value metric-value-emerald">₹{totalDue.toLocaleString()}</span>
+                    <span className="metric-label">Total Amount Due</span>
+                    <span className="metric-value">₹{totalDue.toLocaleString()}</span>
                 </div>
             </div>
 

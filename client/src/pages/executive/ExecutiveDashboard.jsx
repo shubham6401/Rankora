@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchAllExecutiveOrders } from "../../services/executive/order";
 import OrderSummary from "../../component/executive/OrderSummary";
-import Logout from "../../component/Logout";
+import PipelineStepper from "../../component/layout/PipelineStepper";
 import "../../styles/dashboard.css";
+import "../../styles/appLayout.css";
 
 export default function ExecutiveDashboard() {
-    let [orders, setOrders] = useState([]);
+    const [orders, setOrders] = useState([]);
     const navigate = useNavigate();
     const user = JSON.parse(localStorage.getItem("user")) || {};
 
@@ -16,7 +17,7 @@ export default function ExecutiveDashboard() {
 
     const fetchOrders = async () => {
         try {
-            let response = await fetchAllExecutiveOrders();
+            const response = await fetchAllExecutiveOrders();
             setOrders(response.data.orders || []);
         } catch (err) {
             console.error("Failed to fetch executive orders:", err);
@@ -24,128 +25,255 @@ export default function ExecutiveDashboard() {
     };
 
     return (
-        <div className="dashboard-container">
-            {/* HEADER CARD */}
-            <div className="dashboard-header-card">
+        <div className="dashboard-container" style={{ padding: 0 }}>
+            {/* HEADER */}
+            <div className="dashboard-header-card" style={{ marginBottom: "20px" }}>
                 <div>
-                    <h1 className="dashboard-header-title">Executive Dashboard</h1>
+                    <h1 className="dashboard-header-title">
+                        Executive Dashboard
+                    </h1>
                     <div className="dashboard-meta-bar">
-                        <span>Welcome back: <b>Executive {user.name || "User"}</b></span> &nbsp;|&nbsp;
-                        <span>Team Code: <b className="dashboard-meta-pill">{user.teamCode || "N/A"}</b></span>
+                        <span>User: <b>{user.name || "Executive"}</b></span>
+                        <span style={{ color: "#cbd5e1" }}>•</span>
+                        <span>Team: <b className="dashboard-meta-pill">{user.teamCode || "N/A"}</b></span>
+                        <span style={{ color: "#cbd5e1" }}>•</span>
+                        <span>Orders: <b>{orders.length}</b></span>
                     </div>
                 </div>
 
                 <div>
-                    <Logout />
-                </div>
-            </div>
-
-            {/* ORDER SUMMARY COMPONENT */}
-            <OrderSummary orders={orders} />
-
-            {/* QUICK ACTIONS SECTION */}
-            <div className="dashboard-actions-card">
-                <div className="dashboard-section-header">
-                    <h2 className="dashboard-section-title">⚡ Actions & Order Management</h2>
-                </div>
-
-                <div className="dashboard-action-grid">
                     <button
                         type="button"
                         onClick={() => navigate("/executive-add-order")}
-                        className="dash-btn dash-btn-primary"
+                        className="app-btn app-btn-primary app-btn-lg"
+                        style={{ fontWeight: "700" }}
                     >
-                        ➕ Add New Order
+                        ➕ New Order
                     </button>
+                </div>
+            </div>
 
-                    <button
-                        type="button"
-                        onClick={() => navigate("/executive-pending-payment")}
-                        className="dash-btn dash-btn-amber"
-                    >
-                        💳 Pending Payment (Advance)
-                    </button>
+            {/* METRICS SUMMARY */}
+            <OrderSummary orders={orders} />
 
-                    <button
-                        type="button"
-                        onClick={() => navigate("/executive-mediator-sent-payment")}
-                        className="dash-btn dash-btn-sky"
-                    >
-                        📥 Mediator Sent (Verify Refund)
-                    </button>
+            {/* PIPELINE STEPPER */}
+            <PipelineStepper role="executive" />
 
-                    <button
-                        type="button"
-                        onClick={() => navigate("/executive-balance")}
-                        className="dash-btn dash-btn-teal"
-                    >
-                        ⚖️ Balance Settlement
-                    </button>
+            {/* ACTION HUBS */}
+            <div className="action-hubs-container">
+                {/* STAGES */}
+                <div className="action-hub-section">
+                    <div className="action-hub-header" style={{ marginBottom: "14px", paddingBottom: "10px" }}>
+                        <h2 className="action-hub-title">
+                            📦 Order Stages
+                        </h2>
+                    </div>
 
-                    <button
-                        type="button"
-                        onClick={() => navigate("/executive-pending-order")}
-                        className="dash-btn dash-btn-slate"
-                    >
-                        ⏳ Pending Orders
-                    </button>
+                    <div className="action-cards-grid">
+                        <div
+                            className="action-card"
+                            onClick={() => navigate("/executive-pending-order")}
+                        >
+                            <div className="action-card-top">
+                                <div className="action-card-icon">📦</div>
+                                <div>
+                                    <span style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>Stage 1</span>
+                                    <h3 className="action-card-title">Unassigned</h3>
+                                </div>
+                            </div>
+                            <div className="action-card-footer">
+                                <span>Open</span>
+                                <span>→</span>
+                            </div>
+                        </div>
 
-                    <button
-                        type="button"
-                        onClick={() => navigate("/executive-assigned-order")}
-                        className="dash-btn dash-btn-orange"
-                    >
-                        📤 Assigned Orders
-                    </button>
+                        <div
+                            className="action-card"
+                            onClick={() => navigate("/executive-pending-payment")}
+                        >
+                            <div className="action-card-top">
+                                <div className="action-card-icon">💳</div>
+                                <div>
+                                    <span style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>Stage 2</span>
+                                    <h3 className="action-card-title">Advance Payment</h3>
+                                </div>
+                            </div>
+                            <div className="action-card-footer">
+                                <span>Open</span>
+                                <span>→</span>
+                            </div>
+                        </div>
 
-                    <button
-                        type="button"
-                        onClick={() => navigate("/executive-in_progress-order")}
-                        className="dash-btn dash-btn-teal"
-                        style={{ background: "#f0fdfa", color: "#0f766e", borderColor: "#99f6e4" }}
-                    >
-                        🚀 In Progress Orders
-                    </button>
+                        <div
+                            className="action-card"
+                            onClick={() => navigate("/executive-assigned-order")}
+                        >
+                            <div className="action-card-top">
+                                <div className="action-card-icon">📤</div>
+                                <div>
+                                    <span style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>Stage 3</span>
+                                    <h3 className="action-card-title">Assigned</h3>
+                                </div>
+                            </div>
+                            <div className="action-card-footer">
+                                <span>Open</span>
+                                <span>→</span>
+                            </div>
+                        </div>
 
-                    <button
-                        type="button"
-                        onClick={() => navigate("/executive-pending_refund-order")}
-                        className="dash-btn dash-btn-purple"
-                    >
-                        🔄 Pending Refund
-                    </button>
+                        <div
+                            className="action-card"
+                            onClick={() => navigate("/executive-in_progress-order")}
+                        >
+                            <div className="action-card-top">
+                                <div className="action-card-icon">🚀</div>
+                                <div>
+                                    <span style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>Stage 4</span>
+                                    <h3 className="action-card-title">In Progress</h3>
+                                </div>
+                            </div>
+                            <div className="action-card-footer">
+                                <span>Open</span>
+                                <span>→</span>
+                            </div>
+                        </div>
 
-                    <button
-                        type="button"
-                        onClick={() => navigate("/executive-completed-order")}
-                        className="dash-btn dash-btn-emerald"
-                    >
-                        ✅ Completed Orders
-                    </button>
+                        <div
+                            className="action-card"
+                            onClick={() => navigate("/executive-pending_refund-order")}
+                        >
+                            <div className="action-card-top">
+                                <div className="action-card-icon">🔄</div>
+                                <div>
+                                    <span style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>Stage 5</span>
+                                    <h3 className="action-card-title">Pending Refund</h3>
+                                </div>
+                            </div>
+                            <div className="action-card-footer">
+                                <span>Open</span>
+                                <span>→</span>
+                            </div>
+                        </div>
 
-                    <button
-                        type="button"
-                        onClick={() => navigate("/executive-mediators")}
-                        className="dash-btn dash-btn-slate"
-                    >
-                        👥 Your Mediators
-                    </button>
+                        <div
+                            className="action-card"
+                            onClick={() => navigate("/executive-completed-order")}
+                        >
+                            <div className="action-card-top">
+                                <div className="action-card-icon">✅</div>
+                                <div>
+                                    <span style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>Stage 6</span>
+                                    <h3 className="action-card-title">Completed</h3>
+                                </div>
+                            </div>
+                            <div className="action-card-footer">
+                                <span>Open</span>
+                                <span>→</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                    <button
-                        type="button"
-                        onClick={() => navigate("/signup-mediator")}
-                        className="dash-btn dash-btn-dashed"
-                    >
-                        👤 Create Mediator Account
-                    </button>
+                {/* FINANCE */}
+                <div className="action-hub-section">
+                    <div className="action-hub-header" style={{ marginBottom: "14px", paddingBottom: "10px" }}>
+                        <h2 className="action-hub-title">
+                            ⚖️ Finance & Settlement
+                        </h2>
+                    </div>
 
-                    <button
-                        type="button"
-                        onClick={() => navigate("/signup-brand")}
-                        className="dash-btn dash-btn-dashed"
-                    >
-                        🏷️ Add New Brand
-                    </button>
+                    <div className="action-cards-grid">
+                        <div
+                            className="action-card"
+                            onClick={() => navigate("/executive-mediator-sent-payment")}
+                        >
+                            <div className="action-card-top">
+                                <div className="action-card-icon">📥</div>
+                                <div>
+                                    <h3 className="action-card-title">Verify Refunds</h3>
+                                </div>
+                            </div>
+                            <div className="action-card-footer">
+                                <span>Review</span>
+                                <span>→</span>
+                            </div>
+                        </div>
+
+                        <div
+                            className="action-card"
+                            onClick={() => navigate("/executive-balance")}
+                        >
+                            <div className="action-card-top">
+                                <div className="action-card-icon">⚖️</div>
+                                <div>
+                                    <h3 className="action-card-title">Balance Settlement</h3>
+                                </div>
+                            </div>
+                            <div className="action-card-footer">
+                                <span>Manage</span>
+                                <span>→</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* TEAM & MANAGEMENT */}
+                <div className="action-hub-section">
+                    <div className="action-hub-header" style={{ marginBottom: "14px", paddingBottom: "10px" }}>
+                        <h2 className="action-hub-title">
+                            👥 Team & Accounts
+                        </h2>
+                    </div>
+
+                    <div className="action-cards-grid">
+                        <div
+                            className="action-card"
+                            onClick={() => navigate("/executive-mediators")}
+                        >
+                            <div className="action-card-top">
+                                <div className="action-card-icon">👥</div>
+                                <div>
+                                    <h3 className="action-card-title">Mediators</h3>
+                                </div>
+                            </div>
+                            <div className="action-card-footer">
+                                <span>View</span>
+                                <span>→</span>
+                            </div>
+                        </div>
+
+                        <div
+                            className="action-card"
+                            onClick={() => navigate("/signup-mediator")}
+                        >
+                            <div className="action-card-top">
+                                <div className="action-card-icon">👤</div>
+                                <div>
+                                    <h3 className="action-card-title">Add Mediator</h3>
+                                </div>
+                            </div>
+                            <div className="action-card-footer">
+                                <span>Create</span>
+                                <span>→</span>
+                            </div>
+                        </div>
+
+                        <div
+                            className="action-card"
+                            onClick={() => navigate("/signup-brand")}
+                        >
+                            <div className="action-card-top">
+                                <div className="action-card-icon">🏷️</div>
+                                <div>
+                                    <h3 className="action-card-title">Add Brand</h3>
+                                </div>
+                            </div>
+                            <div className="action-card-footer">
+                                <span>Create</span>
+                                <span>→</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

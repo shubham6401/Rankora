@@ -31,9 +31,13 @@ const userSchema = new mongoose.Schema({
     timestamps: true,
 });
 
-// Sparse unique indexes for mediatorCode and brand
+// High-performance indexes for authentication and role lookups
 userSchema.index({ mediatorCode: 1 }, { unique: true, sparse: true });
 userSchema.index({ brand: 1 }, { unique: true, sparse: true });
+userSchema.index({ teamCode: 1 }, { sparse: true });
+userSchema.index({ mediatorCode: 1, role: 1 });
+userSchema.index({ teamCode: 1, role: 1 });
+userSchema.index({ brand: 1, role: 1 });
 
 const User = mongoose.model("User", userSchema);
 module.exports = User;

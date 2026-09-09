@@ -3,6 +3,7 @@ import { fetchAllExecutivePendingOrders, fetchAllMediators } from "../../service
 import { useNavigate } from "react-router-dom";
 import PendingOrderCard from "../../component/executive/PendingOrderCard";
 import OrderFilters from "../../component/executive/OrderFilters";
+import PipelineStepper from "../../component/layout/PipelineStepper";
 import "../../styles/ordersTable.css";
 
 export default function PendingOrders() {
@@ -65,36 +66,32 @@ export default function PendingOrders() {
 
     return (
         <div className="table-page-container">
+            {/* Visual Pipeline Stepper */}
+            <PipelineStepper role="executive" />
+
             {/* Header */}
             <div className="table-page-header">
                 <div className="table-header-info">
-                    <span className="table-page-badge">Allocation Pipeline</span>
-                    <h1 className="table-page-title">📦 Unassigned Pending Orders</h1>
+                    <span className="table-page-badge">Stage 1</span>
+                    <h1 className="table-page-title">Unassigned Orders</h1>
                     <p className="table-page-subtitle">
-                        Brand campaigns awaiting mediator allocation. Select a mediator and quantity to assign units.
+                        Orders waiting to be assigned to mediators.
                     </p>
                 </div>
                 <div className="table-header-actions">
                     <button
                         type="button"
-                        className="nav-btn nav-btn-default"
-                        onClick={() => navigate("/dashboard-executive")}
-                    >
-                        ← Executive Dashboard
-                    </button>
-                    <button
-                        type="button"
                         className="nav-btn nav-btn-primary"
                         onClick={() => navigate("/executive-add-order")}
                     >
-                        + Create New Order
+                        ➕ Create Order
                     </button>
                     <button
                         type="button"
-                        className="nav-btn nav-btn-amber"
+                        className="nav-btn nav-btn-default"
                         onClick={() => navigate("/executive-pending-payment")}
                     >
-                        Pending Payment Proofs →
+                        Advance Payments →
                     </button>
                 </div>
             </div>
@@ -102,16 +99,16 @@ export default function PendingOrders() {
             {/* Metrics */}
             <div className="table-metrics-bar">
                 <div className="metric-card">
-                    <span className="metric-label">Active Pending Batches</span>
+                    <span className="metric-label">Orders</span>
                     <span className="metric-value metric-value-primary">{orders.length}</span>
                 </div>
                 <div className="metric-card">
-                    <span className="metric-label">Units Awaiting Mediator</span>
-                    <span className="metric-value metric-value-amber">{totalUnassignedUnits}</span>
+                    <span className="metric-label">Unassigned Units</span>
+                    <span className="metric-value">{totalUnassignedUnits}</span>
                 </div>
                 <div className="metric-card">
-                    <span className="metric-label">Registered Mediators</span>
-                    <span className="metric-value metric-value-purple">{mediators.length}</span>
+                    <span className="metric-label">Mediators</span>
+                    <span className="metric-value">{mediators.length}</span>
                 </div>
             </div>
 
@@ -149,6 +146,7 @@ export default function PendingOrders() {
                                         order={order}
                                         status="unassigned"
                                         mediators={mediators}
+                                        onOrderUpdated={loadData}
                                     />
                                 ))}
                             </tbody>
@@ -158,7 +156,7 @@ export default function PendingOrders() {
             ) : (
                 <div className="empty-state-card">
                     <div className="empty-state-icon">📋</div>
-                    <h3 className="empty-state-title">No Pending Orders Found</h3>
+                    <h3 className="empty-state-title">No Pending Orders in Pool</h3>
                     <p className="empty-state-text">
                         All campaign units have either been assigned to mediators or no matching orders exist with the current filters.
                     </p>
@@ -167,7 +165,7 @@ export default function PendingOrders() {
                         className="nav-btn nav-btn-primary"
                         onClick={() => navigate("/executive-add-order")}
                     >
-                        + Create a New Brand Order
+                        ➕ Create a New Brand Order
                     </button>
                 </div>
             )}

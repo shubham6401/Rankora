@@ -25,7 +25,7 @@ export default function ExecutiveSignup() {
             setSuccessMsg("Account registered successfully! Redirecting to login...");
             setTimeout(() => {
                 navigate("/login-executive");
-            }, 1200);
+            }, 300);
         } catch (err) {
             console.error("Executive signup error:", err);
             setError(err.response?.data?.message || "Failed to register executive account. Please check credentials.");

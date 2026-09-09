@@ -3,6 +3,7 @@ import { fetchAllExecutiveIn_ProgressOrders } from "../../services/executive/ord
 import { useNavigate } from "react-router-dom";
 import OrderCard from "../../component/executive/OrderCard";
 import OrderFilters from "../../component/executive/OrderFilters";
+import PipelineStepper from "../../component/layout/PipelineStepper";
 import "../../styles/ordersTable.css";
 
 export default function In_progressOrders() {
@@ -60,13 +61,16 @@ export default function In_progressOrders() {
 
     return (
         <div className="table-page-container">
+            {/* Visual Pipeline Stepper */}
+            <PipelineStepper role="executive" />
+
             {/* Header */}
             <div className="table-page-header">
                 <div className="table-header-info">
-                    <span className="table-page-badge">Execution Pipeline</span>
-                    <h1 className="table-page-title">⚡ In-Progress Orders</h1>
+                    <span className="table-page-badge">Stage 4</span>
+                    <h1 className="table-page-title">In-Progress Orders</h1>
                     <p className="table-page-subtitle">
-                        Orders accepted by mediators currently in purchase, transit, or delivery stage.
+                        Orders accepted by mediators currently in progress.
                     </p>
                 </div>
                 <div className="table-header-actions">
@@ -75,14 +79,14 @@ export default function In_progressOrders() {
                         className="nav-btn nav-btn-default"
                         onClick={() => navigate("/dashboard-executive")}
                     >
-                        ← Executive Dashboard
+                        ← Dashboard
                     </button>
                     <button
                         type="button"
-                        className="nav-btn nav-btn-amber"
+                        className="nav-btn nav-btn-default"
                         onClick={() => navigate("/executive-pending_refund-order")}
                     >
-                        Pending Refund Orders →
+                        Pending Refund →
                     </button>
                 </div>
             </div>
@@ -90,12 +94,12 @@ export default function In_progressOrders() {
             {/* Metrics */}
             <div className="table-metrics-bar">
                 <div className="metric-card">
-                    <span className="metric-label">In-Progress Batches</span>
+                    <span className="metric-label">Orders</span>
                     <span className="metric-value metric-value-primary">{orders.length}</span>
                 </div>
                 <div className="metric-card">
-                    <span className="metric-label">Active Units Under Fulfillment</span>
-                    <span className="metric-value metric-value-emerald">{totalUnits} Units</span>
+                    <span className="metric-label">Total Units</span>
+                    <span className="metric-value">{totalUnits}</span>
                 </div>
             </div>
 
