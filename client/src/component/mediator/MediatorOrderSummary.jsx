@@ -19,6 +19,8 @@ export default function MediatorOrderSummary() {
         inProgressOrders: 0,
         pendingRefundUnits: 0,
         pendingRefundOrders: 0,
+        pendingVerificationUnits: 0,
+        pendingVerificationOrders: 0,
         completedUnits: 0,
         completedOrders: 0,
     });
@@ -83,8 +85,19 @@ export default function MediatorOrderSummary() {
             barColor: "#8b5cf6",
         },
         {
-            title: "Completed",
+            title: "Pending Verification",
             subtitle: "Stage 4",
+            icon: "⏳",
+            units: summary.pendingVerificationUnits || 0,
+            ordersCount: summary.pendingVerificationOrders || 0,
+            path: "/mediator-pending-verification",
+            actionLabel: "Awaiting Review",
+            className: "status-card-verify",
+            barColor: "#6366f1",
+        },
+        {
+            title: "Completed",
+            subtitle: "Stage 5",
             icon: "✅",
             units: summary.completedUnits || 0,
             ordersCount: summary.completedOrders || 0,
@@ -92,17 +105,6 @@ export default function MediatorOrderSummary() {
             actionLabel: "View Completed",
             className: "status-card-completed",
             barColor: "#10b981",
-        },
-        {
-            title: "Return Refunds",
-            subtitle: "Stage 5",
-            icon: "💳",
-            units: summary.pendingPaymentUnits || 0,
-            ordersCount: summary.pendingPaymentOrders || 0,
-            path: "/mediator-pending-payment",
-            actionLabel: "Upload Refund SS",
-            className: "status-card-pay",
-            barColor: "#f59e0b",
         },
     ];
 
@@ -173,6 +175,37 @@ export default function MediatorOrderSummary() {
                             );
                         })}
                     </div>
+                </div>
+            )}
+
+            {/* RETURN REFUND ALERT BANNER FOR REJECTED ORDERS */}
+            {summary.pendingPaymentUnits > 0 && (
+                <div
+                    className="summary-alert-banner"
+                    onClick={() => navigate("/mediator-pending-payment")}
+                    title="Click to view and upload proofs for rejected order refunds"
+                >
+                    <div className="summary-alert-content">
+                        <span className="summary-alert-icon">↩️</span>
+                        <div>
+                            <div className="summary-alert-title">
+                                Rejected Orders: {summary.pendingPaymentUnits} Unit(s) Pending Return Refund
+                            </div>
+                            <div className="summary-alert-desc">
+                                Orders with advance payment rejected by you require refund proof upload back to executive.
+                            </div>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        className="summary-alert-btn"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            navigate("/mediator-pending-payment");
+                        }}
+                    >
+                        Resolve Returns &rarr;
+                    </button>
                 </div>
             )}
 

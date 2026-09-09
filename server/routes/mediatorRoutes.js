@@ -12,6 +12,7 @@ const {
     submitOrderDetails,
     getRefundPendingOrders,
     submitRefundDetails,
+    getPendingVerificationOrders,
     getCompletedOrders,
     getMediatorSummary,
 } = require("../controllers/mediatorController");
@@ -53,6 +54,7 @@ router.post(
     submitRefundDetails
 );
 
+router.get("/orders/pending_verification", getPendingVerificationOrders);
 router.get("/orders/completed", getCompletedOrders);
 
 module.exports = router;

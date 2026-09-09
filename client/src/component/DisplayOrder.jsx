@@ -1,16 +1,31 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+    verifyExecutiveOrderUnit,
+    rejectExecutiveOrderUnitVerification,
+} from "../services/executive/order";
 import "../styles/displayOrder.css";
 import "../styles/ordersTable.css";
 
 export default function DisplayOrder({ order }) {
     const navigate = useNavigate();
 
+    const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+    const isExecutive = currentUser.role === "executive" || currentUser.role === "admin";
+
     const [statusFilter, setStatusFilter] = useState("all");
     const [selectedMediatorFilter, setSelectedMediatorFilter] = useState("all");
     const [searchOrderId, setSearchOrderId] = useState("");
     const [searchReviewer, setSearchReviewer] = useState("");
     const [previewImage, setPreviewImage] = useState(null);
+    const [unitsList, setUnitsList] = useState(order?.orderUnits || []);
+    const [verifyingUnitId, setVerifyingUnitId] = useState(null);
+
+    useEffect(() => {
+        if (order?.orderUnits) {
+            setUnitsList(order.orderUnits);
+        }
+    }, [order]);
 
     if (!order) {
         return (
@@ -24,13 +39,58 @@ export default function DisplayOrder({ order }) {
         );
     }
 
-    const units = order.orderUnits || [];
-    const summary = order.summary || {
-        unassigned: 0,
-        assigned: 0,
-        inProgress: 0,
-        pendingRefund: 0,
-        completed: 0,
+    const units = unitsList;
+    const summary = {
+        unassigned: units.filter((u) => u.status === "unassigned").length,
+        pendingPayment: units.filter((u) => u.status === "pending_payment").length,
+        assigned: units.filter((u) => u.status === "assigned").length,
+        inProgress: units.filter((u) => u.status === "in_progress").length,
+        pendingRefund: units.filter((u) => u.status === "pending_refund").length,
+        pendingVerification: units.filter((u) => u.status === "pending_verification").length,
+        completed: units.filter((u) => u.status === "completed").length,
+    };
+
+    const handleVerifyUnit = async (unitId) => {
+        if (!window.confirm("Verify submitted review proofs and mark this unit as Completed?")) return;
+        try {
+            setVerifyingUnitId(unitId);
+            const res = await verifyExecutiveOrderUnit({ orderId: order._id, unitId });
+            if (res.data?.success) {
+                alert("Unit verified successfully and marked as Completed!");
+                setUnitsList((prev) =>
+                    prev.map((u) =>
+                        u._id === unitId ? { ...u, status: "completed", completedAt: new Date() } : u
+                    )
+                );
+            }
+        } catch (err) {
+            console.error("Error verifying unit:", err);
+            alert(err?.response?.data?.message || "Failed to verify unit");
+        } finally {
+            setVerifyingUnitId(null);
+        }
+    };
+
+    const handleRejectVerification = async (unitId) => {
+        const reason = window.prompt("Enter revision reason / feedback for the mediator (why proofs were not approved):");
+        if (reason === null) return;
+        try {
+            setVerifyingUnitId(unitId);
+            const res = await rejectExecutiveOrderUnitVerification({ orderId: order._id, unitId, reason });
+            if (res.data?.success) {
+                alert("Revision requested! Unit returned to Pending Refund for mediator.");
+                setUnitsList((prev) =>
+                    prev.map((u) =>
+                        u._id === unitId ? { ...u, status: "pending_refund", verificationRejectionReason: reason } : u
+                    )
+                );
+            }
+        } catch (err) {
+            console.error("Error requesting revision:", err);
+            alert(err?.response?.data?.message || "Failed to request revision");
+        } finally {
+            setVerifyingUnitId(null);
+        }
     };
 
     // Extract all unique mediators assigned to this order
@@ -243,6 +303,13 @@ export default function DisplayOrder({ order }) {
                             className={`status-pill-btn ${statusFilter === "pending_refund" ? "active active-pending_refund" : ""}`}
                         >
                             Pending Refund ({summary.pendingRefund})
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setStatusFilter("pending_verification")}
+                            className={`status-pill-btn ${statusFilter === "pending_verification" ? "active active-pending_verification" : ""}`}
+                        >
+                            Pending Verification ({summary.pendingVerification})
                         </button>
                         <button
                             type="button"
@@ -460,6 +527,7 @@ export default function DisplayOrder({ order }) {
                             <option value="assigned">Assigned ({summary.assigned})</option>
                             <option value="in_progress">In Progress ({summary.inProgress})</option>
                             <option value="pending_refund">Pending Refund ({summary.pendingRefund})</option>
+                            <option value="pending_verification">Pending Verification ({summary.pendingVerification})</option>
                             <option value="completed">Completed ({summary.completed})</option>
                         </select>
                     </div>
@@ -676,58 +744,151 @@ export default function DisplayOrder({ order }) {
                                         </div>
                                     )}
 
-                                    {/* Post Delivery / Refund Proofs */}
-                                    {unit.postDeliveryDetails?.success && (
-                                        <div className="post-delivery-box">
-                                            <div className="post-delivery-title">
-                                                ✓ Post-Delivery & Refund Verification Details
+                                    {/* Post Delivery / Refund Proofs / Verification */}
+                                    {(unit.postDeliveryDetails?.success || unit.status === "pending_verification" || unit.status === "completed") && (
+                                        <div
+                                            className="post-delivery-box"
+                                            style={{
+                                                border: unit.status === "pending_verification" ? "1.5px solid #c7d2fe" : undefined,
+                                                background: unit.status === "pending_verification" ? "#f5f7ff" : undefined,
+                                            }}
+                                        >
+                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "10px" }}>
+                                                <div className="post-delivery-title" style={{ margin: 0 }}>
+                                                    {unit.status === "pending_verification"
+                                                        ? "⏳ Submitted Review & Delivery Proofs"
+                                                        : "✓ Post-Delivery & Verification Details"}
+                                                </div>
+                                                {unit.status === "pending_verification" && (
+                                                    <span className="status-badge status-badge-pending_verification">
+                                                        ● Awaiting Executive Verification
+                                                    </span>
+                                                )}
                                             </div>
+
                                             <div className="post-delivery-grid">
-                                                {unit.postDeliveryDetails.productReviewScreenshot && (
+                                                {unit.postDeliveryDetails?.productReviewScreenshot && (
                                                     <div className="post-delivery-item">
                                                         <span>Product Review</span>
-                                                        <a href={unit.postDeliveryDetails.productReviewScreenshot} target="_blank" rel="noreferrer">
+                                                        <div style={{ cursor: "pointer" }} onClick={() => setPreviewImage(unit.postDeliveryDetails.productReviewScreenshot)}>
                                                             <img
                                                                 src={unit.postDeliveryDetails.productReviewScreenshot}
                                                                 alt="Product Review"
                                                                 className="proof-img-thumb"
                                                                 style={{ maxHeight: "100px" }}
                                                             />
-                                                        </a>
+                                                            <div style={{ fontSize: "11px", color: "var(--primary-600)", marginTop: "2px", fontWeight: "600" }}>🔍 Click to enlarge</div>
+                                                        </div>
                                                     </div>
                                                 )}
-                                                {unit.postDeliveryDetails.invoiceScreenshot && (
+                                                {unit.postDeliveryDetails?.invoiceScreenshot && (
                                                     <div className="post-delivery-item">
                                                         <span>Invoice</span>
-                                                        <a href={unit.postDeliveryDetails.invoiceScreenshot} target="_blank" rel="noreferrer">
+                                                        <div style={{ cursor: "pointer" }} onClick={() => setPreviewImage(unit.postDeliveryDetails.invoiceScreenshot)}>
                                                             <img
                                                                 src={unit.postDeliveryDetails.invoiceScreenshot}
                                                                 alt="Invoice Screenshot"
                                                                 className="proof-img-thumb"
                                                                 style={{ maxHeight: "100px" }}
                                                             />
-                                                        </a>
+                                                            <div style={{ fontSize: "11px", color: "var(--primary-600)", marginTop: "2px", fontWeight: "600" }}>🔍 Click to enlarge</div>
+                                                        </div>
                                                     </div>
                                                 )}
-                                                {unit.postDeliveryDetails.sellerFeedbackScreenShot && (
+                                                {unit.postDeliveryDetails?.sellerFeedbackScreenShot && (
                                                     <div className="post-delivery-item">
                                                         <span>Seller Feedback</span>
-                                                        <a href={unit.postDeliveryDetails.sellerFeedbackScreenShot} target="_blank" rel="noreferrer">
+                                                        <div style={{ cursor: "pointer" }} onClick={() => setPreviewImage(unit.postDeliveryDetails.sellerFeedbackScreenShot)}>
                                                             <img
                                                                 src={unit.postDeliveryDetails.sellerFeedbackScreenShot}
                                                                 alt="Seller Feedback"
                                                                 className="proof-img-thumb"
                                                                 style={{ maxHeight: "100px" }}
                                                             />
-                                                        </a>
+                                                            <div style={{ fontSize: "11px", color: "var(--primary-600)", marginTop: "2px", fontWeight: "600" }}>🔍 Click to enlarge</div>
+                                                        </div>
                                                     </div>
                                                 )}
                                             </div>
-                                            {unit.completedAt && (
-                                                <div className="proof-timestamp">
-                                                    Completed on: {new Date(unit.completedAt).toLocaleString()}
+
+                                            {unit.submittedForVerificationAt && (
+                                                <div className="proof-timestamp" style={{ marginTop: "10px" }}>
+                                                    Submitted for verification on: {new Date(unit.submittedForVerificationAt).toLocaleString()}
                                                 </div>
                                             )}
+
+                                            {unit.completedAt && (
+                                                <div className="proof-timestamp">
+                                                    Completed & Verified on: {new Date(unit.completedAt).toLocaleString()}
+                                                </div>
+                                            )}
+
+                                            {/* EXECUTIVE ACTION BAR FOR PENDING VERIFICATION */}
+                                            {unit.status === "pending_verification" && isExecutive && (
+                                                <div
+                                                    style={{
+                                                        marginTop: "14px",
+                                                        paddingTop: "12px",
+                                                        borderTop: "1px solid #c7d2fe",
+                                                        display: "flex",
+                                                        justifyContent: "space-between",
+                                                        alignItems: "center",
+                                                        flexWrap: "wrap",
+                                                        gap: "10px",
+                                                    }}
+                                                >
+                                                    <div style={{ fontSize: "12.5px", color: "#4338ca", fontWeight: 600 }}>
+                                                        Inspect submitted proofs above and verify this delivery to mark as Completed.
+                                                    </div>
+                                                    <div style={{ display: "flex", gap: "8px" }}>
+                                                        <button
+                                                            type="button"
+                                                            disabled={verifyingUnitId === unit._id}
+                                                            onClick={() => handleRejectVerification(unit._id)}
+                                                            className="table-btn table-btn-danger"
+                                                            style={{ padding: "6px 14px", fontSize: "12px" }}
+                                                        >
+                                                            ✕ Request Revision
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            disabled={verifyingUnitId === unit._id}
+                                                            onClick={() => handleVerifyUnit(unit._id)}
+                                                            className="table-btn table-btn-success"
+                                                            style={{ padding: "6px 18px", fontSize: "12px", fontWeight: 700 }}
+                                                        >
+                                                            {verifyingUnitId === unit._id ? "Verifying..." : "✓ Verify & Mark Completed"}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* MEDIATOR STATUS HINT */}
+                                            {unit.status === "pending_verification" && !isExecutive && (
+                                                <div style={{ marginTop: "10px", fontSize: "12px", color: "#6366f1", fontStyle: "italic" }}>
+                                                    ⏳ Your review proofs are under review by the Executive. Status will automatically update to Completed once approved.
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* REVISION NOTE IF PREVIOUSLY REJECTED */}
+                                    {unit.verificationRejectionReason && unit.status === "pending_refund" && (
+                                        <div
+                                            style={{
+                                                marginTop: "10px",
+                                                padding: "10px 14px",
+                                                background: "#fff1f2",
+                                                border: "1px solid #fecdd3",
+                                                borderRadius: "8px",
+                                                color: "#9f1239",
+                                                fontSize: "12.5px",
+                                            }}
+                                        >
+                                            <b>⚠️ Executive Requested Revision:</b> {unit.verificationRejectionReason}
+                                            <div style={{ fontSize: "11.5px", color: "#be123c", marginTop: "4px" }}>
+                                                Please update the order review proofs with the requested corrections.
+                                            </div>
                                         </div>
                                     )}
                                 </div>

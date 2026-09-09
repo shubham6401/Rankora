@@ -4,18 +4,18 @@ import {
     fetchMediatorPendingPaymentOrders,
     submitMediatorPaymentProof,
 } from "../../services/mediator/orders";
-import PipelineStepper from "../../component/layout/PipelineStepper";
 import "../../styles/ordersTable.css";
 
 export default function MediatorPendingPayment() {
     const navigate = useNavigate();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [submittingOrderId, setSubmittingOrderId] = useState(null);
-    const [selectedFiles, setSelectedFiles] = useState({}); // { [orderId]: File }
-    const [previewUrls, setPreviewUrls] = useState({}); // { [orderId]: string }
-    const [messages, setMessages] = useState({}); // { [orderId]: string }
-    const [modalImage, setModalImage] = useState(null);
+    const [activeUploadOrder, setActiveUploadOrder] = useState(null); // order object when modal is open
+    const [uploadFile, setUploadFile] = useState(null);
+    const [uploadPreview, setUploadPreview] = useState(null);
+    const [uploadMessage, setUploadMessage] = useState("");
+    const [submitting, setSubmitting] = useState(false);
+    const [modalImage, setModalImage] = useState(null); // For image zoom
 
     useEffect(() => {
         loadPendingPayments();
@@ -25,7 +25,7 @@ export default function MediatorPendingPayment() {
         try {
             setLoading(true);
             const res = await fetchMediatorPendingPaymentOrders();
-            setOrders(res.data.orders || []);
+            setOrders(res.data?.orders || []);
         } catch (err) {
             console.error("Error fetching pending payment orders:", err);
         } finally {
@@ -33,55 +33,55 @@ export default function MediatorPendingPayment() {
         }
     };
 
-    const handleFileChange = (orderId, e) => {
+    const handleOpenUploadModal = (order) => {
+        setActiveUploadOrder(order);
+        setUploadFile(null);
+        setUploadPreview(null);
+        setUploadMessage("");
+    };
+
+    const handleCloseUploadModal = () => {
+        if (uploadPreview) URL.revokeObjectURL(uploadPreview);
+        setActiveUploadOrder(null);
+        setUploadFile(null);
+        setUploadPreview(null);
+        setUploadMessage("");
+    };
+
+    const handleFileChange = (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-
-        setSelectedFiles((prev) => ({ ...prev, [orderId]: file }));
-        const preview = URL.createObjectURL(file);
-        setPreviewUrls((prev) => ({ ...prev, [orderId]: preview }));
+        setUploadFile(file);
+        setUploadPreview(URL.createObjectURL(file));
     };
 
-    const handleClearFile = (orderId) => {
-        setSelectedFiles((prev) => {
-            const next = { ...prev };
-            delete next[orderId];
-            return next;
-        });
-        setPreviewUrls((prev) => {
-            const next = { ...prev };
-            if (next[orderId]) URL.revokeObjectURL(next[orderId]);
-            delete next[orderId];
-            return next;
-        });
-    };
-
-    const handleSubmitPayment = async (orderId, totalAmount) => {
-        const file = selectedFiles[orderId];
-        if (!file) {
-            alert("Please attach your refund payment screenshot proof first.");
+    const handleSubmitPayment = async (e) => {
+        e.preventDefault();
+        if (!uploadFile) {
+            alert("Please attach your refund payment screenshot.");
             return;
         }
 
-        const message = messages[orderId] || "";
-        const confirmMsg = `Send refund payment proof of ₹${totalAmount.toLocaleString()} to Executive?`;
-        if (!window.confirm(confirmMsg)) return;
+        const orderId = activeUploadOrder._id;
+        const units = activeUploadOrder.orderUnits || [];
+        const priceNum = Number(activeUploadOrder.price) || 0;
+        const totalAmount = priceNum * units.length;
 
         try {
-            setSubmittingOrderId(orderId);
+            setSubmitting(true);
             const formData = new FormData();
-            formData.append("mediatorPaymentScreenshot", file);
-            formData.append("message", message);
+            formData.append("mediatorPaymentScreenshot", uploadFile);
+            formData.append("message", uploadMessage);
 
             const res = await submitMediatorPaymentProof(orderId, formData);
-            alert(res.data.message || "Payment proof successfully submitted and sent to executive!");
-            handleClearFile(orderId);
+            alert(res.data?.message || `Refund proof of ₹${totalAmount.toLocaleString()} sent to executive!`);
+            handleCloseUploadModal();
             await loadPendingPayments();
         } catch (err) {
             console.error("Error submitting payment proof:", err);
             alert(err?.response?.data?.message || "Failed to submit payment proof");
         } finally {
-            setSubmittingOrderId(null);
+            setSubmitting(false);
         }
     };
 
@@ -90,8 +90,8 @@ export default function MediatorPendingPayment() {
             <div className="table-page-container">
                 <div className="empty-state-card">
                     <div className="empty-state-icon">⏳</div>
-                    <h2 className="empty-state-title">Loading Pending Payment Orders...</h2>
-                    <p className="empty-state-text">Fetching rejected orders awaiting refund payment submission.</p>
+                    <h2 className="empty-state-title">Loading Return Refunds...</h2>
+                    <p className="empty-state-text">Fetching rejected orders awaiting refund submission.</p>
                 </div>
             </div>
         );
@@ -107,20 +107,17 @@ export default function MediatorPendingPayment() {
 
     return (
         <div className="table-page-container">
-            {/* Visual Pipeline Stepper */}
-            <PipelineStepper role="mediator" />
-
-            {/* TOP HEADER */}
+            {/* TOP HEADER - Non-pipeline finance section */}
             <div className="table-page-header">
                 <div className="table-header-info">
-                    <span className="table-page-badge" style={{ background: "#fff1f2", color: "#e11d48", borderColor: "#fecdd3" }}>
-                        Stage 5 of Mediator Pipeline
+                    <span className="table-page-badge" style={{ background: "#fffbeb", color: "#b45309", borderColor: "#fde68a" }}>
+                        ↩️ Rejections & Return Refunds
                     </span>
                     <h1 className="table-page-title">
-                        💳 Stage 5: Payment Pending (Refunds to Executive)
+                        Return Refunds for Rejected Orders
                     </h1>
                     <p className="table-page-subtitle">
-                        Units where you rejected offers and need to upload refund payment proof to the executive.
+                        When you reject offers that had advance payments, upload the refund transaction screenshot here so the Executive can verify and accept the returned payment.
                     </p>
                 </div>
                 <div className="table-header-actions">
@@ -131,22 +128,22 @@ export default function MediatorPendingPayment() {
                         ← Dashboard
                     </button>
                     <button
-                        onClick={() => navigate("/mediator-new-orders")}
+                        onClick={() => navigate("/mediator-neworders")}
                         className="nav-btn nav-btn-primary"
                     >
-                        New Assigned Orders
+                        New Offers →
                     </button>
                 </div>
             </div>
 
-            {/* SUMMARY STATS BAR */}
+            {/* METRICS SUMMARY */}
             <div className="table-metrics-bar">
                 <div className="metric-card">
-                    <span className="metric-label">Orders Requiring Refund</span>
-                    <span className="metric-value metric-value-amber">{orders.length} Orders</span>
+                    <span className="metric-label">Rejected Orders</span>
+                    <span className="metric-value metric-value-amber">{orders.length}</span>
                 </div>
                 <div className="metric-card">
-                    <span className="metric-label">Total Units Rejected</span>
+                    <span className="metric-label">Total Units Returned</span>
                     <span className="metric-value">{totalUnitsCount} Units</span>
                 </div>
                 <div className="metric-card">
@@ -155,220 +152,409 @@ export default function MediatorPendingPayment() {
                 </div>
             </div>
 
-            {/* EMPTY STATE */}
+            {/* TABLE / EMPTY STATE */}
             {orders.length === 0 ? (
                 <div className="empty-state-card">
                     <div className="empty-state-icon">✅</div>
-                    <h2 className="empty-state-title">No Pending Payments</h2>
+                    <h2 className="empty-state-title">No Pending Return Refunds</h2>
                     <p className="empty-state-text">
-                        You have no rejected orders awaiting refund payment proof submission.
+                        All advance payments and rejected orders are fully settled with the Executive.
                     </p>
                     <button
-                        onClick={() => navigate("/mediator-new-orders")}
-                        className="table-btn table-btn-primary"
+                        onClick={() => navigate("/mediator-neworders")}
+                        className="nav-btn nav-btn-primary"
+                        style={{ marginTop: "14px" }}
                     >
-                        View New Assigned Orders
+                        View Available New Offers →
                     </button>
                 </div>
             ) : (
-                /* LIST OF ORDERS REQUIRING REFUND */
-                <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-                    {orders.map((order) => {
-                        const units = order.orderUnits || [];
-                        const unitCount = units.length;
-                        const priceNum = Number(order.price) || 0;
-                        const totalOrderRefund = priceNum * unitCount;
-                        const isSubmitting = submittingOrderId === order._id;
-                        const preview = previewUrls[order._id];
-                        const alreadySubmittedProof = units.find((u) => u.mediatorPaymentScreenshot)?.mediatorPaymentScreenshot;
-                        const alreadySubmittedMessage = units.find((u) => u.mediatorMessage)?.mediatorMessage;
-                        const alreadySubmittedDate = units.find((u) => u.mediatorPaymentSentAt)?.mediatorPaymentSentAt;
+                <div className="table-card">
+                    <div className="table-wrapper">
+                        <table className="orders-table">
+                            <thead>
+                                <tr>
+                                    <th>Order Info</th>
+                                    <th>Product / Brand</th>
+                                    <th>Platform</th>
+                                    <th>Rejected Units</th>
+                                    <th>Total Refund Due</th>
+                                    <th>Executive</th>
+                                    <th>Refund Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {orders.map((order) => {
+                                    const units = order.orderUnits || [];
+                                    const unitCount = units.length;
+                                    const priceNum = Number(order.price) || 0;
+                                    const totalOrderRefund = priceNum * unitCount;
+                                    const submittedUnit = units.find((u) => u.mediatorPaymentScreenshot);
+                                    const alreadySubmittedProof = submittedUnit?.mediatorPaymentScreenshot;
+                                    const alreadySubmittedDate = submittedUnit?.mediatorPaymentSentAt;
+                                    const alreadySubmittedMessage = submittedUnit?.mediatorMessage;
 
-                        return (
-                            <div key={order._id} className="group-card">
-                                {/* HEADER */}
-                                <div className="group-card-header">
-                                    <div>
-                                        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", marginBottom: "4px" }}>
-                                            <h2 className="group-title">{order.productName}</h2>
-                                            <span className="status-badge status-badge-pending">
-                                                Brand: {order.brand}
-                                            </span>
-                                            <span className="status-badge status-badge-rejected">
-                                                {unitCount} {unitCount === 1 ? "Unit Rejected" : "Units Rejected"}
-                                            </span>
-                                        </div>
-                                        <div className="group-meta">
-                                            <span>Executive: <b>{order.executiveName || order.createdBy?.name || "Executive"}</b></span>
-                                            <span>Platform: <b>{order.orderPlatform}</b></span>
-                                            <span>Team Code: <b>{order.teamCode || "N/A"}</b></span>
-                                        </div>
-                                    </div>
+                                    return (
+                                        <tr key={order._id}>
+                                            {/* Order Info */}
+                                            <td>
+                                                <div className="order-id-cell">
+                                                    <span className="order-id-text">
+                                                        #{order._id.substring(0, 8)}...
+                                                    </span>
+                                                    <span className="order-date-text">
+                                                        {new Date(order.createdAt).toLocaleDateString()}
+                                                    </span>
+                                                </div>
+                                            </td>
 
-                                    {/* TOTAL AMOUNT TO REFUND */}
-                                    <div className="group-summary-stats">
-                                        <div className="metric-label" style={{ color: "#e11d48" }}>
-                                            Total Refund Due
-                                        </div>
-                                        <div className="group-total-amount" style={{ color: "#be123c" }}>
-                                            ₹{totalOrderRefund.toLocaleString()}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* BODY */}
-                                <div>
-                                    {/* IF ALREADY SUBMITTED PROOF */}
-                                    {alreadySubmittedProof ? (
-                                        <div className="proof-upload-box" style={{ background: "#f0fdf4", borderColor: "#bbf7d0" }}>
-                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "14px" }}>
-                                                <div>
-                                                    <div style={{ color: "#166534", fontWeight: 700, fontSize: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
-                                                        <span>✓</span> Payment Proof Sent to Executive
-                                                    </div>
-                                                    <div style={{ color: "var(--slate-600)", fontSize: "13px", marginTop: "4px" }}>
-                                                        Submitted on: {new Date(alreadySubmittedDate).toLocaleString()}
-                                                    </div>
-                                                    {alreadySubmittedMessage && (
-                                                        <div style={{ color: "var(--slate-800)", fontSize: "13px", marginTop: "6px", background: "#ffffff", padding: "8px 12px", borderRadius: "6px", border: "1px solid var(--slate-200)" }}>
-                                                            <b>Your Message:</b> {alreadySubmittedMessage}
-                                                        </div>
-                                                    )}
-                                                    <div style={{ fontSize: "12px", color: "var(--slate-500)", marginTop: "6px" }}>
-                                                        Waiting for the executive to verify and click accept. Once accepted, this order will be cleared and sent back to Executive Pending Orders.
+                                            {/* Product / Brand */}
+                                            <td>
+                                                <div className="product-info-cell">
+                                                    <a
+                                                        href={order.productLink}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="product-name-link"
+                                                        title="Open product link"
+                                                    >
+                                                        {order.productName} ↗
+                                                    </a>
+                                                    <div className="product-meta">
+                                                        <span className="brand-tag">{order.brand}</span>
                                                     </div>
                                                 </div>
+                                            </td>
 
-                                                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                                                    <img
-                                                        src={alreadySubmittedProof}
-                                                        alt="Refund Payment SS"
-                                                        onClick={() => setModalImage(alreadySubmittedProof)}
-                                                        className="proof-thumb"
-                                                        style={{ width: "54px", height: "54px" }}
-                                                        title="Click to zoom proof"
-                                                    />
+                                            {/* Platform */}
+                                            <td>
+                                                <span className="platform-badge">
+                                                    {order.orderPlatform || "Amazon"}
+                                                </span>
+                                            </td>
+
+                                            {/* Rejected Units */}
+                                            <td>
+                                                <div className="units-cell">
+                                                    <span className="units-count" style={{ color: "#b91c1c" }}>
+                                                        {unitCount} {unitCount === 1 ? "Unit" : "Units"}
+                                                    </span>
+                                                    <span className="unit-price">
+                                                        ₹{priceNum} / unit
+                                                    </span>
+                                                </div>
+                                            </td>
+
+                                            {/* Total Refund Due */}
+                                            <td>
+                                                <div style={{ fontWeight: 800, fontSize: "14px", color: "#e11d48" }}>
+                                                    ₹{totalOrderRefund.toLocaleString()}
+                                                </div>
+                                            </td>
+
+                                            {/* Executive */}
+                                            <td>
+                                                <div style={{ fontSize: "12px", color: "#334155" }}>
+                                                    <div style={{ fontWeight: 600 }}>
+                                                        {order.executiveName || order.createdBy?.name || "Executive"}
+                                                    </div>
+                                                    {order.teamCode && (
+                                                        <div style={{ fontSize: "11px", color: "#64748b" }}>
+                                                            Team: {order.teamCode}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </td>
+
+                                            {/* Refund Status */}
+                                            <td>
+                                                {alreadySubmittedProof ? (
+                                                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                                        <span className="status-badge" style={{ background: "#f0fdf4", color: "#15803d", borderColor: "#bbf7d0" }}>
+                                                            ✓ Proof Sent
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setModalImage(alreadySubmittedProof)}
+                                                            style={{ fontSize: "11px", color: "#2563eb", background: "none", border: "none", cursor: "pointer", textAlign: "left", padding: 0 }}
+                                                        >
+                                                            🔍 View Sent SS
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <span className="status-badge status-badge-pending_payment">
+                                                        ● Proof Required
+                                                    </span>
+                                                )}
+                                            </td>
+
+                                            {/* Actions */}
+                                            <td>
+                                                <div className="action-btn-group">
+                                                    {!alreadySubmittedProof ? (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleOpenUploadModal(order)}
+                                                            className="table-btn table-btn-primary"
+                                                            style={{ padding: "6px 12px", fontSize: "12px" }}
+                                                        >
+                                                            📤 Upload Refund
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleOpenUploadModal(order)}
+                                                            className="table-btn table-btn-outline"
+                                                            style={{ padding: "6px 10px", fontSize: "11.5px" }}
+                                                            title="Re-upload or update proof"
+                                                        >
+                                                            🔄 Update Proof
+                                                        </button>
+                                                    )}
+
                                                     <button
                                                         type="button"
-                                                        onClick={() => setModalImage(alreadySubmittedProof)}
-                                                        className="table-btn table-btn-outline"
+                                                        onClick={() => navigate(`/order/${order._id}`)}
+                                                        className="table-btn table-btn-detail"
                                                     >
-                                                        🔍 View Proof
+                                                        Details
                                                     </button>
                                                 </div>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        /* UPLOAD PAYMENT SS & MESSAGE FORM */
-                                        <div className="proof-upload-box">
-                                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
-                                                {/* Left: Upload screenshot */}
-                                                <div>
-                                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: "var(--slate-800)", marginBottom: "6px" }}>
-                                                        📸 Upload Refund Payment Screenshot (SS): <span style={{ color: "var(--rose-500)" }}>*</span>
-                                                    </label>
-                                                    <input
-                                                        type="file"
-                                                        accept="image/*"
-                                                        onChange={(e) => handleFileChange(order._id, e)}
-                                                        disabled={isSubmitting}
-                                                        className="proof-note-input"
-                                                        style={{ padding: "6px", width: "100%" }}
-                                                    />
-
-                                                    {preview && (
-                                                        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "10px" }}>
-                                                            <img
-                                                                src={preview}
-                                                                alt="Selected Preview"
-                                                                onClick={() => setModalImage(preview)}
-                                                                className="proof-thumb"
-                                                                style={{ width: "54px", height: "54px" }}
-                                                            />
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleClearFile(order._id)}
-                                                                className="table-btn table-btn-danger"
-                                                            >
-                                                                Remove ✕
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                {/* Right: Message textarea */}
-                                                <div>
-                                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: "var(--slate-800)", marginBottom: "6px" }}>
-                                                        💬 Message / Transaction Details for Executive:
-                                                    </label>
-                                                    <textarea
-                                                        rows="3"
-                                                        placeholder="e.g. Refunded ₹2000 via UPI Txn #123456789. Reason: Cannot fulfill 2 units."
-                                                        value={messages[order._id] || ""}
-                                                        onChange={(e) => setMessages({ ...messages, [order._id]: e.target.value })}
-                                                        className="proof-note-input"
-                                                        style={{ width: "100%", resize: "vertical" }}
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* ACTION BUTTONS */}
-                                    <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "16px", paddingTop: "14px", borderTop: "1px solid var(--slate-100)" }}>
-                                        <button
-                                            type="button"
-                                            onClick={() => navigate(`/order/${order._id}`)}
-                                            className="table-btn table-btn-outline"
-                                        >
-                                            View Order Details
-                                        </button>
-
-                                        {!alreadySubmittedProof && (
-                                            <button
-                                                type="button"
-                                                onClick={() => handleSubmitPayment(order._id, totalOrderRefund)}
-                                                disabled={isSubmitting || !selectedFiles[order._id]}
-                                                className="table-btn table-btn-success"
-                                                style={{ padding: "8px 20px", fontSize: "13.5px" }}
-                                            >
-                                                {isSubmitting ? "Sending..." : "Send Refund Proof to Executive 📤"}
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             )}
 
-            {/* FULL IMAGE MODAL PREVIEW */}
+            {/* COMPACT UPLOAD REFUND MODAL */}
+            {activeUploadOrder && (
+                <div
+                    style={{
+                        position: "fixed",
+                        inset: 0,
+                        backgroundColor: "rgba(15, 23, 42, 0.7)",
+                        backdropFilter: "blur(4px)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        zIndex: 9999,
+                        padding: "16px",
+                    }}
+                    onClick={handleCloseUploadModal}
+                >
+                    <div
+                        style={{
+                            backgroundColor: "#ffffff",
+                            borderRadius: "14px",
+                            maxWidth: "520px",
+                            width: "100%",
+                            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+                            overflow: "hidden",
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Modal Header */}
+                        <div
+                            style={{
+                                padding: "16px 20px",
+                                borderBottom: "1px solid #e2e8f0",
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                backgroundColor: "#f8fafc",
+                            }}
+                        >
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#0f172a" }}>
+                                    Upload Return Refund Proof
+                                </h3>
+                                <p style={{ margin: "2px 0 0 0", fontSize: "12px", color: "#64748b" }}>
+                                    {activeUploadOrder.productName} ({activeUploadOrder.brand})
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleCloseUploadModal}
+                                style={{
+                                    border: "none",
+                                    background: "#e2e8f0",
+                                    borderRadius: "6px",
+                                    width: "28px",
+                                    height: "28px",
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    color: "#475569",
+                                    fontWeight: 700,
+                                }}
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Modal Form */}
+                        <form onSubmit={handleSubmitPayment} style={{ padding: "20px" }}>
+                            {/* Summary callout */}
+                            <div
+                                style={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                    padding: "10px 14px",
+                                    background: "#fff1f2",
+                                    border: "1px solid #fecdd3",
+                                    borderRadius: "8px",
+                                    marginBottom: "16px",
+                                }}
+                            >
+                                <div>
+                                    <span style={{ fontSize: "12px", color: "#9f1239", fontWeight: 600 }}>Refund Amount Due:</span>
+                                    <div style={{ fontSize: "18px", fontWeight: 800, color: "#be123c" }}>
+                                        ₹{((Number(activeUploadOrder.price) || 0) * (activeUploadOrder.orderUnits?.length || 1)).toLocaleString()}
+                                    </div>
+                                </div>
+                                <div style={{ textAlign: "right", fontSize: "12px", color: "#475569" }}>
+                                    <div>{activeUploadOrder.orderUnits?.length || 1} Rejected Units</div>
+                                    <div style={{ fontWeight: 600 }}>To: {activeUploadOrder.executiveName || "Executive"}</div>
+                                </div>
+                            </div>
+
+                            {/* File Upload */}
+                            <div style={{ marginBottom: "14px" }}>
+                                <label style={{ display: "block", fontSize: "12.5px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>
+                                    Payment Transaction Screenshot <span style={{ color: "#e11d48" }}>*</span>
+                                </label>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    required
+                                    onChange={handleFileChange}
+                                    style={{
+                                        display: "block",
+                                        width: "100%",
+                                        fontSize: "12.5px",
+                                        padding: "8px",
+                                        borderRadius: "6px",
+                                        border: "1px solid #cbd5e1",
+                                    }}
+                                />
+
+                                {uploadPreview && (
+                                    <div style={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "10px" }}>
+                                        <img
+                                            src={uploadPreview}
+                                            alt="Preview"
+                                            onClick={() => setModalImage(uploadPreview)}
+                                            style={{
+                                                width: "50px",
+                                                height: "50px",
+                                                objectFit: "cover",
+                                                borderRadius: "6px",
+                                                border: "1px solid #cbd5e1",
+                                                cursor: "pointer",
+                                            }}
+                                            title="Click to zoom"
+                                        />
+                                        <span style={{ fontSize: "12px", color: "#15803d", fontWeight: 600 }}>
+                                            ✓ File selected: {uploadFile?.name}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Message / Txn note */}
+                            <div style={{ marginBottom: "18px" }}>
+                                <label style={{ display: "block", fontSize: "12.5px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>
+                                    Note / UTR / Transaction ID (Optional)
+                                </label>
+                                <textarea
+                                    rows="2"
+                                    placeholder="e.g. Returned ₹1500 via UPI UTR: 4098712398"
+                                    value={uploadMessage}
+                                    onChange={(e) => setUploadMessage(e.target.value)}
+                                    style={{
+                                        width: "100%",
+                                        fontSize: "12.5px",
+                                        padding: "8px 10px",
+                                        borderRadius: "6px",
+                                        border: "1px solid #cbd5e1",
+                                        boxSizing: "border-box",
+                                        resize: "vertical",
+                                    }}
+                                />
+                            </div>
+
+                            {/* Actions */}
+                            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                                <button
+                                    type="button"
+                                    onClick={handleCloseUploadModal}
+                                    className="nav-btn nav-btn-default"
+                                    style={{ padding: "8px 14px" }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={submitting || !uploadFile}
+                                    className="nav-btn nav-btn-primary"
+                                    style={{ padding: "8px 18px", background: "#16a34a" }}
+                                >
+                                    {submitting ? "Uploading..." : "Submit Refund Proof 📤"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* FULL IMAGE ZOOM MODAL */}
             {modalImage && (
                 <div
                     onClick={() => setModalImage(null)}
-                    className="image-modal-overlay"
+                    style={{
+                        position: "fixed",
+                        inset: 0,
+                        backgroundColor: "rgba(15, 23, 42, 0.8)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        zIndex: 10000,
+                        padding: "16px",
+                    }}
                 >
                     <div
                         onClick={(e) => e.stopPropagation()}
-                        className="image-modal-content"
+                        style={{
+                            maxWidth: "600px",
+                            width: "100%",
+                            backgroundColor: "#ffffff",
+                            borderRadius: "10px",
+                            overflow: "hidden",
+                        }}
                     >
-                        <div className="image-modal-header">
-                            <span style={{ fontWeight: 700, fontSize: "14px", color: "var(--slate-700)" }}>
-                                Payment Proof
-                            </span>
+                        <div style={{ padding: "12px 16px", borderBottom: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between" }}>
+                            <span style={{ fontWeight: 700, fontSize: "13px" }}>Payment Screenshot</span>
                             <button
                                 onClick={() => setModalImage(null)}
-                                className="image-modal-close-btn"
+                                style={{ border: "none", background: "none", cursor: "pointer", fontWeight: 700 }}
                             >
-                                Close ✕
+                                ✕
                             </button>
                         </div>
-                        <img
-                            src={modalImage}
-                            alt="Full Payment Proof"
-                            className="image-modal-img"
-                        />
+                        <div style={{ padding: "16px", textAlign: "center", backgroundColor: "#0b132b" }}>
+                            <img
+                                src={modalImage}
+                                alt="Proof"
+                                style={{ maxWidth: "100%", maxHeight: "70vh", objectFit: "contain" }}
+                            />
+                        </div>
                     </div>
                 </div>
             )}

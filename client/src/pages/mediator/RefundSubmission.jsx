@@ -43,7 +43,7 @@ export default function RefundSubmission() {
             });
 
             await mediatorRefundSubmit(id, data);
-            navigate("/mediator-completed-orders", { replace: true });
+            navigate("/mediator-pending-verification", { replace: true });
         } catch (err) {
             console.error("Error submitting refund proofs:", err);
             setError(err.response?.data?.message || "Error submitting refund details. Please try again.");
@@ -86,10 +86,10 @@ export default function RefundSubmission() {
 
             <div className="form-card">
                 <div className="form-header">
-                    <span className="form-header-badge badge-purple">Final Verification</span>
+                    <span className="form-header-badge badge-purple">Verification Submission</span>
                     <h1 className="form-title">Submit Post-Delivery & Review Proofs</h1>
                     <p className="form-subtitle">
-                        Upload verification screenshots of the live review, invoice, and seller feedback to complete fulfillment.
+                        Upload screenshots of the review, invoice, and seller feedback. Your submission will be sent to the Executive team for verification before moving to Completed.
                     </p>
                 </div>
 

@@ -36,6 +36,10 @@ export const FetchAllRefund_PendingOrders = () => {
     return api.get("/mediator/orders/refund_pending");
 };
 
+export const FetchAllPendingVerificationOrders = () => {
+    return api.get("/mediator/orders/pending_verification");
+};
+
 export const FetchAllCompletedOrders = () => {
     return api.get("/mediator/orders/completed");
 };

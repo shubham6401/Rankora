@@ -61,6 +61,7 @@ const orderUnitSchema = new mongoose.Schema({
             "assigned",
             "in_progress",
             "pending_refund",
+            "pending_verification",
             "completed"
         ],
         default: "unassigned",
@@ -101,6 +102,14 @@ const orderUnitSchema = new mongoose.Schema({
         type: Date,
         default: null,
     },
+    submittedForVerificationAt: {
+        type: Date,
+        default: null,
+    },
+    verificationRejectionReason: {
+        type: String,
+        default: null,
+    },
     postDeliveryDetails: {
         type: postDeliveryDetailsSchema,
         default: () => ({}),
@@ -125,6 +134,10 @@ const orderSummarySchema = new mongoose.Schema({
         default: 0,
     },
     pendingRefund: {
+        type: Number,
+        default: 0,
+    },
+    pendingVerification: {
         type: Number,
         default: 0,
     },
@@ -202,6 +215,7 @@ orderSchema.methods.recalculateSummary = function () {
         assigned: 0,
         inProgress: 0,
         pendingRefund: 0,
+        pendingVerification: 0,
         completed: 0,
     };
 
@@ -211,6 +225,7 @@ orderSchema.methods.recalculateSummary = function () {
         else if (unit.status === "assigned") summary.assigned++;
         else if (unit.status === "in_progress") summary.inProgress++;
         else if (unit.status === "pending_refund") summary.pendingRefund++;
+        else if (unit.status === "pending_verification") summary.pendingVerification++;
         else if (unit.status === "completed") summary.completed++;
     }
 

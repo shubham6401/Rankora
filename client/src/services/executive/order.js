@@ -25,8 +25,20 @@ export const fetchAllExecutivePending_RefundOrders=()=>{
     return api.get("/executive/orders/pending_refund");
 }
 
+export const fetchAllExecutivePendingVerificationOrders=()=>{
+    return api.get("/executive/orders/pending_verification");
+}
+
 export const fetchAllExecutiveCompletedOrders=()=>{
     return api.get("/executive/orders/completed");
+}
+
+export const verifyExecutiveOrderUnit=(data)=>{
+    return api.post("/executive/order/verify-unit", data);
+}
+
+export const rejectExecutiveOrderUnitVerification=(data)=>{
+    return api.post("/executive/order/reject-unit-verification", data);
 }
 
 export const addExecutiveOrder=(data)=>{

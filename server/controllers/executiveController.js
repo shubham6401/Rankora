@@ -365,6 +365,153 @@ const getCompletedOrders = async (req, res, next) => {
 };
 
 // ==========================================
+// GET PENDING VERIFICATION ORDERS (FOR EXECUTIVE)
+// ==========================================
+const getPendingVerificationOrders = async (req, res, next) => {
+    try {
+        const teamCode = req.user.teamCode;
+        const query = {
+            "orderUnits.status": "pending_verification",
+        };
+        if (teamCode) query.teamCode = teamCode;
+
+        const orders = await Order.find(query)
+            .populate("brandUserId", "name brand role")
+            .populate("createdBy", "name")
+            .populate("orderUnits.mediatorId", "name mediatorCode teamCode email phone")
+            .sort({ updatedAt: -1 });
+
+        return res.status(200).json({
+            success: true,
+            message: "Orders pending verification fetched successfully",
+            orders,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ==========================================
+// VERIFY ORDER UNIT (EXECUTIVE APPROVES MEDIATOR PROOFS)
+// ==========================================
+const verifyOrderUnit = async (req, res, next) => {
+    try {
+        const { orderId, unitId } = req.body;
+
+        if (!orderId || !unitId) {
+            return res.status(400).json({
+                success: false,
+                message: "orderId and unitId are required",
+            });
+        }
+
+        const order = await Order.findById(orderId);
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: "Order not found",
+            });
+        }
+
+        const unit = order.orderUnits.id(unitId) || order.orderUnits.find((u) => u._id.toString() === unitId);
+        if (!unit) {
+            return res.status(404).json({
+                success: false,
+                message: "Order unit not found",
+            });
+        }
+
+        if (unit.status !== "pending_verification") {
+            return res.status(400).json({
+                success: false,
+                message: `Cannot verify unit with status '${unit.status}'. Only 'pending_verification' units can be verified.`,
+            });
+        }
+
+        unit.status = "completed";
+        unit.completedAt = new Date();
+        unit.verificationRejectionReason = null;
+
+        order.recalculateSummary();
+        await order.save();
+
+        const populatedOrder = await Order.findById(order._id)
+            .populate("brandUserId", "name brand role")
+            .populate("createdBy", "name")
+            .populate("orderUnits.mediatorId", "name mediatorCode teamCode");
+
+        return res.status(200).json({
+            success: true,
+            message: "Unit verified successfully and marked as completed",
+            order: populatedOrder,
+            unit,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ==========================================
+// REJECT / REQUEST REVISION FOR ORDER UNIT (EXECUTIVE ASKS REVISION)
+// ==========================================
+const rejectOrderUnitVerification = async (req, res, next) => {
+    try {
+        const { orderId, unitId, reason } = req.body;
+
+        if (!orderId || !unitId) {
+            return res.status(400).json({
+                success: false,
+                message: "orderId and unitId are required",
+            });
+        }
+
+        const order = await Order.findById(orderId);
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: "Order not found",
+            });
+        }
+
+        const unit = order.orderUnits.id(unitId) || order.orderUnits.find((u) => u._id.toString() === unitId);
+        if (!unit) {
+            return res.status(404).json({
+                success: false,
+                message: "Order unit not found",
+            });
+        }
+
+        if (unit.status !== "pending_verification") {
+            return res.status(400).json({
+                success: false,
+                message: `Cannot request revision for unit with status '${unit.status}'. Only 'pending_verification' units can be revised.`,
+            });
+        }
+
+        // Revert back to pending_refund so mediator can re-upload proofs
+        unit.status = "pending_refund";
+        unit.verificationRejectionReason = reason || "Executive requested revision of proof details";
+
+        order.recalculateSummary();
+        await order.save();
+
+        const populatedOrder = await Order.findById(order._id)
+            .populate("brandUserId", "name brand role")
+            .populate("createdBy", "name")
+            .populate("orderUnits.mediatorId", "name mediatorCode teamCode");
+
+        return res.status(200).json({
+            success: true,
+            message: "Revision requested. Unit returned to Pending Refund for mediator correction.",
+            order: populatedOrder,
+            unit,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ==========================================
 // UNASSIGN / REVERT WRONGLY ASSIGNED UNIT OR ORDER (BACK TO UNASSIGNED)
 // ==========================================
 const unassignOrderUnit = async (req, res, next) => {
@@ -670,7 +817,10 @@ module.exports = {
     getAssignedOrders,
     getInProgressOrders,
     getPendingRefundOrders,
+    getPendingVerificationOrders,
     getCompletedOrders,
+    verifyOrderUnit,
+    rejectOrderUnitVerification,
     unassignOrderUnit,
     submitExecutivePayment,
     getMediatorSentOrders,

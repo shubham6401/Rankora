@@ -304,16 +304,59 @@ const submitRefundDetails = async (req, res, next) => {
             sellerFeedbackScreenShot: sellerFeedbackScreenShot || null,
         };
 
-        unit.status = "completed";
-        unit.completedAt = new Date();
+        unit.status = "pending_verification";
+        unit.submittedForVerificationAt = new Date();
+        unit.verificationRejectionReason = null;
 
         order.recalculateSummary();
         await order.save();
 
         return res.status(200).json({
             success: true,
-            message: "Successfully submitted refund",
+            message: "Successfully submitted refund proofs for verification",
             order,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ==========================================
+// GET PENDING VERIFICATION ORDERS FOR MEDIATOR
+// ==========================================
+const getPendingVerificationOrders = async (req, res, next) => {
+    try {
+        const mediatorId = req.user.id;
+
+        const orders = await Order.find({
+            orderUnits: {
+                $elemMatch: {
+                    mediatorId: mediatorId,
+                    status: "pending_verification",
+                },
+            },
+        })
+            .populate("brandUserId", "name brand role")
+            .populate("createdBy", "name")
+            .populate("orderUnits.mediatorId", "name mediatorCode teamCode")
+            .sort({ updatedAt: -1 });
+
+        const formattedOrders = orders.map((order) => {
+            const orderObj = order.toObject();
+            orderObj.orderUnits = orderObj.orderUnits.filter(
+                (unit) =>
+                    unit.status === "pending_verification" &&
+                    unit.mediatorId &&
+                    (unit.mediatorId._id?.toString() === mediatorId ||
+                        unit.mediatorId.toString() === mediatorId)
+            );
+            return orderObj;
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Fetched pending verification orders successfully",
+            orders: formattedOrders,
         });
     } catch (err) {
         next(err);
@@ -562,12 +605,14 @@ const getMediatorSummary = async (req, res, next) => {
         let pendingPaymentUnits = 0;
         let inProgressUnits = 0;
         let pendingRefundUnits = 0;
+        let pendingVerificationUnits = 0;
         let completedUnits = 0;
 
         let newAssignedOrders = 0;
         let pendingPaymentOrders = 0;
         let inProgressOrders = 0;
         let pendingRefundOrders = 0;
+        let pendingVerificationOrders = 0;
         let completedOrders = 0;
 
         const mappedOrders = orders.map((order) => {
@@ -584,6 +629,7 @@ const getMediatorSummary = async (req, res, next) => {
             let hasPendingPayment = false;
             let hasInProgress = false;
             let hasPendingRefund = false;
+            let hasPendingVerification = false;
             let hasCompleted = false;
 
             myUnits.forEach((unit) => {
@@ -602,6 +648,9 @@ const getMediatorSummary = async (req, res, next) => {
                 } else if (unit.status === "pending_refund") {
                     pendingRefundUnits++;
                     hasPendingRefund = true;
+                } else if (unit.status === "pending_verification") {
+                    pendingVerificationUnits++;
+                    hasPendingVerification = true;
                 } else if (unit.status === "completed") {
                     completedUnits++;
                     completedValue += price;
@@ -613,6 +662,7 @@ const getMediatorSummary = async (req, res, next) => {
             if (hasPendingPayment) pendingPaymentOrders++;
             if (hasInProgress) inProgressOrders++;
             if (hasPendingRefund) pendingRefundOrders++;
+            if (hasPendingVerification) pendingVerificationOrders++;
             if (hasCompleted) completedOrders++;
 
             orderObj.orderUnits = myUnits;
@@ -637,6 +687,8 @@ const getMediatorSummary = async (req, res, next) => {
                 inProgressOrders,
                 pendingRefundUnits,
                 pendingRefundOrders,
+                pendingVerificationUnits,
+                pendingVerificationOrders,
                 completedUnits,
                 completedOrders,
             },
@@ -657,6 +709,7 @@ module.exports = {
     submitOrderDetails,
     getRefundPendingOrders,
     submitRefundDetails,
+    getPendingVerificationOrders,
     getCompletedOrders,
     getMediatorSummary,
 };

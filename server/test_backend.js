@@ -386,8 +386,8 @@ async function runTests() {
         assert(refundPending.status === 200, "Refund pending orders returns 200");
         assert(refundPending.data.orders.some((o) => o._id === orderId), "Order appears in refund pending list");
 
-        // 20. Mediator Submitting Refund Screenshots -> Completed
-        console.log("\n👉 Test 20: Mediator Submitting Refund Proof -> Completed");
+        // 20. Mediator Submitting Refund Screenshots -> Pending Verification
+        console.log("\n👉 Test 20: Mediator Submitting Refund Proof -> Pending Verification");
         const refundSubmitRes = await request(`/mediator/refund/submit/${orderId}`, {
             method: "POST",
             headers: medHeaders,
@@ -399,7 +399,72 @@ async function runTests() {
         });
         assert(refundSubmitRes.status === 200, "Refund submission returns 200");
         assert(refundSubmitRes.data.order.summary.pendingRefund === 0, "pendingRefund count decreased to 0");
-        assert(refundSubmitRes.data.order.summary.completed === 1, "completed count increased to 1");
+        assert(refundSubmitRes.data.order.summary.pendingVerification === 1, "pendingVerification count is 1");
+        assert(refundSubmitRes.data.order.summary.completed === 0, "completed count remains 0 before verification");
+
+        const targetUnitId = refundSubmitRes.data.order.orderUnits.find(
+            (u) => u.status === "pending_verification"
+        )?._id;
+        assert(!!targetUnitId, "Found unit in pending_verification");
+
+        // 20a. Mediator Fetching Pending Verification Orders
+        console.log("\n👉 Test 20a: Mediator Fetching Pending Verification Orders");
+        const medPendingVerify = await request("/mediator/orders/pending_verification", {
+            headers: medHeaders,
+        });
+        assert(medPendingVerify.status === 200, "Mediator pending verification returns 200");
+        assert(medPendingVerify.data.orders.some((o) => o._id === orderId), "Order appears in mediator pending verification list");
+
+        // 20b. Executive Fetching Pending Verification Orders
+        console.log("\n👉 Test 20b: Executive Fetching Pending Verification Orders");
+        const execPendingVerify = await request("/executive/orders/pending_verification", {
+            headers: execHeaders,
+        });
+        assert(execPendingVerify.status === 200, "Executive pending verification returns 200");
+        assert(execPendingVerify.data.orders.some((o) => o._id === orderId), "Order appears in executive pending verification list");
+
+        // 20c. Executive Requesting Revision -> Reverts to Pending Refund
+        console.log("\n👉 Test 20c: Executive Requesting Revision (Revert to Pending Refund)");
+        const revisionRes = await request("/executive/order/reject-unit-verification", {
+            method: "POST",
+            headers: execHeaders,
+            body: {
+                orderId,
+                unitId: targetUnitId,
+                reason: "Invoice screenshot is blurry, please re-upload clear proof",
+            },
+        });
+        assert(revisionRes.status === 200, "Reject verification returns 200");
+        assert(revisionRes.data.order.summary.pendingRefund === 1, "Unit reverted to pending_refund");
+        assert(revisionRes.data.order.summary.pendingVerification === 0, "pendingVerification count decreased to 0");
+
+        // 20d. Mediator Resubmitting Corrected Proofs
+        console.log("\n👉 Test 20d: Mediator Resubmitting Corrected Proofs");
+        const resubmitRes = await request(`/mediator/refund/submit/${orderId}`, {
+            method: "POST",
+            headers: medHeaders,
+            body: {
+                productReviewScreenshot: "https://res.cloudinary.com/demo/image/upload/review_clear.jpg",
+                invoiceScreenshot: "https://res.cloudinary.com/demo/image/upload/invoice_clear.jpg",
+                sellerFeedbackScreenShot: "https://res.cloudinary.com/demo/image/upload/feedback_clear.jpg",
+            },
+        });
+        assert(resubmitRes.status === 200, "Resubmission returns 200");
+        assert(resubmitRes.data.order.summary.pendingVerification === 1, "pendingVerification count is 1 again");
+
+        // 20e. Executive Verifying Unit -> Moves to Completed
+        console.log("\n👉 Test 20e: Executive Verifying Delivery Unit -> Completed");
+        const verifyRes = await request("/executive/order/verify-unit", {
+            method: "POST",
+            headers: execHeaders,
+            body: {
+                orderId,
+                unitId: targetUnitId,
+            },
+        });
+        assert(verifyRes.status === 200, "Unit verification returns 200");
+        assert(verifyRes.data.order.summary.completed === 1, "completed count increased to 1");
+        assert(verifyRes.data.order.summary.pendingVerification === 0, "pendingVerification count decreased to 0");
 
         // 21. Mediator Completed Orders & Executive Completed Orders
         console.log("\n👉 Test 21: Fetching Completed Orders");
