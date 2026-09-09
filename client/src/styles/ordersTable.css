@@ -8,6 +8,7 @@
     box-sizing: border-box;
     font-family: var(--font-body);
     animation: fadeIn 0.25s ease-out;
+    overflow-x: hidden;
 }
 
 /* Header Section */

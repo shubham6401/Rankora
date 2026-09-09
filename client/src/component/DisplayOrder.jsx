@@ -377,7 +377,7 @@ export default function DisplayOrder({ order }) {
                                 <div key={med.id} className="mediator-payment-box">
                                     {/* Mediator Header */}
                                     <div className="mediator-payment-header">
-                                        <div style={{ display: "flex", alignItems: "center" }}>
+                                        <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
                                             <span className="mediator-payment-name">
                                                 {med.name}
                                             </span>
@@ -825,28 +825,16 @@ export default function DisplayOrder({ order }) {
 
                                             {/* EXECUTIVE ACTION BAR FOR PENDING VERIFICATION */}
                                             {unit.status === "pending_verification" && isExecutive && (
-                                                <div
-                                                    style={{
-                                                        marginTop: "14px",
-                                                        paddingTop: "12px",
-                                                        borderTop: "1px solid #c7d2fe",
-                                                        display: "flex",
-                                                        justifyContent: "space-between",
-                                                        alignItems: "center",
-                                                        flexWrap: "wrap",
-                                                        gap: "10px",
-                                                    }}
-                                                >
-                                                    <div style={{ fontSize: "12.5px", color: "#4338ca", fontWeight: 600 }}>
+                                                <div className="verification-action-bar">
+                                                    <div className="verification-action-note">
                                                         Inspect submitted proofs above and verify this delivery to mark as Completed.
                                                     </div>
-                                                    <div style={{ display: "flex", gap: "8px" }}>
+                                                    <div className="verification-btn-group">
                                                         <button
                                                             type="button"
                                                             disabled={verifyingUnitId === unit._id}
                                                             onClick={() => handleRejectVerification(unit._id)}
                                                             className="table-btn table-btn-danger"
-                                                            style={{ padding: "6px 14px", fontSize: "12px" }}
                                                         >
                                                             ✕ Request Revision
                                                         </button>
@@ -855,7 +843,6 @@ export default function DisplayOrder({ order }) {
                                                             disabled={verifyingUnitId === unit._id}
                                                             onClick={() => handleVerifyUnit(unit._id)}
                                                             className="table-btn table-btn-success"
-                                                            style={{ padding: "6px 18px", fontSize: "12px", fontWeight: 700 }}
                                                         >
                                                             {verifyingUnitId === unit._id ? "Verifying..." : "✓ Verify & Mark Completed"}
                                                         </button>

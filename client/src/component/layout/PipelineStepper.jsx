@@ -37,13 +37,13 @@ export default function PipelineStepper({ role = "executive" }) {
                 {steps.map((step, idx) => {
                     const isActive = location.pathname === step.path;
                     return (
-                        <div key={step.path} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <div key={step.path} className="pipeline-step-wrapper">
                             <div
                                 onClick={() => navigate(step.path)}
                                 className={`pipeline-step-item ${isActive ? "active" : ""}`}
                             >
                                 <span className="pipeline-step-num">{step.num}</span>
-                                <span>{step.icon} {step.title}</span>
+                                <span className="pipeline-step-text">{step.icon} {step.title}</span>
                             </div>
                             {idx < steps.length - 1 && (
                                 <span className="pipeline-step-arrow">→</span>
