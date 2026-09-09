@@ -5,13 +5,10 @@
   "description": "Rankora - Multi-Role E-Commerce Operations & Settlement Platform",
   "scripts": {
     "start": "node server/app.js",
-    "build": "cd client && npm install && npm run build && cp -r dist ../dist 2>/dev/null || true",
+    "build": "cd client && npm install --legacy-peer-deps && npm run build && cp -r dist ../dist 2>/dev/null || true",
     "server": "cd server && npm install && npm start",
     "client": "cd client && npm install && npm run dev"
   },
-  "workspaces": [
-    "client"
-  ],
   "keywords": ["ecommerce", "operations", "settlement", "platform"],
   "author": "Rankora",
   "license": "ISC"
