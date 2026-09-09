@@ -206,39 +206,131 @@ export default function MediatorPendingVerification() {
                                                 </div>
                                             </td>
 
-                                            {/* Submitted Proofs Thumbnails */}
+                                            {/* Submitted Proofs Thumbnails (Decluttered & Visual) */}
                                             <td>
-                                                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
-                                                    {postDetails.productReviewScreenshot ? (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setSelectedProof({ title: "Review Screenshot", url: postDetails.productReviewScreenshot })}
-                                                            style={{ padding: "4px 8px", fontSize: "11px", borderRadius: "6px", border: "1px solid #c7d2fe", background: "#eef2ff", color: "#4338ca", cursor: "pointer", fontWeight: 600 }}
-                                                        >
-                                                            ⭐ Review SS
-                                                        </button>
-                                                    ) : null}
-                                                    {postDetails.invoiceScreenshot ? (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setSelectedProof({ title: "Invoice Screenshot", url: postDetails.invoiceScreenshot })}
-                                                            style={{ padding: "4px 8px", fontSize: "11px", borderRadius: "6px", border: "1px solid #bfdbfe", background: "#eff6ff", color: "#1d4ed8", cursor: "pointer", fontWeight: 600 }}
-                                                        >
-                                                            🧾 Invoice SS
-                                                        </button>
-                                                    ) : null}
-                                                    {postDetails.sellerFeedbackScreenShot ? (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setSelectedProof({ title: "Seller Feedback", url: postDetails.sellerFeedbackScreenShot })}
-                                                            style={{ padding: "4px 8px", fontSize: "11px", borderRadius: "6px", border: "1px solid #e2e8f0", background: "#f8fafc", color: "#334155", cursor: "pointer", fontWeight: 600 }}
-                                                        >
-                                                            💬 Feedback SS
-                                                        </button>
-                                                    ) : null}
-                                                    {!postDetails.productReviewScreenshot && !postDetails.invoiceScreenshot && !postDetails.sellerFeedbackScreenShot && (
-                                                        <span style={{ fontSize: "11px", color: "#94a3b8" }}>Proofs Submitted</span>
-                                                    )}
+                                                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                                                    {pendingUnits.map((u, uIdx) => (
+                                                        <div key={u._id || uIdx} style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                                            {pendingUnits.length > 1 && (
+                                                                <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--slate-600)" }}>
+                                                                    Unit #{uIdx + 1} {u.reviewerName ? `(${u.reviewerName})` : ""}:
+                                                                </span>
+                                                            )}
+                                                            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+                                                                {u.orderedScreenshot && (
+                                                                    <div
+                                                                        onClick={() => setSelectedProof({ title: "Ordered Screenshot (Order Placement)", url: u.orderedScreenshot })}
+                                                                        style={{
+                                                                            display: "inline-flex",
+                                                                            alignItems: "center",
+                                                                            gap: "6px",
+                                                                            background: "#ffffff",
+                                                                            border: "1px solid var(--slate-300)",
+                                                                            padding: "3px 8px 3px 4px",
+                                                                            borderRadius: "6px",
+                                                                            cursor: "pointer",
+                                                                            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                                                                            transition: "transform 0.15s ease",
+                                                                        }}
+                                                                        title="Click to zoom Ordered SS"
+                                                                    >
+                                                                        <img
+                                                                            src={u.orderedScreenshot}
+                                                                            alt="Ordered SS"
+                                                                            style={{ width: "24px", height: "24px", objectFit: "cover", borderRadius: "4px" }}
+                                                                        />
+                                                                        <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--slate-800)" }}>
+                                                                            🛒 Ordered SS
+                                                                        </span>
+                                                                    </div>
+                                                                )}
+                                                                {u.postDeliveryDetails?.productReviewScreenshot && (
+                                                                    <div
+                                                                        onClick={() => setSelectedProof({ title: "Product Review Screenshot", url: u.postDeliveryDetails.productReviewScreenshot })}
+                                                                        style={{
+                                                                            display: "inline-flex",
+                                                                            alignItems: "center",
+                                                                            gap: "6px",
+                                                                            background: "#eef2ff",
+                                                                            border: "1px solid #c7d2fe",
+                                                                            padding: "3px 8px 3px 4px",
+                                                                            borderRadius: "6px",
+                                                                            cursor: "pointer",
+                                                                            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                                                                            transition: "transform 0.15s ease",
+                                                                        }}
+                                                                        title="Click to zoom Review SS"
+                                                                    >
+                                                                        <img
+                                                                            src={u.postDeliveryDetails.productReviewScreenshot}
+                                                                            alt="Review SS"
+                                                                            style={{ width: "24px", height: "24px", objectFit: "cover", borderRadius: "4px" }}
+                                                                        />
+                                                                        <span style={{ fontSize: "11px", fontWeight: 600, color: "#4338ca" }}>
+                                                                            ⭐ Review SS
+                                                                        </span>
+                                                                    </div>
+                                                                )}
+                                                                {u.postDeliveryDetails?.invoiceScreenshot && (
+                                                                    <div
+                                                                        onClick={() => setSelectedProof({ title: "Invoice Screenshot", url: u.postDeliveryDetails.invoiceScreenshot })}
+                                                                        style={{
+                                                                            display: "inline-flex",
+                                                                            alignItems: "center",
+                                                                            gap: "6px",
+                                                                            background: "#eff6ff",
+                                                                            border: "1px solid #bfdbfe",
+                                                                            padding: "3px 8px 3px 4px",
+                                                                            borderRadius: "6px",
+                                                                            cursor: "pointer",
+                                                                            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                                                                            transition: "transform 0.15s ease",
+                                                                        }}
+                                                                        title="Click to zoom Invoice SS"
+                                                                    >
+                                                                        <img
+                                                                            src={u.postDeliveryDetails.invoiceScreenshot}
+                                                                            alt="Invoice SS"
+                                                                            style={{ width: "24px", height: "24px", objectFit: "cover", borderRadius: "4px" }}
+                                                                        />
+                                                                        <span style={{ fontSize: "11px", fontWeight: 600, color: "#1d4ed8" }}>
+                                                                            🧾 Invoice
+                                                                        </span>
+                                                                    </div>
+                                                                )}
+                                                                {u.postDeliveryDetails?.sellerFeedbackScreenShot && (
+                                                                    <div
+                                                                        onClick={() => setSelectedProof({ title: "Seller Feedback Screenshot", url: u.postDeliveryDetails.sellerFeedbackScreenShot })}
+                                                                        style={{
+                                                                            display: "inline-flex",
+                                                                            alignItems: "center",
+                                                                            gap: "6px",
+                                                                            background: "#f8fafc",
+                                                                            border: "1px solid #e2e8f0",
+                                                                            padding: "3px 8px 3px 4px",
+                                                                            borderRadius: "6px",
+                                                                            cursor: "pointer",
+                                                                            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                                                                            transition: "transform 0.15s ease",
+                                                                        }}
+                                                                        title="Click to zoom Feedback SS"
+                                                                    >
+                                                                        <img
+                                                                            src={u.postDeliveryDetails.sellerFeedbackScreenShot}
+                                                                            alt="Feedback SS"
+                                                                            style={{ width: "24px", height: "24px", objectFit: "cover", borderRadius: "4px" }}
+                                                                        />
+                                                                        <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--slate-700)" }}>
+                                                                            💬 Feedback
+                                                                        </span>
+                                                                    </div>
+                                                                )}
+                                                                {!u.orderedScreenshot && !u.postDeliveryDetails?.productReviewScreenshot && !u.postDeliveryDetails?.invoiceScreenshot && !u.postDeliveryDetails?.sellerFeedbackScreenShot && (
+                                                                    <span style={{ fontSize: "11px", color: "#94a3b8" }}>Proofs Submitted</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))}
                                                 </div>
                                             </td>
 

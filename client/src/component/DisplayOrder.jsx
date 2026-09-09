@@ -728,19 +728,20 @@ export default function DisplayOrder({ order }) {
                                         </div>
                                     )}
 
-                                    {/* Ordered Screenshot */}
-                                    {unit.orderedScreenshot && (
+                                    {/* Ordered Screenshot (Standalone view when not in verification/completed) */}
+                                    {unit.orderedScreenshot && !(unit.postDeliveryDetails?.success || unit.status === "pending_verification" || unit.status === "completed") && (
                                         <div style={{ marginTop: "10px", marginBottom: "12px" }}>
                                             <b style={{ color: "var(--slate-600)", fontSize: "13px", display: "block", marginBottom: "6px" }}>
                                                 Ordered Screenshot:
                                             </b>
-                                            <a href={unit.orderedScreenshot} target="_blank" rel="noreferrer">
+                                            <div style={{ cursor: "pointer", display: "inline-block" }} onClick={() => setPreviewImage(unit.orderedScreenshot)}>
                                                 <img
                                                     src={unit.orderedScreenshot}
                                                     alt="Ordered Screenshot"
                                                     className="proof-img-thumb"
                                                 />
-                                            </a>
+                                                <div style={{ fontSize: "11px", color: "var(--primary-600)", marginTop: "2px", fontWeight: "600" }}>🔍 Click to enlarge</div>
+                                            </div>
                                         </div>
                                     )}
 
@@ -756,7 +757,7 @@ export default function DisplayOrder({ order }) {
                                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "10px" }}>
                                                 <div className="post-delivery-title" style={{ margin: 0 }}>
                                                     {unit.status === "pending_verification"
-                                                        ? "⏳ Submitted Review & Delivery Proofs"
+                                                        ? "⏳ Submitted Verification Proofs"
                                                         : "✓ Post-Delivery & Verification Details"}
                                                 </div>
                                                 {unit.status === "pending_verification" && (
@@ -767,9 +768,25 @@ export default function DisplayOrder({ order }) {
                                             </div>
 
                                             <div className="post-delivery-grid">
+                                                {/* Proof 1: Ordered Screenshot */}
+                                                {unit.orderedScreenshot && (
+                                                    <div className="post-delivery-item">
+                                                        <span>🛒 Ordered SS</span>
+                                                        <div style={{ cursor: "pointer" }} onClick={() => setPreviewImage(unit.orderedScreenshot)}>
+                                                            <img
+                                                                src={unit.orderedScreenshot}
+                                                                alt="Ordered Screenshot"
+                                                                className="proof-img-thumb"
+                                                                style={{ maxHeight: "100px" }}
+                                                            />
+                                                            <div style={{ fontSize: "11px", color: "var(--primary-600)", marginTop: "2px", fontWeight: "600" }}>🔍 Click to enlarge</div>
+                                                        </div>
+                                                    </div>
+                                                )}
+
                                                 {unit.postDeliveryDetails?.productReviewScreenshot && (
                                                     <div className="post-delivery-item">
-                                                        <span>Product Review</span>
+                                                        <span>⭐ Product Review</span>
                                                         <div style={{ cursor: "pointer" }} onClick={() => setPreviewImage(unit.postDeliveryDetails.productReviewScreenshot)}>
                                                             <img
                                                                 src={unit.postDeliveryDetails.productReviewScreenshot}
@@ -783,7 +800,7 @@ export default function DisplayOrder({ order }) {
                                                 )}
                                                 {unit.postDeliveryDetails?.invoiceScreenshot && (
                                                     <div className="post-delivery-item">
-                                                        <span>Invoice</span>
+                                                        <span>🧾 Invoice</span>
                                                         <div style={{ cursor: "pointer" }} onClick={() => setPreviewImage(unit.postDeliveryDetails.invoiceScreenshot)}>
                                                             <img
                                                                 src={unit.postDeliveryDetails.invoiceScreenshot}
@@ -797,7 +814,7 @@ export default function DisplayOrder({ order }) {
                                                 )}
                                                 {unit.postDeliveryDetails?.sellerFeedbackScreenShot && (
                                                     <div className="post-delivery-item">
-                                                        <span>Seller Feedback</span>
+                                                        <span>💬 Seller Feedback</span>
                                                         <div style={{ cursor: "pointer" }} onClick={() => setPreviewImage(unit.postDeliveryDetails.sellerFeedbackScreenShot)}>
                                                             <img
                                                                 src={unit.postDeliveryDetails.sellerFeedbackScreenShot}

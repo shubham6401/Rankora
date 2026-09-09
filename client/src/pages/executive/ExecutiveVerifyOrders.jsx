@@ -16,6 +16,7 @@ export default function ExecutiveVerifyOrders() {
     const [selectedProof, setSelectedProof] = useState(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedMediator, setSelectedMediator] = useState("all");
+    const [collapsedMediators, setCollapsedMediators] = useState({});
 
     useEffect(() => {
         loadVerificationOrders();
@@ -66,6 +67,13 @@ export default function ExecutiveVerifyOrders() {
         } finally {
             setVerifyingId(null);
         }
+    };
+
+    const toggleCollapseMediator = (medId) => {
+        setCollapsedMediators((prev) => ({
+            ...prev,
+            [medId]: !prev[medId],
+        }));
     };
 
     // Extract unique mediators for filter
@@ -126,6 +134,58 @@ export default function ExecutiveVerifyOrders() {
         return true;
     });
 
+    // 3-LEVEL GROUPING: Mediator -> Brand -> Units
+    const groupedByMediator = {};
+
+    filteredItems.forEach(({ order, unit }) => {
+        const med = unit.mediatorId || {};
+        const medId = med._id ? med._id.toString() : (med.id || "unassigned");
+        const medName = med.name || "Unknown Mediator";
+        const medCode = med.mediatorCode || "N/A";
+        const medPhone = med.phone || "";
+        const medEmail = med.email || "";
+
+        if (!groupedByMediator[medId]) {
+            groupedByMediator[medId] = {
+                mediator: {
+                    _id: medId,
+                    name: medName,
+                    mediatorCode: medCode,
+                    phone: medPhone,
+                    email: medEmail,
+                },
+                totalUnits: 0,
+                totalAmount: 0,
+                brands: {},
+            };
+        }
+
+        const brandName = (order.brand || "Unbranded").trim();
+        const brandKey = brandName.toLowerCase();
+
+        if (!groupedByMediator[medId].brands[brandKey]) {
+            groupedByMediator[medId].brands[brandKey] = {
+                brand: brandName,
+                totalUnits: 0,
+                totalAmount: 0,
+                items: [],
+            };
+        }
+
+        const price = parseFloat(order.price) || 0;
+        groupedByMediator[medId].totalUnits += 1;
+        groupedByMediator[medId].totalAmount += price;
+
+        groupedByMediator[medId].brands[brandKey].totalUnits += 1;
+        groupedByMediator[medId].brands[brandKey].totalAmount += price;
+        groupedByMediator[medId].brands[brandKey].items.push({ order, unit });
+    });
+
+    const mediatorGroups = Object.values(groupedByMediator).map((group) => ({
+        ...group,
+        brandsList: Object.values(group.brands),
+    }));
+
     const totalValue = pendingUnitsAll.reduce(
         (sum, item) => sum + (parseFloat(item.order.price) || 0),
         0
@@ -158,7 +218,7 @@ export default function ExecutiveVerifyOrders() {
                         🔍 Verify Deliveries & Mediator Submissions
                     </h1>
                     <p className="table-page-subtitle">
-                        Inspect review screenshots, invoices, and seller feedback submitted by mediators. Verify and mark as Completed, or request corrections.
+                        Mediator-wise & Brand-wise inspection of all 4 verification proofs (Ordered SS, Review SS, Invoice SS, and Seller Feedback). Approve deliveries to transition to Completed, or request revisions.
                     </p>
                 </div>
                 <div className="table-header-actions">
@@ -189,28 +249,28 @@ export default function ExecutiveVerifyOrders() {
             {/* Metrics */}
             <div className="table-metrics-bar">
                 <div className="metric-card">
-                    <span className="metric-label">Orders Under Review</span>
-                    <span className="metric-value metric-value-primary">{orders.length}</span>
+                    <span className="metric-label">Active Mediators</span>
+                    <span className="metric-value metric-value-primary">{mediatorGroups.length}</span>
                 </div>
                 <div className="metric-card">
-                    <span className="metric-label">Units Awaiting Approval</span>
+                    <span className="metric-label">Units Under Review</span>
                     <span className="metric-value" style={{ color: "#4f46e5" }}>
                         {pendingUnitsAll.length} Units
                     </span>
                 </div>
                 <div className="metric-card">
-                    <span className="metric-label">Pending Value</span>
+                    <span className="metric-label">Total Verification Value</span>
                     <span className="metric-value metric-value-green">₹{totalValue.toLocaleString()}</span>
                 </div>
             </div>
 
             {/* Filters Bar */}
-            <div className="order-filters-card" style={{ marginBottom: "16px" }}>
+            <div className="order-filters-card" style={{ marginBottom: "20px" }}>
                 <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
-                    <div style={{ flex: "1 1 240px" }}>
+                    <div style={{ flex: "1 1 260px" }}>
                         <input
                             type="text"
-                            placeholder="🔍 Search product, brand, reviewer, mediator code..."
+                            placeholder="🔍 Search product, brand, reviewer, mediator code, order ID..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="filter-input"
@@ -218,7 +278,7 @@ export default function ExecutiveVerifyOrders() {
                         />
                     </div>
 
-                    <div style={{ minWidth: "180px" }}>
+                    <div style={{ minWidth: "200px" }}>
                         <select
                             value={selectedMediator}
                             onChange={(e) => setSelectedMediator(e.target.value)}
@@ -251,12 +311,12 @@ export default function ExecutiveVerifyOrders() {
             </div>
 
             {/* Empty State */}
-            {filteredItems.length === 0 ? (
+            {mediatorGroups.length === 0 ? (
                 <div className="empty-state-card">
                     <div className="empty-state-icon">✅</div>
                     <h2 className="empty-state-title">Verification Queue Empty</h2>
                     <p className="empty-state-text">
-                        There are currently no deliveries awaiting executive verification. When mediators submit review proofs, they will appear here.
+                        There are currently no deliveries awaiting executive verification. When mediators submit review proofs, they will appear here grouped mediator-wise, brand-wise, and unit-wise.
                     </p>
                     <button
                         onClick={() => navigate("/executive-completed-order")}
@@ -267,291 +327,479 @@ export default function ExecutiveVerifyOrders() {
                     </button>
                 </div>
             ) : (
-                /* Submissions Table */
-                <div className="data-table-container">
-                    <div className="data-table-responsive">
-                        <table className="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Order Info</th>
-                                    <th>Product Details</th>
-                                    <th>Mediator</th>
-                                    <th>Reviewer & Price</th>
-                                    <th>Submitted Proofs</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredItems.map(({ order, unit }) => {
-                                    const postDetails = unit.postDeliveryDetails || {};
-                                    const isActing = verifyingId === unit._id;
+                /* 3-LEVEL HIERARCHICAL VIEW */
+                <div className="verification-hierarchy-wrapper">
+                    {mediatorGroups.map((group) => {
+                        const med = group.mediator;
+                        const isCollapsed = !!collapsedMediators[med._id];
 
-                                    return (
-                                        <tr key={unit._id}>
-                                            {/* Order Info */}
-                                            <td>
-                                                <div className="order-id-cell">
-                                                    <span className="order-id-text">
-                                                        #{order._id.substring(0, 8)}...
-                                                    </span>
-                                                    <span className="order-date-text">
-                                                        {unit.submittedForVerificationAt
-                                                            ? `Submitted ${new Date(unit.submittedForVerificationAt).toLocaleDateString()}`
-                                                            : new Date(order.createdAt).toLocaleDateString()}
-                                                    </span>
-                                                    <span style={{ fontSize: "11px", color: "#64748b" }}>
-                                                        Unit #{unit._id.substring(0, 6)}
-                                                    </span>
-                                                </div>
-                                            </td>
+                        return (
+                            <div key={med._id} className="mediator-verification-card">
+                                {/* LEVEL 1: MEDIATOR HEADER */}
+                                <div className="mediator-vcard-header">
+                                    <div className="mediator-vcard-profile">
+                                        <div className="mediator-vcard-avatar">
+                                            {med.name.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div className="mediator-vcard-info">
+                                            <h2 className="mediator-vcard-title">
+                                                Mediator: {med.name}
+                                                <span className="brand-tag" style={{ fontSize: "12px", padding: "2px 8px" }}>
+                                                    {med.mediatorCode}
+                                                </span>
+                                            </h2>
+                                            <div className="mediator-vcard-meta">
+                                                {med.phone && <span>📞 {med.phone}</span>}
+                                                {med.email && <span>✉️ {med.email}</span>}
+                                            </div>
+                                        </div>
+                                    </div>
 
-                                            {/* Product Details */}
-                                            <td>
-                                                <div className="product-info-cell">
-                                                    <a
-                                                        href={order.productLink}
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                        className="product-name-link"
-                                                        title="Open product link"
-                                                    >
-                                                        {order.productName} ↗
-                                                    </a>
-                                                    <div className="product-meta">
-                                                        <span className="brand-tag">{order.brand}</span>
-                                                        <span className="platform-badge" style={{ marginLeft: "4px" }}>
-                                                            {order.orderPlatform}
+                                    <div className="mediator-vcard-stats">
+                                        <span className="vcard-stat-chip units">
+                                            ⏳ {group.totalUnits} {group.totalUnits === 1 ? "Unit" : "Units"} Under Review
+                                        </span>
+                                        <span className="vcard-stat-chip amount">
+                                            💰 ₹{group.totalAmount.toLocaleString()} Value
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleCollapseMediator(med._id)}
+                                            className="mediator-vcard-collapse-btn"
+                                            title={isCollapsed ? "Expand section" : "Collapse section"}
+                                        >
+                                            {isCollapsed ? "Expand ▼" : "Collapse ▲"}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* LEVEL 2 & 3: BRANDS & UNITS */}
+                                {!isCollapsed && (
+                                    <div className="mediator-vcard-body">
+                                        {group.brandsList.map((brandSection) => (
+                                            <div key={brandSection.brand} className="brand-verification-section">
+                                                {/* LEVEL 2: BRAND HEADER */}
+                                                <div className="brand-vsection-header">
+                                                    <div className="brand-vsection-title">
+                                                        <span>🏷️ Brand:</span>
+                                                        <span className="brand-vsection-tag">
+                                                            {brandSection.brand}
+                                                        </span>
+                                                    </div>
+                                                    <div className="brand-vsection-meta">
+                                                        <span style={{ fontWeight: 600, color: "var(--slate-700)" }}>
+                                                            {brandSection.totalUnits} {brandSection.totalUnits === 1 ? "Unit" : "Units"}
+                                                        </span>
+                                                        <span>•</span>
+                                                        <span style={{ fontWeight: 700, color: "#16a34a" }}>
+                                                            Subtotal: ₹{brandSection.totalAmount.toLocaleString()}
                                                         </span>
                                                     </div>
                                                 </div>
-                                            </td>
 
-                                            {/* Mediator */}
-                                            <td>
-                                                <div style={{ fontSize: "12.5px" }}>
-                                                    <div style={{ fontWeight: 700, color: "#0f172a" }}>
-                                                        {unit.mediatorId?.name || "Mediator"}
-                                                    </div>
-                                                    <div style={{ fontSize: "11px", color: "#64748b" }}>
-                                                        Code: <b>{unit.mediatorId?.mediatorCode || "N/A"}</b>
-                                                    </div>
-                                                    {unit.mediatorId?.phone && (
-                                                        <div style={{ fontSize: "11px", color: "#64748b" }}>
-                                                            📞 {unit.mediatorId.phone}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </td>
+                                                {/* LEVEL 3: UNIT CARDS */}
+                                                <div className="brand-vsection-units-list">
+                                                    {brandSection.items.map(({ order, unit }, unitIdx) => {
+                                                        const postDetails = unit.postDeliveryDetails || {};
+                                                        const isActing = verifyingId === unit._id;
 
-                                            {/* Reviewer & Price */}
-                                            <td>
-                                                <div className="units-cell">
-                                                    <span style={{ fontSize: "12.5px", fontWeight: 700, color: "#16a34a" }}>
-                                                        ₹{order.price}
-                                                    </span>
-                                                    {unit.reviewerName && (
-                                                        <span style={{ fontSize: "11.5px", color: "#334155" }}>
-                                                            Reviewer: <b>{unit.reviewerName}</b>
-                                                        </span>
-                                                    )}
-                                                    {unit.orderId && (
-                                                        <span style={{ fontSize: "11px", color: "#64748b" }}>
-                                                            Ext ID: {unit.orderId}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </td>
+                                                        return (
+                                                            <div key={unit._id} className="verification-unit-card">
+                                                                {/* Unit Header Row */}
+                                                                <div className="v-unit-header">
+                                                                    <div className="v-unit-title-group">
+                                                                        <span className="v-unit-badge">
+                                                                            Unit #{unitIdx + 1}
+                                                                        </span>
+                                                                        <a
+                                                                            href={order.productLink}
+                                                                            target="_blank"
+                                                                            rel="noreferrer"
+                                                                            className="v-unit-product-name"
+                                                                            title="Open product link in new tab"
+                                                                        >
+                                                                            {order.productName} ↗
+                                                                        </a>
+                                                                        <span className="platform-badge">
+                                                                            {order.orderPlatform || "Amazon"}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="v-unit-meta-row">
+                                                                        {unit.orderId && (
+                                                                            <div className="v-unit-meta-item">
+                                                                                <span style={{ color: "var(--slate-500)" }}>Order ID:</span>
+                                                                                <span style={{ fontWeight: 600, color: "var(--slate-800)" }}>{unit.orderId}</span>
+                                                                            </div>
+                                                                        )}
+                                                                        {unit.reviewerName && (
+                                                                            <div className="v-unit-meta-item">
+                                                                                <span style={{ color: "var(--slate-500)" }}>Reviewer:</span>
+                                                                                <span style={{ fontWeight: 600, color: "var(--slate-800)" }}>{unit.reviewerName}</span>
+                                                                            </div>
+                                                                        )}
+                                                                        <div className="v-unit-meta-item">
+                                                                            <span style={{ color: "var(--slate-500)" }}>Price:</span>
+                                                                            <span className="v-unit-price">₹{order.price}</span>
+                                                                        </div>
+                                                                        <div className="v-unit-meta-item" style={{ fontSize: "11px", color: "var(--slate-500)" }}>
+                                                                            {unit.submittedForVerificationAt
+                                                                                ? `Submitted: ${new Date(unit.submittedForVerificationAt).toLocaleDateString()}`
+                                                                                : `Created: ${new Date(order.createdAt).toLocaleDateString()}`}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
 
-                                            {/* Submitted Proofs Thumbnails */}
-                                            <td>
-                                                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
-                                                    {postDetails.productReviewScreenshot && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                setSelectedProof({
-                                                                    title: "Product Review Screenshot",
-                                                                    url: postDetails.productReviewScreenshot,
-                                                                    info: `${order.productName} (${unit.reviewerName || "Reviewer"})`,
-                                                                })
-                                                            }
-                                                            style={{
-                                                                padding: "4px 8px",
-                                                                fontSize: "11px",
-                                                                borderRadius: "6px",
-                                                                border: "1px solid #c7d2fe",
-                                                                background: "#eef2ff",
-                                                                color: "#4338ca",
-                                                                cursor: "pointer",
-                                                                fontWeight: 600,
-                                                            }}
-                                                        >
-                                                            ⭐ Review SS
-                                                        </button>
-                                                    )}
-                                                    {postDetails.invoiceScreenshot && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                setSelectedProof({
-                                                                    title: "Invoice Screenshot",
-                                                                    url: postDetails.invoiceScreenshot,
-                                                                    info: `${order.productName} - Invoice`,
-                                                                })
-                                                            }
-                                                            style={{
-                                                                padding: "4px 8px",
-                                                                fontSize: "11px",
-                                                                borderRadius: "6px",
-                                                                border: "1px solid #bfdbfe",
-                                                                background: "#eff6ff",
-                                                                color: "#1d4ed8",
-                                                                cursor: "pointer",
-                                                                fontWeight: 600,
-                                                            }}
-                                                        >
-                                                            🧾 Invoice SS
-                                                        </button>
-                                                    )}
-                                                    {postDetails.sellerFeedbackScreenShot && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                setSelectedProof({
-                                                                    title: "Seller Feedback Screenshot",
-                                                                    url: postDetails.sellerFeedbackScreenShot,
-                                                                    info: `${order.productName} - Seller Feedback`,
-                                                                })
-                                                            }
-                                                            style={{
-                                                                padding: "4px 8px",
-                                                                fontSize: "11px",
-                                                                borderRadius: "6px",
-                                                                border: "1px solid #e2e8f0",
-                                                                background: "#f8fafc",
-                                                                color: "#334155",
-                                                                cursor: "pointer",
-                                                                fontWeight: 600,
-                                                            }}
-                                                        >
-                                                            💬 Feedback SS
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </td>
+                                                                {/* Prior Revision Alert if any */}
+                                                                {unit.verificationRejectionReason && (
+                                                                    <div className="v-unit-revision-alert">
+                                                                        <span>⚠️</span>
+                                                                        <div>
+                                                                            <b>Previous Revision Feedback:</b> {unit.verificationRejectionReason}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
 
-                                            {/* Actions */}
-                                            <td>
-                                                <div className="action-btn-group">
-                                                    <button
-                                                        type="button"
-                                                        disabled={isActing}
-                                                        onClick={() => handleVerify(order._id, unit._id)}
-                                                        className="table-btn table-btn-success"
-                                                        style={{ padding: "6px 12px", fontSize: "12px", fontWeight: 700 }}
-                                                        title="Approve proof and transition to Completed"
-                                                    >
-                                                        {isActing ? "..." : "✓ Verify"}
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        disabled={isActing}
-                                                        onClick={() => handleReject(order._id, unit._id)}
-                                                        className="table-btn table-btn-danger"
-                                                        style={{ padding: "6px 10px", fontSize: "11.5px" }}
-                                                        title="Reject proof and ask mediator for revision"
-                                                    >
-                                                        ✕ Revise
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => navigate(`/order/${order._id}`)}
-                                                        className="table-btn table-btn-detail"
-                                                        style={{ padding: "6px 10px", fontSize: "11.5px" }}
-                                                    >
-                                                        Details
-                                                    </button>
+                                                                {/* 4-POINT DECLUTTERED PROOF DOSSIER */}
+                                                                <div className="v-proofs-dossier">
+                                                                    <div className="v-proofs-title">
+                                                                        <span>📋 Submitted Verification Proofs</span>
+                                                                        <span style={{ fontSize: "11px", fontWeight: 400, color: "var(--slate-500)" }}>
+                                                                            (Ordered SS, Review SS, Invoice, Seller Feedback)
+                                                                        </span>
+                                                                    </div>
+
+                                                                    <div className="v-proofs-grid">
+                                                                        {/* Proof 1: Ordered Screenshot */}
+                                                                        <div className={`v-proof-card ${unit.orderedScreenshot ? "active" : "empty"}`}>
+                                                                            <div className="v-proof-card-header">
+                                                                                <span className={`v-proof-num ${unit.orderedScreenshot ? "" : "empty"}`}>1</span>
+                                                                                <span className="v-proof-card-title">🛒 Ordered SS</span>
+                                                                            </div>
+                                                                            <div className="v-proof-media">
+                                                                                {unit.orderedScreenshot ? (
+                                                                                    <div
+                                                                                        className="v-proof-img-wrap"
+                                                                                        onClick={() =>
+                                                                                            setSelectedProof({
+                                                                                                title: "Ordered Screenshot (Placement Proof)",
+                                                                                                url: unit.orderedScreenshot,
+                                                                                                info: `${order.productName} — Unit #${unitIdx + 1} (${unit.reviewerName || "Reviewer"})`,
+                                                                                            })
+                                                                                        }
+                                                                                    >
+                                                                                        <img
+                                                                                            src={unit.orderedScreenshot}
+                                                                                            alt="Ordered Screenshot"
+                                                                                            className="v-proof-img"
+                                                                                        />
+                                                                                        <span className="v-proof-zoom-hint">🔍 Zoom</span>
+                                                                                    </div>
+                                                                                ) : (
+                                                                                    <div className="v-proof-empty-box">
+                                                                                        <span className="v-proof-empty-icon">🛒</span>
+                                                                                        <span className="v-proof-empty-text">No Ordered SS</span>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                            {unit.orderedScreenshot && (
+                                                                                <div className="v-proof-footer-actions">
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        className="v-proof-btn-zoom"
+                                                                                        onClick={() =>
+                                                                                            setSelectedProof({
+                                                                                                title: "Ordered Screenshot (Placement Proof)",
+                                                                                                url: unit.orderedScreenshot,
+                                                                                                info: `${order.productName} — Unit #${unitIdx + 1} (${unit.reviewerName || "Reviewer"})`,
+                                                                                            })
+                                                                                        }
+                                                                                    >
+                                                                                        Enlarge 🔍
+                                                                                    </button>
+                                                                                    <a
+                                                                                        href={unit.orderedScreenshot}
+                                                                                        target="_blank"
+                                                                                        rel="noreferrer"
+                                                                                        className="v-proof-btn-zoom"
+                                                                                    >
+                                                                                        New Tab ↗
+                                                                                    </a>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+
+                                                                        {/* Proof 2: Product Review Screenshot */}
+                                                                        <div className={`v-proof-card ${postDetails.productReviewScreenshot ? "active" : "empty"}`}>
+                                                                            <div className="v-proof-card-header">
+                                                                                <span className={`v-proof-num ${postDetails.productReviewScreenshot ? "" : "empty"}`}>2</span>
+                                                                                <span className="v-proof-card-title">⭐ Review SS</span>
+                                                                            </div>
+                                                                            <div className="v-proof-media">
+                                                                                {postDetails.productReviewScreenshot ? (
+                                                                                    <div
+                                                                                        className="v-proof-img-wrap"
+                                                                                        onClick={() =>
+                                                                                            setSelectedProof({
+                                                                                                title: "Product Review Screenshot",
+                                                                                                url: postDetails.productReviewScreenshot,
+                                                                                                info: `${order.productName} — Unit #${unitIdx + 1} (${unit.reviewerName || "Reviewer"})`,
+                                                                                            })
+                                                                                        }
+                                                                                    >
+                                                                                        <img
+                                                                                            src={postDetails.productReviewScreenshot}
+                                                                                            alt="Product Review Screenshot"
+                                                                                            className="v-proof-img"
+                                                                                        />
+                                                                                        <span className="v-proof-zoom-hint">🔍 Zoom</span>
+                                                                                    </div>
+                                                                                ) : (
+                                                                                    <div className="v-proof-empty-box">
+                                                                                        <span className="v-proof-empty-icon">⭐</span>
+                                                                                        <span className="v-proof-empty-text">No Review SS</span>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                            <div className="v-proof-footer-actions">
+                                                                                {postDetails.productReviewScreenshot && (
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        className="v-proof-btn-zoom"
+                                                                                        onClick={() =>
+                                                                                            setSelectedProof({
+                                                                                                title: "Product Review Screenshot",
+                                                                                                url: postDetails.productReviewScreenshot,
+                                                                                                info: `${order.productName} — Unit #${unitIdx + 1} (${unit.reviewerName || "Reviewer"})`,
+                                                                                            })
+                                                                                        }
+                                                                                    >
+                                                                                        Enlarge 🔍
+                                                                                    </button>
+                                                                                )}
+                                                                                {postDetails.productReviewLink && (
+                                                                                    <a
+                                                                                        href={postDetails.productReviewLink}
+                                                                                        target="_blank"
+                                                                                        rel="noreferrer"
+                                                                                        className="v-proof-btn-zoom"
+                                                                                        title="Open Live Review Link"
+                                                                                    >
+                                                                                        Review URL ↗
+                                                                                    </a>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* Proof 3: Invoice Screenshot */}
+                                                                        <div className={`v-proof-card ${postDetails.invoiceScreenshot ? "active" : "empty"}`}>
+                                                                            <div className="v-proof-card-header">
+                                                                                <span className={`v-proof-num ${postDetails.invoiceScreenshot ? "" : "empty"}`}>3</span>
+                                                                                <span className="v-proof-card-title">🧾 Invoice SS</span>
+                                                                            </div>
+                                                                            <div className="v-proof-media">
+                                                                                {postDetails.invoiceScreenshot ? (
+                                                                                    <div
+                                                                                        className="v-proof-img-wrap"
+                                                                                        onClick={() =>
+                                                                                            setSelectedProof({
+                                                                                                title: "Platform Invoice Screenshot",
+                                                                                                url: postDetails.invoiceScreenshot,
+                                                                                                info: `${order.productName} — Unit #${unitIdx + 1} Invoice`,
+                                                                                            })
+                                                                                        }
+                                                                                    >
+                                                                                        <img
+                                                                                            src={postDetails.invoiceScreenshot}
+                                                                                            alt="Invoice Screenshot"
+                                                                                            className="v-proof-img"
+                                                                                        />
+                                                                                        <span className="v-proof-zoom-hint">🔍 Zoom</span>
+                                                                                    </div>
+                                                                                ) : (
+                                                                                    <div className="v-proof-empty-box">
+                                                                                        <span className="v-proof-empty-icon">🧾</span>
+                                                                                        <span className="v-proof-empty-text">Invoice Optional</span>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                            {postDetails.invoiceScreenshot && (
+                                                                                <div className="v-proof-footer-actions">
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        className="v-proof-btn-zoom"
+                                                                                        onClick={() =>
+                                                                                            setSelectedProof({
+                                                                                                title: "Platform Invoice Screenshot",
+                                                                                                url: postDetails.invoiceScreenshot,
+                                                                                                info: `${order.productName} — Unit #${unitIdx + 1} Invoice`,
+                                                                                            })
+                                                                                        }
+                                                                                    >
+                                                                                        Enlarge 🔍
+                                                                                    </button>
+                                                                                    <a
+                                                                                        href={postDetails.invoiceScreenshot}
+                                                                                        target="_blank"
+                                                                                        rel="noreferrer"
+                                                                                        className="v-proof-btn-zoom"
+                                                                                    >
+                                                                                        New Tab ↗
+                                                                                    </a>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+
+                                                                        {/* Proof 4: Seller Feedback Screenshot */}
+                                                                        <div className={`v-proof-card ${postDetails.sellerFeedbackScreenShot ? "active" : "empty"}`}>
+                                                                            <div className="v-proof-card-header">
+                                                                                <span className={`v-proof-num ${postDetails.sellerFeedbackScreenShot ? "" : "empty"}`}>4</span>
+                                                                                <span className="v-proof-card-title">💬 Feedback SS</span>
+                                                                            </div>
+                                                                            <div className="v-proof-media">
+                                                                                {postDetails.sellerFeedbackScreenShot ? (
+                                                                                    <div
+                                                                                        className="v-proof-img-wrap"
+                                                                                        onClick={() =>
+                                                                                            setSelectedProof({
+                                                                                                title: "Seller Feedback Screenshot",
+                                                                                                url: postDetails.sellerFeedbackScreenShot,
+                                                                                                info: `${order.productName} — Unit #${unitIdx + 1} Seller Feedback`,
+                                                                                            })
+                                                                                        }
+                                                                                    >
+                                                                                        <img
+                                                                                            src={postDetails.sellerFeedbackScreenShot}
+                                                                                            alt="Seller Feedback Screenshot"
+                                                                                            className="v-proof-img"
+                                                                                        />
+                                                                                        <span className="v-proof-zoom-hint">🔍 Zoom</span>
+                                                                                    </div>
+                                                                                ) : (
+                                                                                    <div className="v-proof-empty-box">
+                                                                                        <span className="v-proof-empty-icon">💬</span>
+                                                                                        <span className="v-proof-empty-text">Feedback Optional</span>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                            {postDetails.sellerFeedbackScreenShot && (
+                                                                                <div className="v-proof-footer-actions">
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        className="v-proof-btn-zoom"
+                                                                                        onClick={() =>
+                                                                                            setSelectedProof({
+                                                                                                title: "Seller Feedback Screenshot",
+                                                                                                url: postDetails.sellerFeedbackScreenShot,
+                                                                                                info: `${order.productName} — Unit #${unitIdx + 1} Seller Feedback`,
+                                                                                            })
+                                                                                        }
+                                                                                    >
+                                                                                        Enlarge 🔍
+                                                                                    </button>
+                                                                                    <a
+                                                                                        href={postDetails.sellerFeedbackScreenShot}
+                                                                                        target="_blank"
+                                                                                        rel="noreferrer"
+                                                                                        className="v-proof-btn-zoom"
+                                                                                    >
+                                                                                        New Tab ↗
+                                                                                    </a>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Unit Actions Bar */}
+                                                                <div className="v-unit-actions-bar">
+                                                                    <div style={{ fontSize: "12px", color: "var(--slate-500)" }}>
+                                                                        Unit Action:
+                                                                    </div>
+                                                                    <div className="v-unit-action-group">
+                                                                        <button
+                                                                            type="button"
+                                                                            disabled={isActing}
+                                                                            onClick={() => handleVerify(order._id, unit._id)}
+                                                                            className="table-btn table-btn-success"
+                                                                            style={{ padding: "7px 16px", fontSize: "12.5px", fontWeight: 700 }}
+                                                                            title="Approve all proofs and transition to Completed"
+                                                                        >
+                                                                            {isActing ? "Verifying..." : "✓ Verify & Mark Completed"}
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            disabled={isActing}
+                                                                            onClick={() => handleReject(order._id, unit._id)}
+                                                                            className="table-btn table-btn-danger"
+                                                                            style={{ padding: "7px 12px", fontSize: "12px" }}
+                                                                            title="Reject proof and return to mediator for correction"
+                                                                        >
+                                                                            ✕ Request Revision
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => navigate(`/order/${order._id}`)}
+                                                                            className="table-btn table-btn-detail"
+                                                                            style={{ padding: "7px 12px", fontSize: "12px" }}
+                                                                        >
+                                                                            Order Details →
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
                                                 </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
             )}
 
-            {/* PROOF ZOOM MODAL */}
+            {/* LIGHTBOX ZOOM MODAL */}
             {selectedProof && (
                 <div
-                    style={{
-                        position: "fixed",
-                        inset: 0,
-                        backgroundColor: "rgba(15, 23, 42, 0.75)",
-                        backdropFilter: "blur(4px)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        zIndex: 9999,
-                        padding: "16px",
-                    }}
+                    className="image-modal-overlay"
                     onClick={() => setSelectedProof(null)}
                 >
                     <div
-                        style={{
-                            backgroundColor: "#ffffff",
-                            borderRadius: "12px",
-                            maxWidth: "700px",
-                            width: "100%",
-                            maxHeight: "90vh",
-                            display: "flex",
-                            flexDirection: "column",
-                            overflow: "hidden",
-                            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2)",
-                        }}
+                        className="image-modal-content"
+                        style={{ maxWidth: "750px", width: "100%" }}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div
-                            style={{
-                                padding: "14px 18px",
-                                borderBottom: "1px solid #e2e8f0",
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                            }}
-                        >
+                        <div className="image-modal-header">
                             <div>
-                                <h3 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "#0f172a" }}>
+                                <h3 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "var(--slate-900)" }}>
                                     {selectedProof.title}
                                 </h3>
-                                <p style={{ margin: "2px 0 0 0", fontSize: "12px", color: "#64748b" }}>
-                                    {selectedProof.info}
-                                </p>
+                                {selectedProof.info && (
+                                    <p style={{ margin: "2px 0 0 0", fontSize: "12px", color: "var(--slate-500)" }}>
+                                        {selectedProof.info}
+                                    </p>
+                                )}
                             </div>
                             <button
                                 type="button"
                                 onClick={() => setSelectedProof(null)}
-                                style={{
-                                    border: "none",
-                                    background: "#f1f5f9",
-                                    borderRadius: "6px",
-                                    padding: "4px 8px",
-                                    cursor: "pointer",
-                                    fontSize: "13px",
-                                    fontWeight: 700,
-                                    color: "#475569",
-                                }}
+                                className="image-modal-close-btn"
                             >
-                                ✕ Close
+                                Close ✕
                             </button>
                         </div>
                         <div
                             style={{
-                                padding: "16px",
-                                overflowY: "auto",
-                                textAlign: "center",
-                                backgroundColor: "#0b132b",
+                                width: "100%",
+                                display: "flex",
+                                justifyContent: "center",
+                                alignItems: "center",
+                                padding: "12px",
+                                backgroundColor: "#0f172a",
+                                borderRadius: "8px",
+                                overflow: "hidden",
                             }}
                         >
                             <img
@@ -559,11 +807,22 @@ export default function ExecutiveVerifyOrders() {
                                 alt={selectedProof.title}
                                 style={{
                                     maxWidth: "100%",
-                                    maxHeight: "75vh",
+                                    maxHeight: "72vh",
                                     objectFit: "contain",
-                                    borderRadius: "6px",
+                                    borderRadius: "4px",
                                 }}
                             />
+                        </div>
+                        <div style={{ width: "100%", display: "flex", justifyContent: "flex-end", marginTop: "10px" }}>
+                            <a
+                                href={selectedProof.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="table-btn table-btn-outline"
+                                style={{ fontSize: "12px" }}
+                            >
+                                Open Original Full Image ↗
+                            </a>
                         </div>
                     </div>
                 </div>
