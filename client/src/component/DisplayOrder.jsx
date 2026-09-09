@@ -18,6 +18,7 @@ export default function DisplayOrder({ order }) {
     const [searchOrderId, setSearchOrderId] = useState("");
     const [searchReviewer, setSearchReviewer] = useState("");
     const [activeUnitTab, setActiveUnitTab] = useState("all");
+    const [unitsList, setUnitsList] = useState(order?.orderUnits || []);
     const [previewImage, setPreviewImage] = useState(null);
     const [verifyingUnitId, setVerifyingUnitId] = useState(null);
     const [revisionModal, setRevisionModal] = useState({
@@ -47,7 +48,7 @@ export default function DisplayOrder({ order }) {
         );
     }
 
-    const units = unitsList;
+    const units = unitsList || order?.orderUnits || [];
     const summary = {
         unassigned: units.filter((u) => u.status === "unassigned").length,
         pendingPayment: units.filter((u) => u.status === "pending_payment").length,

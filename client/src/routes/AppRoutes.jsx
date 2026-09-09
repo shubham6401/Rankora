@@ -86,6 +86,7 @@ export default function AppRoutes() {
             <Route path="/mediator-refund-submission/:id" element={<ProtectedLayout><RefundSubmission /></ProtectedLayout>} />
             <Route path="/refund-submission/:id" element={<ProtectedLayout><RefundSubmission /></ProtectedLayout>} />
             <Route path="/order/:id" element={<ProtectedLayout><DisplayOrderDetails /></ProtectedLayout>} />
+            <Route path="/executive-order/:id" element={<ProtectedLayout><DisplayOrderDetails /></ProtectedLayout>} />
 
             {/* Executive Protected Routes */}
             <Route path="/dashboard-executive" element={<ProtectedLayout><ExecutiveDashboard /></ProtectedLayout>} />
