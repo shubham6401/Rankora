@@ -558,3 +558,27 @@
         margin-top: 32px;
     }
 }
+
+@media (max-width: 480px) {
+    .role-page-container {
+        padding: 24px 12px;
+    }
+    .role-card {
+        padding: 20px 16px;
+    }
+    .role-demo-banner {
+        border-radius: var(--radius-lg);
+        text-align: center;
+        padding: 10px 12px;
+    }
+}
+
+@media (max-width: 360px) {
+    .role-page-container {
+        padding: 18px 10px;
+    }
+    .role-card {
+        padding: 18px 12px;
+    }
+}
+

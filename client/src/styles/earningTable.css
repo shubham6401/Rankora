@@ -227,3 +227,52 @@
     color: var(--slate-500);
     text-align: right;
 }
+
+@media (max-width: 640px) {
+    .earning-wrapper {
+        margin: 14px auto;
+        padding: 0 4px;
+    }
+    .earning-sync-bar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .earning-controls {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 480px) {
+    .earning-metrics-row {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+    .cell-label {
+        padding: 7px 10px;
+        font-size: 12.5px;
+    }
+    .cell-val {
+        padding: 7px 10px;
+        font-size: 13px;
+    }
+    .spreadsheet-header-th {
+        padding: 10px 14px;
+        font-size: 16px;
+    }
+}
+
+@media (max-width: 360px) {
+    .earning-metrics-row {
+        grid-template-columns: 1fr;
+    }
+    .cell-label {
+        padding: 6px 8px;
+        font-size: 12px;
+    }
+    .cell-val {
+        padding: 6px 8px;
+        font-size: 12px;
+    }
+}
+

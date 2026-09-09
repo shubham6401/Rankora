@@ -203,7 +203,7 @@ export default function ExecutiveBalance() {
             <div
                 style={{
                     display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))",
                     gap: "16px",
                     marginBottom: "28px",
                 }}
@@ -369,7 +369,7 @@ export default function ExecutiveBalance() {
                 </p>
 
                 <form onSubmit={handleSendBalance}>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "16px", marginBottom: "16px" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 260px), 1fr))", gap: "16px", marginBottom: "16px" }}>
                         {/* Select Mediator */}
                         <div>
                             <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#334155", marginBottom: "6px" }}>

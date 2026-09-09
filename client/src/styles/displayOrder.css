@@ -516,17 +516,51 @@
         flex-direction: column;
         gap: 8px;
     }
+    .mediators-grid {
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+    }
+    .units-filter-grid {
+        grid-template-columns: 1fr;
+    }
+    .display-section-card {
+        padding: 16px;
+    }
 }
 
 @media (max-width: 480px) {
+    .display-order-page {
+        padding: 14px 10px 48px;
+    }
+    .master-order-card {
+        padding: 16px 14px;
+    }
     .master-order-grid {
         grid-template-columns: 1fr;
     }
     .master-order-title {
         font-size: 20px;
     }
+    .mediators-grid {
+        grid-template-columns: 1fr;
+    }
     .display-order-back-btn {
         width: 100%;
         justify-content: center;
     }
+    .filter-pills-row {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        padding-bottom: 4px;
+        -webkit-overflow-scrolling: touch;
+    }
 }
+
+@media (max-width: 360px) {
+    .display-order-page {
+        padding: 12px 8px 40px;
+    }
+    .display-section-card {
+        padding: 12px 10px;
+    }
+}
+

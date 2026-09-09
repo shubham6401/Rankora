@@ -916,12 +916,16 @@
    ========================================================================== */
 @media (max-width: 1024px) {
     .table-metrics-bar {
+        display: grid;
         grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
         gap: 12px;
     }
 }
 
 @media (max-width: 768px) {
+    .table-page-container {
+        padding: 18px 16px 48px;
+    }
     .table-page-header {
         flex-direction: column;
         align-items: flex-start;
@@ -932,8 +936,14 @@
         justify-content: flex-start;
     }
     .table-metrics-bar {
+        display: grid;
         grid-template-columns: repeat(2, 1fr);
         gap: 10px;
+    }
+    .metric-card {
+        min-width: 0;
+        max-width: 100%;
+        padding: 12px 14px;
     }
     .metric-value {
         font-size: 20px;
@@ -944,14 +954,31 @@
     .modal-action-row {
         grid-template-columns: 1fr;
     }
+    .filter-bar-card {
+        padding: 12px 14px;
+    }
+    .filter-input-text {
+        flex: 1 1 100%;
+        max-width: 100%;
+    }
+    .group-card {
+        padding: 18px 16px;
+    }
+    .proof-note-input {
+        min-width: 0;
+        width: 100%;
+    }
 }
 
 @media (max-width: 480px) {
+    .table-page-container {
+        padding: 14px 10px 48px;
+    }
     .table-metrics-bar {
         grid-template-columns: 1fr;
     }
     .table-page-title {
-        font-size: 22px;
+        font-size: 20px;
     }
     .nav-btn {
         width: 100%;
@@ -959,6 +986,25 @@
     }
     .table-header-actions {
         flex-direction: column;
+        width: 100%;
+    }
+    .group-card {
+        padding: 14px 12px;
+    }
+    .filter-btn-submit,
+    .filter-btn-clear {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+@media (max-width: 360px) {
+    .table-page-container {
+        padding: 12px 8px 40px;
+    }
+    .table-btn {
+        padding: 5px 8px;
+        font-size: 11px;
     }
 }
 

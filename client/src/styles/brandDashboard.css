@@ -1594,9 +1594,49 @@
         align-items: flex-start;
         gap: 8px;
     }
+    /* Breakdown Modal Responsive */
+    .modal-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+    .modal-toolbar-filters {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+    }
+    .modal-search-box {
+        min-width: 100%;
+        max-width: 100%;
+    }
+    .modal-select-wrapper {
+        width: 100%;
+    }
+    .modal-select {
+        width: 100%;
+    }
+    .modal-download-excel-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    .proofs-grid {
+        grid-template-columns: 1fr;
+    }
+    .modal-header {
+        padding: 14px 16px;
+    }
+    .modal-body {
+        padding: 14px 16px;
+    }
 }
 
 @media (max-width: 480px) {
+    .brand-dashboard-container {
+        padding: 14px 10px 48px;
+    }
+    .brand-hero-card {
+        padding: 16px 14px;
+    }
     .brand-hero-left {
         flex-direction: column;
         align-items: flex-start;
@@ -1607,5 +1647,29 @@
     }
     .brand-hero-title {
         font-size: 22px;
+    }
+    .brand-modal-backdrop {
+        padding: 8px;
+    }
+    .brand-breakdown-modal {
+        width: 100%;
+        max-height: 94vh;
+        border-radius: 12px;
+    }
+    .modal-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 360px) {
+    .brand-dashboard-container {
+        padding: 12px 8px 40px;
+    }
+    .modal-kpi-grid {
+        grid-template-columns: 1fr;
+    }
+    .brand-refresh-btn {
+        width: 100%;
+        justify-content: center;
     }
 }

@@ -116,7 +116,7 @@
 
 .context-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
     gap: 12px 20px;
 }
 
@@ -249,10 +249,23 @@
 }
 
 @media (max-width: 600px) {
+    .form-page-container {
+        margin: 16px auto 40px auto;
+        padding: 0 8px;
+    }
+    .form-card {
+        padding: 20px 16px;
+    }
+    .form-submit-row,
     .form-actions {
         flex-direction: column;
+        width: 100%;
     }
     .form-btn-submit {
+        width: 100%;
+        justify-content: center;
+    }
+    .form-nav-back {
         width: 100%;
         justify-content: center;
     }
