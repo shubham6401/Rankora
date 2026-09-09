@@ -259,6 +259,41 @@ export default function DisplayOrder({ order }) {
                 ← Go Back
             </button>
 
+            {/* VERIFICATION CALLOUT FOR EXECUTIVES */}
+            {isExecutive && summary.pendingVerification > 0 && (
+                <div
+                    style={{
+                        background: "linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%)",
+                        border: "1.5px solid #c7d2fe",
+                        borderRadius: "10px",
+                        padding: "14px 18px",
+                        marginBottom: "16px",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                        gap: "12px",
+                    }}
+                >
+                    <div>
+                        <div style={{ fontWeight: 800, color: "#3730a3", fontSize: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
+                            ⏳ Delivery Verification Required
+                        </div>
+                        <div style={{ fontSize: "12.5px", color: "#4338ca", marginTop: "2px" }}>
+                            This order has <b>{summary.pendingVerification}</b> unit(s) awaiting delivery proof verification.
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => navigate(`/executive-verify-order/${order._id}`)}
+                        className="table-btn table-btn-primary"
+                        style={{ background: "#4f46e5", fontWeight: 700, padding: "8px 16px" }}
+                    >
+                        🔍 Open Verification Inspection ({summary.pendingVerification}) →
+                    </button>
+                </div>
+            )}
+
             {/* MASTER ORDER HEADER CARD */}
             <div className="master-order-card">
                 <div className="master-order-top">

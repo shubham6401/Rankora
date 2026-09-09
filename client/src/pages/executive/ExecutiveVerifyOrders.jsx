@@ -363,12 +363,21 @@ export default function ExecutiveVerifyOrders() {
                                                 <div className="action-btn-group" style={{ justifyContent: "center", gap: "6px", flexWrap: "wrap" }}>
                                                     <button
                                                         type="button"
-                                                        onClick={() => navigate(`/order/${order._id}`)}
+                                                        onClick={() => navigate(`/executive-verify-order/${order._id}`)}
                                                         className="table-btn table-btn-primary"
                                                         style={{ background: "#4f46e5", fontWeight: 700, whiteSpace: "nowrap" }}
-                                                        title="Inspect all 4 proof screenshots in detail and verify or request revision"
+                                                        title="Inspect the 4 verification proof screenshots and verify or request revision for pending units"
                                                     >
-                                                        🔍 Inspect & Verify Details →
+                                                        🔍 Inspect & Verify ({count} {count === 1 ? "Unit" : "Units"}) →
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => navigate(`/order/${order._id}`)}
+                                                        className="table-btn table-btn-secondary"
+                                                        style={{ fontSize: "11.5px", padding: "5px 9px", whiteSpace: "nowrap" }}
+                                                        title="View complete master order specifications, all units across all stages, and finance history"
+                                                    >
+                                                        📄 Full Details
                                                     </button>
                                                 </div>
                                             </td>

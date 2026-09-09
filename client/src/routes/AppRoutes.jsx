@@ -32,6 +32,7 @@ import AssignedOrders from "../pages/executive/AssignedOrders";
 import In_progressOrders from "../pages/executive/In_progressOrders";
 import Pending_refundOrders from "../pages/executive/Pending_refundOrders";
 import ExecutiveVerifyOrders from "../pages/executive/ExecutiveVerifyOrders";
+import ExecutiveInspectOrder from "../pages/executive/ExecutiveInspectOrder";
 import CompletedOrders from "../pages/executive/CompletedOrders";
 import AllMediator from "../pages/executive/AllMediators";
 import ExecutiveBalance from "../pages/executive/ExecutiveBalance";
@@ -99,6 +100,7 @@ export default function AppRoutes() {
             <Route path="/executive-in_progress-order" element={<ProtectedLayout><In_progressOrders /></ProtectedLayout>} />
             <Route path="/executive-pending_refund-order" element={<ProtectedLayout><Pending_refundOrders /></ProtectedLayout>} />
             <Route path="/executive-verify-orders" element={<ProtectedLayout><ExecutiveVerifyOrders /></ProtectedLayout>} />
+            <Route path="/executive-verify-order/:id" element={<ProtectedLayout><ExecutiveInspectOrder /></ProtectedLayout>} />
             <Route path="/executive-completed-order" element={<ProtectedLayout><CompletedOrders /></ProtectedLayout>} />
             <Route path="/executive-balance" element={<ProtectedLayout><ExecutiveBalance /></ProtectedLayout>} />
             <Route path="/executive-mediators" element={<ProtectedLayout><AllMediator /></ProtectedLayout>} />
