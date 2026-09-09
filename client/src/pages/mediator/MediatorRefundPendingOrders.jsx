@@ -129,13 +129,28 @@ export default function MediatorRefundPendingOrders() {
                                     );
                                     const count = pendingRefundUnits.length;
                                     const primaryUnit = pendingRefundUnits[0] || {};
+                                    const hasRevision = pendingRefundUnits.some((u) => !!u.verificationRejectionReason);
+                                    const revisionUnit = pendingRefundUnits.find((u) => !!u.verificationRejectionReason) || primaryUnit;
                                     const orderIdDisplay = primaryUnit.orderId || order.orderId || "Submitted";
                                     const reviewerDisplay = primaryUnit.reviewerName || order.reviewerName || "N/A";
 
                                     return (
-                                        <tr key={order._id}>
+                                        <tr key={order._id} className={hasRevision ? "row-revision-alert" : ""}>
                                             <td className="product-name-cell">
-                                                {order.productName}
+                                                <div style={{ fontWeight: 600 }}>{order.productName}</div>
+                                                {hasRevision && revisionUnit.verificationRejectionReason && (
+                                                    <div className="revision-feedback-callout" style={{ marginTop: "6px", maxWidth: "340px" }}>
+                                                        <div className="callout-header">
+                                                            <span>⚠️ Executive Feedback</span>
+                                                        </div>
+                                                        <div className="callout-message">
+                                                            "{revisionUnit.verificationRejectionReason}"
+                                                        </div>
+                                                        <div className="callout-action-hint">
+                                                            Click Fix Proofs to re-upload the requested screenshots.
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </td>
                                             <td>{order.brand}</td>
                                             <td>{order.orderPlatform}</td>
@@ -151,21 +166,28 @@ export default function MediatorRefundPendingOrders() {
                                             <td>{reviewerDisplay}</td>
                                             <td>{new Date(order.createdAt).toLocaleDateString()}</td>
                                             <td>
-                                                <span className="status-badge status-badge-pending_refund">
-                                                    ● Pending Refund
-                                                </span>
+                                                <div style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-start" }}>
+                                                    <span className="status-badge status-badge-pending_refund">
+                                                        ● Pending Refund
+                                                    </span>
+                                                    {hasRevision && (
+                                                        <span className="status-badge-revision">
+                                                            ⚠️ Revision Needed
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td>{order.teamCode || "N/A"}</td>
                                             <td style={{ textAlign: "center" }}>
                                                 <div className="action-btn-group" style={{ justifyContent: "center", flexWrap: "wrap", gap: "6px" }}>
                                                     <button
                                                         type="button"
-                                                        onClick={() => navigate(`/mediator-refund-submission/${pendingRefundUnits[0]?._id || order._id}`)}
-                                                        className="table-btn table-btn-primary"
-                                                        style={{ background: "#7c3aed" }}
-                                                        title={count > 1 ? `Submit delivery review proof (${count} units remaining)` : "Submit delivery review proof"}
+                                                        onClick={() => navigate(`/mediator-refund-submission/${revisionUnit?._id || primaryUnit?._id || order._id}`)}
+                                                        className={hasRevision ? "table-btn table-btn-danger" : "table-btn table-btn-primary"}
+                                                        style={hasRevision ? { fontWeight: 700 } : { background: "#7c3aed" }}
+                                                        title={hasRevision ? "Executive requested revision on proofs. Click to fix." : (count > 1 ? `Submit delivery review proof (${count} units remaining)` : "Submit delivery review proof")}
                                                     >
-                                                        Submit Delivery Proof
+                                                        {hasRevision ? "Fix Proofs ⚠️" : "Submit Delivery Proof"}
                                                     </button>
                                                     <button
                                                         type="button"

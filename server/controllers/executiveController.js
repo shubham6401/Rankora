@@ -456,7 +456,7 @@ const verifyOrderUnit = async (req, res, next) => {
 // ==========================================
 const rejectOrderUnitVerification = async (req, res, next) => {
     try {
-        const { orderId, unitId, reason } = req.body;
+        const { orderId, unitId, reason, targetStatus } = req.body;
 
         if (!orderId || !unitId) {
             return res.status(400).json({
@@ -488,9 +488,11 @@ const rejectOrderUnitVerification = async (req, res, next) => {
             });
         }
 
-        // Revert back to pending_refund so mediator can re-upload proofs
-        unit.status = "pending_refund";
+        // Destination state chosen by executive: 'in_progress' or 'pending_refund' (default)
+        const finalStatus = targetStatus === "in_progress" ? "in_progress" : "pending_refund";
+        unit.status = finalStatus;
         unit.verificationRejectionReason = reason || "Executive requested revision of proof details";
+        unit.rejectedAt = new Date();
 
         order.recalculateSummary();
         await order.save();
@@ -500,11 +502,13 @@ const rejectOrderUnitVerification = async (req, res, next) => {
             .populate("createdBy", "name")
             .populate("orderUnits.mediatorId", "name mediatorCode teamCode");
 
+        const statusLabel = finalStatus === "in_progress" ? "In Progress" : "Pending Refund";
         return res.status(200).json({
             success: true,
-            message: "Revision requested. Unit returned to Pending Refund for mediator correction.",
+            message: `Revision requested. Unit returned to ${statusLabel} for mediator correction.`,
             order: populatedOrder,
             unit,
+            targetStatus: finalStatus,
         });
     } catch (err) {
         next(err);

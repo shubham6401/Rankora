@@ -423,8 +423,46 @@ async function runTests() {
         assert(execPendingVerify.status === 200, "Executive pending verification returns 200");
         assert(execPendingVerify.data.orders.some((o) => o._id === orderId), "Order appears in executive pending verification list");
 
-        // 20c. Executive Requesting Revision -> Reverts to Pending Refund
-        console.log("\n👉 Test 20c: Executive Requesting Revision (Revert to Pending Refund)");
+        // 20c. Executive Requesting Revision with Target Destination State Choice
+        console.log("\n👉 Test 20c: Executive Requesting Revision (Reverting to In Progress & Pending Refund)");
+        // Test branch 1: Rejection to In Progress
+        const revisionToInProgress = await request("/executive/order/reject-unit-verification", {
+            method: "POST",
+            headers: execHeaders,
+            body: {
+                orderId,
+                unitId: targetUnitId,
+                reason: "Wrong order ID provided, please verify and re-place order",
+                targetStatus: "in_progress",
+            },
+        });
+        assert(revisionToInProgress.status === 200, "Reject to in_progress returns 200");
+        assert(revisionToInProgress.data.targetStatus === "in_progress", "Target status is in_progress");
+        assert(revisionToInProgress.data.order.summary.inProgress === 2, "inProgress count increased to 2");
+        assert(revisionToInProgress.data.order.summary.pendingVerification === 0, "pendingVerification count decreased to 0");
+
+        // Mediator resubmits from in_progress specifically for targetUnitId -> moves to pending_refund
+        const mediatorFixOrder = await request(`/mediator/order/submit/${targetUnitId}`, {
+            method: "POST",
+            headers: medHeaders,
+            body: {
+                orderId: "AMZ-CORRECTED-999",
+                reviewerName: "Verified Buyer",
+            },
+        });
+        assert(mediatorFixOrder.status === 200, "Mediator resubmitting from in_progress returns 200");
+        assert(mediatorFixOrder.data.order.summary.pendingRefund === 1, "Order moved to pending_refund");
+
+        // Mediator submits proofs to pending_verification
+        await request(`/mediator/refund/submit/${targetUnitId}`, {
+            method: "POST",
+            headers: medHeaders,
+            body: {
+                productReviewScreenshot: "https://res.cloudinary.com/demo/image/upload/review_1.jpg",
+            },
+        });
+
+        // Test branch 2: Rejection to Pending Refund
         const revisionRes = await request("/executive/order/reject-unit-verification", {
             method: "POST",
             headers: execHeaders,
@@ -432,15 +470,16 @@ async function runTests() {
                 orderId,
                 unitId: targetUnitId,
                 reason: "Invoice screenshot is blurry, please re-upload clear proof",
+                targetStatus: "pending_refund",
             },
         });
-        assert(revisionRes.status === 200, "Reject verification returns 200");
+        assert(revisionRes.status === 200, "Reject verification to pending_refund returns 200");
         assert(revisionRes.data.order.summary.pendingRefund === 1, "Unit reverted to pending_refund");
         assert(revisionRes.data.order.summary.pendingVerification === 0, "pendingVerification count decreased to 0");
 
         // 20d. Mediator Resubmitting Corrected Proofs
         console.log("\n👉 Test 20d: Mediator Resubmitting Corrected Proofs");
-        const resubmitRes = await request(`/mediator/refund/submit/${orderId}`, {
+        const resubmitRes = await request(`/mediator/refund/submit/${targetUnitId}`, {
             method: "POST",
             headers: medHeaders,
             body: {

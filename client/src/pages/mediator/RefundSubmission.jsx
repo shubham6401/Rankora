@@ -75,6 +75,11 @@ export default function RefundSubmission() {
         );
     }
 
+    const currentUnit =
+        (order.orderUnits || []).find((u) => u._id === id) ||
+        (order.orderUnits || []).find((u) => u.status === "pending_refund") ||
+        {};
+
     return (
         <div className="form-page-container">
             <button
@@ -93,6 +98,24 @@ export default function RefundSubmission() {
                         Upload screenshots of the review, invoice, and seller feedback. Your submission will be sent to the Executive team for verification before moving to Completed.
                     </p>
                 </div>
+
+                {/* EXECUTIVE REVISION FEEDBACK ALERT */}
+                {currentUnit.verificationRejectionReason && (
+                    <div className="revision-feedback-callout" style={{ marginBottom: "20px" }}>
+                        <div className="callout-header">
+                            <span>⚠️ Executive Requested Revision</span>
+                            <span className="callout-badge" style={{ background: "#fee2e2", color: "#991b1b" }}>
+                                Action Required
+                            </span>
+                        </div>
+                        <div className="callout-message">
+                            "{currentUnit.verificationRejectionReason}"
+                        </div>
+                        <div className="callout-action-hint">
+                            Please review the feedback above and re-upload the corrected screenshots below.
+                        </div>
+                    </div>
+                )}
 
                 {error && (
                     <div style={{ color: "#e11d48", padding: "10px", background: "#fff1f2", borderRadius: "6px", marginBottom: "16px", fontSize: "13px" }}>

@@ -190,6 +190,7 @@ const submitOrderDetails = async (req, res, next) => {
         if (req.body.season) unit.season = req.body.season;
 
         unit.status = "pending_refund";
+        unit.verificationRejectionReason = null;
 
         order.recalculateSummary();
         await order.save();

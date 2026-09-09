@@ -18,8 +18,15 @@ export default function DisplayOrder({ order }) {
     const [searchOrderId, setSearchOrderId] = useState("");
     const [searchReviewer, setSearchReviewer] = useState("");
     const [previewImage, setPreviewImage] = useState(null);
-    const [unitsList, setUnitsList] = useState(order?.orderUnits || []);
     const [verifyingUnitId, setVerifyingUnitId] = useState(null);
+    const [revisionModal, setRevisionModal] = useState({
+        isOpen: false,
+        unitId: null,
+        orderId: null,
+        targetStatus: "pending_refund",
+        reason: "",
+        isSubmitting: false,
+    });
 
     useEffect(() => {
         if (order?.orderUnits) {
@@ -71,25 +78,67 @@ export default function DisplayOrder({ order }) {
         }
     };
 
-    const handleRejectVerification = async (unitId) => {
-        const reason = window.prompt("Enter revision reason / feedback for the mediator (why proofs were not approved):");
-        if (reason === null) return;
+    const openRevisionModal = (unitId) => {
+        setRevisionModal({
+            isOpen: true,
+            unitId,
+            orderId: order._id,
+            targetStatus: "pending_refund",
+            reason: "",
+            isSubmitting: false,
+        });
+    };
+
+    const closeRevisionModal = () => {
+        setRevisionModal({
+            isOpen: false,
+            unitId: null,
+            orderId: null,
+            targetStatus: "pending_refund",
+            reason: "",
+            isSubmitting: false,
+        });
+    };
+
+    const submitRevisionModal = async () => {
+        if (!revisionModal.reason.trim()) {
+            alert("Please provide a reason or feedback for requesting revision.");
+            return;
+        }
+
         try {
-            setVerifyingUnitId(unitId);
-            const res = await rejectExecutiveOrderUnitVerification({ orderId: order._id, unitId, reason });
+            setRevisionModal((prev) => ({ ...prev, isSubmitting: true }));
+            const res = await rejectExecutiveOrderUnitVerification({
+                orderId: revisionModal.orderId,
+                unitId: revisionModal.unitId,
+                reason: revisionModal.reason.trim(),
+                targetStatus: revisionModal.targetStatus,
+            });
+
             if (res.data?.success) {
-                alert("Revision requested! Unit returned to Pending Refund for mediator.");
+                const destLabel =
+                    revisionModal.targetStatus === "in_progress"
+                        ? "In Progress (Stage 2)"
+                        : "Pending Refund (Stage 3)";
+                alert(`Revision requested! Unit returned to ${destLabel} for the mediator.`);
                 setUnitsList((prev) =>
                     prev.map((u) =>
-                        u._id === unitId ? { ...u, status: "pending_refund", verificationRejectionReason: reason } : u
+                        u._id === revisionModal.unitId
+                            ? {
+                                  ...u,
+                                  status: revisionModal.targetStatus,
+                                  verificationRejectionReason: revisionModal.reason.trim(),
+                                  rejectedAt: new Date(),
+                              }
+                            : u
                     )
                 );
+                closeRevisionModal();
             }
         } catch (err) {
             console.error("Error requesting revision:", err);
             alert(err?.response?.data?.message || "Failed to request revision");
-        } finally {
-            setVerifyingUnitId(null);
+            setRevisionModal((prev) => ({ ...prev, isSubmitting: false }));
         }
     };
 
@@ -610,7 +659,8 @@ export default function DisplayOrder({ order }) {
                             return (
                                 <div
                                     key={unit._id || index}
-                                    className="unit-item-card"
+                                    className={`unit-item-card ${unit.verificationRejectionReason && (unit.status === "in_progress" || unit.status === "pending_refund") ? "unit-card-revision" : ""}`}
+                                    style={unit.verificationRejectionReason && (unit.status === "in_progress" || unit.status === "pending_refund") ? { borderColor: "#fca5a5", background: "#fffdfd", boxShadow: "0 0 0 1.5px rgba(239, 68, 68, 0.2)" } : {}}
                                 >
                                     {/* Unit Header */}
                                     <div className="unit-item-header">
@@ -620,9 +670,16 @@ export default function DisplayOrder({ order }) {
                                                 ID: {unit._id}
                                             </span>
                                         </div>
-                                        <span className={`status-badge status-badge-${unit.status}`}>
-                                            ● {unit.status.replace("_", " ")}
-                                        </span>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                                            <span className={`status-badge status-badge-${unit.status}`}>
+                                                ● {unit.status.replace("_", " ")}
+                                            </span>
+                                            {unit.verificationRejectionReason && (unit.status === "in_progress" || unit.status === "pending_refund") && (
+                                                <span className="status-badge-revision">
+                                                    ⚠️ Revision Needed
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
 
                                     {/* Mediator Info */}
@@ -849,8 +906,8 @@ export default function DisplayOrder({ order }) {
                                                     <div className="verification-btn-group">
                                                         <button
                                                             type="button"
-                                                            disabled={verifyingUnitId === unit._id}
-                                                            onClick={() => handleRejectVerification(unit._id)}
+                                                            disabled={verifyingUnitId === unit._id || revisionModal.isOpen}
+                                                            onClick={() => openRevisionModal(unit._id)}
                                                             className="table-btn table-btn-danger"
                                                         >
                                                             ✕ Request Revision
@@ -876,22 +933,28 @@ export default function DisplayOrder({ order }) {
                                         </div>
                                     )}
 
-                                    {/* REVISION NOTE IF PREVIOUSLY REJECTED */}
-                                    {unit.verificationRejectionReason && unit.status === "pending_refund" && (
-                                        <div
-                                            style={{
-                                                marginTop: "10px",
-                                                padding: "10px 14px",
-                                                background: "#fff1f2",
-                                                border: "1px solid #fecdd3",
-                                                borderRadius: "8px",
-                                                color: "#9f1239",
-                                                fontSize: "12.5px",
-                                            }}
-                                        >
-                                            <b>⚠️ Executive Requested Revision:</b> {unit.verificationRejectionReason}
-                                            <div style={{ fontSize: "11.5px", color: "#be123c", marginTop: "4px" }}>
-                                                Please update the order review proofs with the requested corrections.
+                                    {/* REVISION FEEDBACK CALLOUT IF PREVIOUSLY REJECTED */}
+                                    {unit.verificationRejectionReason && (unit.status === "pending_refund" || unit.status === "in_progress") && (
+                                        <div className="revision-feedback-callout" style={{ marginTop: "12px" }}>
+                                            <div className="callout-header">
+                                                <span>⚠️ Executive Requested Revision</span>
+                                                {unit.status === "in_progress" ? (
+                                                    <span className="callout-badge" style={{ background: "#dbeafe", color: "#1e40af" }}>
+                                                        Returned to In Progress (Stage 2)
+                                                    </span>
+                                                ) : (
+                                                    <span className="callout-badge" style={{ background: "#fef3c7", color: "#92400e" }}>
+                                                        Returned to Pending Refund (Stage 3)
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="callout-message">
+                                                "{unit.verificationRejectionReason}"
+                                            </div>
+                                            <div className="callout-action-hint">
+                                                {unit.status === "in_progress"
+                                                    ? "👉 Please correct the order placement details/screenshots in In Progress Orders."
+                                                    : "👉 Please correct the refund proof screenshots in Pending Refund."}
                                             </div>
                                         </div>
                                     )}
@@ -901,6 +964,141 @@ export default function DisplayOrder({ order }) {
                     </div>
                 )}
             </div>
+
+            {/* REVISION REQUEST MODAL (EXECUTIVE SELECTS DESTINATION STAGE & FEEDBACK) */}
+            {revisionModal.isOpen && (
+                <div className="revision-modal-overlay" onClick={closeRevisionModal}>
+                    <div className="revision-modal-card" onClick={(e) => e.stopPropagation()}>
+                        <div className="revision-modal-header">
+                            <div>
+                                <h3 className="revision-modal-title">
+                                    ↩️ Request Revision / Reject Delivery Proofs
+                                </h3>
+                                <p className="revision-modal-subtitle">
+                                    Select which stage the mediator must return to and specify what needs correction.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={closeRevisionModal}
+                                className="image-modal-close-btn"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Destination Stage Selector */}
+                        <div>
+                            <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: "var(--slate-800)", marginBottom: "6px" }}>
+                                Return Unit To Which Stage?
+                            </label>
+                            <div className="revision-dest-options">
+                                <div
+                                    className={`revision-dest-card ${revisionModal.targetStatus === "pending_refund" ? "selected" : ""}`}
+                                    onClick={() => setRevisionModal((prev) => ({ ...prev, targetStatus: "pending_refund" }))}
+                                >
+                                    <input
+                                        type="radio"
+                                        name="displayOrderTargetStatus"
+                                        checked={revisionModal.targetStatus === "pending_refund"}
+                                        onChange={() => setRevisionModal((prev) => ({ ...prev, targetStatus: "pending_refund" }))}
+                                        className="revision-dest-radio"
+                                    />
+                                    <div className="revision-dest-content">
+                                        <span className="revision-dest-title">
+                                            🔄 Pending Refund (Stage 3)
+                                        </span>
+                                        <span className="revision-dest-desc">
+                                            Return for new review screenshots, invoice screenshots, or seller feedback.
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div
+                                    className={`revision-dest-card ${revisionModal.targetStatus === "in_progress" ? "selected" : ""}`}
+                                    onClick={() => setRevisionModal((prev) => ({ ...prev, targetStatus: "in_progress" }))}
+                                >
+                                    <input
+                                        type="radio"
+                                        name="displayOrderTargetStatus"
+                                        checked={revisionModal.targetStatus === "in_progress"}
+                                        onChange={() => setRevisionModal((prev) => ({ ...prev, targetStatus: "in_progress" }))}
+                                        className="revision-dest-radio"
+                                    />
+                                    <div className="revision-dest-content">
+                                        <span className="revision-dest-title">
+                                            ⏪ Return to In Progress (Stage 2)
+                                        </span>
+                                        <span className="revision-dest-desc">
+                                            Mediator must re-enter order placement details, order ID, or order confirmation screenshot.
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Feedback / Reason Input */}
+                        <div>
+                            <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: "var(--slate-800)", marginBottom: "6px" }}>
+                                Rejection Feedback for Mediator:
+                            </label>
+                            <textarea
+                                rows={3}
+                                placeholder="Describe what is wrong and what the mediator needs to fix..."
+                                value={revisionModal.reason}
+                                onChange={(e) => setRevisionModal((prev) => ({ ...prev, reason: e.target.value }))}
+                                className="filter-input"
+                                style={{ width: "100%", boxSizing: "border-box", resize: "vertical", minHeight: "75px" }}
+                            />
+
+                            <div style={{ marginTop: "6px" }}>
+                                <span style={{ fontSize: "11px", color: "var(--slate-500)", fontWeight: 600 }}>
+                                    Quick suggestions:
+                                </span>
+                                <div className="revision-suggestion-chips">
+                                    {[
+                                        "Review screenshot is blurry or cropped",
+                                        "5-star storefront rating not visible",
+                                        "External Order ID does not match",
+                                        "Platform invoice screenshot is missing",
+                                        "Seller feedback proof incomplete",
+                                        "Wrong order placed, re-place in progress",
+                                    ].map((suggestion) => (
+                                        <button
+                                            key={suggestion}
+                                            type="button"
+                                            className="revision-chip-btn"
+                                            onClick={() => setRevisionModal((prev) => ({ ...prev, reason: suggestion }))}
+                                        >
+                                            + {suggestion}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Modal Actions */}
+                        <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>
+                            <button
+                                type="button"
+                                onClick={closeRevisionModal}
+                                className="table-btn table-btn-outline"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                disabled={revisionModal.isSubmitting}
+                                onClick={submitRevisionModal}
+                                className="table-btn table-btn-danger"
+                                style={{ fontWeight: 700, padding: "8px 18px" }}
+                            >
+                                {revisionModal.isSubmitting ? "Returning Unit..." : "Confirm & Return Unit"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* FULLSCREEN IMAGE PREVIEW MODAL */}
             {previewImage && (

@@ -125,11 +125,26 @@ export default function MediatorPendingOrders() {
                                         (u) => u.status === "in_progress"
                                     );
                                     const count = inProgressUnits.length;
+                                    const hasRevision = inProgressUnits.some((u) => !!u.verificationRejectionReason);
+                                    const revisionUnit = inProgressUnits.find((u) => !!u.verificationRejectionReason) || inProgressUnits[0];
 
                                     return (
-                                        <tr key={order._id}>
+                                        <tr key={order._id} className={hasRevision ? "row-revision-alert" : ""}>
                                             <td className="product-name-cell">
-                                                {order.productName}
+                                                <div style={{ fontWeight: 600 }}>{order.productName}</div>
+                                                {hasRevision && revisionUnit?.verificationRejectionReason && (
+                                                    <div className="revision-feedback-callout" style={{ marginTop: "6px", maxWidth: "340px" }}>
+                                                        <div className="callout-header">
+                                                            <span>⚠️ Returned by Executive</span>
+                                                        </div>
+                                                        <div className="callout-message">
+                                                            "{revisionUnit.verificationRejectionReason}"
+                                                        </div>
+                                                        <div className="callout-action-hint">
+                                                            Executive returned this delivery to In Progress. Please fix order placement details.
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </td>
                                             <td>{order.brand}</td>
                                             <td>{order.orderPlatform}</td>
@@ -137,9 +152,16 @@ export default function MediatorPendingOrders() {
                                             <td>{order.executiveName || "Executive"}</td>
                                             <td>{new Date(order.createdAt).toLocaleDateString()}</td>
                                             <td>
-                                                <span className="status-badge status-badge-in_progress">
-                                                    ● In Progress
-                                                </span>
+                                                <div style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-start" }}>
+                                                    <span className="status-badge status-badge-in_progress">
+                                                        ● In Progress
+                                                    </span>
+                                                    {hasRevision && (
+                                                        <span className="status-badge-revision">
+                                                            ⚠️ Revision: Returned
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td>
                                                 <span className="qty-pill qty-pill-warning">
@@ -151,11 +173,12 @@ export default function MediatorPendingOrders() {
                                                 <div className="action-btn-group" style={{ justifyContent: "center", flexWrap: "wrap", gap: "6px" }}>
                                                     <button
                                                         type="button"
-                                                        onClick={() => navigate(`/mediator-order-submission/${inProgressUnits[0]?._id || order._id}`)}
-                                                        className="table-btn table-btn-primary"
-                                                        title={count > 1 ? `Submit details for next unit (${count} units remaining)` : "Submit placement details"}
+                                                        onClick={() => navigate(`/mediator-order-submission/${revisionUnit?._id || inProgressUnits[0]?._id || order._id}`)}
+                                                        className={hasRevision ? "table-btn table-btn-danger" : "table-btn table-btn-primary"}
+                                                        style={hasRevision ? { fontWeight: 700 } : {}}
+                                                        title={hasRevision ? "Executive requested revision. Click to fix order placement details." : (count > 1 ? `Submit details for next unit (${count} units remaining)` : "Submit placement details")}
                                                     >
-                                                        Submit Details
+                                                        {hasRevision ? "Fix Details ⚠️" : "Submit Details"}
                                                     </button>
                                                     <button
                                                         type="button"

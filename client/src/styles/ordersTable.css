@@ -1544,5 +1544,200 @@
     }
 }
 
+/* ==========================================================================
+   REVISION REQUESTED & REJECTED ORDERS DIFFERENTIATION STYLING
+   ========================================================================== */
+
+/* Distinct highlight for rejected rows in mediator tables */
+.row-revision-alert {
+    background: linear-gradient(90deg, #fff1f2 0%, #ffffff 70%) !important;
+    border-left: 4px solid #ef4444 !important;
+}
+
+.row-revision-alert:hover {
+    background: linear-gradient(90deg, #ffe4e6 0%, #f8fafc 70%) !important;
+}
+
+/* Callout box displaying executive's rejection feedback */
+.revision-feedback-callout {
+    margin-top: 6px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+    font-size: 12px;
+    line-height: 1.4;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.revision-feedback-callout b {
+    color: #7f1d1d;
+}
+
+.revision-feedback-action {
+    display: block;
+    margin-top: 3px;
+    font-size: 11px;
+    color: #b91c1c;
+    font-weight: 600;
+}
+
+/* Status badge for revision needed */
+.status-badge-revision {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    animation: pulseBadge 2s infinite ease-in-out;
+}
+
+@keyframes pulseBadge {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 4px rgba(239, 68, 68, 0);
+    }
+}
+
+/* Interactive Revision Modal for Executive */
+.revision-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 16px;
+}
+
+.revision-modal-card {
+    background: #ffffff;
+    border-radius: 12px;
+    max-width: 540px;
+    width: 100%;
+    padding: 24px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    box-sizing: border-box;
+}
+
+.revision-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 1px solid var(--slate-200);
+    padding-bottom: 12px;
+}
+
+.revision-modal-title {
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--slate-900);
+    margin: 0 0 4px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.revision-modal-subtitle {
+    font-size: 12.5px;
+    color: var(--slate-600);
+    margin: 0;
+}
+
+.revision-dest-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.revision-dest-card {
+    border: 1.5px solid var(--slate-300);
+    border-radius: 8px;
+    padding: 12px 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    transition: all 0.15s ease;
+    background: #ffffff;
+}
+
+.revision-dest-card:hover {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+}
+
+.revision-dest-card.selected {
+    border-color: #4f46e5;
+    background: #f5f7ff;
+    box-shadow: 0 0 0 1px #4f46e5;
+}
+
+.revision-dest-radio {
+    margin-top: 3px;
+    cursor: pointer;
+}
+
+.revision-dest-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.revision-dest-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--slate-900);
+}
+
+.revision-dest-desc {
+    font-size: 11.5px;
+    color: var(--slate-600);
+    line-height: 1.35;
+}
+
+.revision-suggestion-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.revision-chip-btn {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #334155;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.revision-chip-btn:hover {
+    background: #e2e8f0;
+    border-color: #cbd5e1;
+    color: #0f172a;
+}
+
+
 
 

@@ -51,14 +51,54 @@ export default function ExecutiveVerifyOrders() {
         }
     };
 
-    const handleReject = async (orderId, unitId) => {
-        const reason = window.prompt("Enter revision reason / feedback for the mediator:");
-        if (reason === null) return;
+    const [revisionModal, setRevisionModal] = useState({
+        isOpen: false,
+        orderId: null,
+        unitId: null,
+        targetStatus: "pending_refund",
+        reason: "",
+        unitInfo: "",
+    });
+
+    const openRevisionModal = (orderId, unitId, unitInfo) => {
+        setRevisionModal({
+            isOpen: true,
+            orderId,
+            unitId,
+            targetStatus: "pending_refund",
+            reason: "",
+            unitInfo: unitInfo || "",
+        });
+    };
+
+    const closeRevisionModal = () => {
+        setRevisionModal({
+            isOpen: false,
+            orderId: null,
+            unitId: null,
+            targetStatus: "pending_refund",
+            reason: "",
+            unitInfo: "",
+        });
+    };
+
+    const submitRevisionModal = async () => {
+        if (!revisionModal.reason.trim()) {
+            alert("Please enter a reason or feedback for the revision request.");
+            return;
+        }
         try {
-            setVerifyingId(unitId);
-            const res = await rejectExecutiveOrderUnitVerification({ orderId, unitId, reason });
+            setVerifyingId(revisionModal.unitId);
+            const res = await rejectExecutiveOrderUnitVerification({
+                orderId: revisionModal.orderId,
+                unitId: revisionModal.unitId,
+                reason: revisionModal.reason.trim(),
+                targetStatus: revisionModal.targetStatus,
+            });
             if (res.data?.success) {
-                alert("Revision requested! Unit returned to Pending Refund for mediator.");
+                const destLabel = revisionModal.targetStatus === "in_progress" ? "In Progress" : "Pending Refund";
+                alert(`Revision requested! Unit returned to ${destLabel} for mediator correction.`);
+                closeRevisionModal();
                 await loadVerificationOrders();
             }
         } catch (err) {
@@ -729,10 +769,10 @@ export default function ExecutiveVerifyOrders() {
                                                                         <button
                                                                             type="button"
                                                                             disabled={isActing}
-                                                                            onClick={() => handleReject(order._id, unit._id)}
+                                                                            onClick={() => openRevisionModal(order._id, unit._id, `${order.productName} — Unit #${unitIdx + 1}`)}
                                                                             className="table-btn table-btn-danger"
                                                                             style={{ padding: "7px 12px", fontSize: "12px" }}
-                                                                            title="Reject proof and return to mediator for correction"
+                                                                            title="Reject proof and return to mediator with target state selection"
                                                                         >
                                                                             ✕ Request Revision
                                                                         </button>
@@ -757,6 +797,141 @@ export default function ExecutiveVerifyOrders() {
                             </div>
                         );
                     })}
+                </div>
+            )}
+
+            {/* REVISION REQUEST MODAL WITH DESTINATION CHOICE */}
+            {revisionModal.isOpen && (
+                <div className="revision-modal-overlay" onClick={closeRevisionModal}>
+                    <div className="revision-modal-card" onClick={(e) => e.stopPropagation()}>
+                        <div className="revision-modal-header">
+                            <div>
+                                <h3 className="revision-modal-title">
+                                    <span>✕</span> Request Revision & Return Unit
+                                </h3>
+                                <p className="revision-modal-subtitle">
+                                    {revisionModal.unitInfo ? `Unit: ${revisionModal.unitInfo}` : "Choose destination stage and specify feedback for mediator."}
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={closeRevisionModal}
+                                className="image-modal-close-btn"
+                            >
+                                Close ✕
+                            </button>
+                        </div>
+
+                        {/* Destination Selection */}
+                        <div>
+                            <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: "var(--slate-800)", marginBottom: "8px" }}>
+                                Select Return Destination Stage:
+                            </label>
+                            <div className="revision-dest-options">
+                                <div
+                                    className={`revision-dest-card ${revisionModal.targetStatus === "pending_refund" ? "selected" : ""}`}
+                                    onClick={() => setRevisionModal((prev) => ({ ...prev, targetStatus: "pending_refund" }))}
+                                >
+                                    <input
+                                        type="radio"
+                                        name="targetStatus"
+                                        checked={revisionModal.targetStatus === "pending_refund"}
+                                        onChange={() => setRevisionModal((prev) => ({ ...prev, targetStatus: "pending_refund" }))}
+                                        className="revision-dest-radio"
+                                    />
+                                    <div className="revision-dest-content">
+                                        <span className="revision-dest-title">
+                                            🔄 Return to Pending Refund (Stage 3)
+                                        </span>
+                                        <span className="revision-dest-desc">
+                                            Mediator must re-upload product review screenshot, invoice, or seller feedback.
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div
+                                    className={`revision-dest-card ${revisionModal.targetStatus === "in_progress" ? "selected" : ""}`}
+                                    onClick={() => setRevisionModal((prev) => ({ ...prev, targetStatus: "in_progress" }))}
+                                >
+                                    <input
+                                        type="radio"
+                                        name="targetStatus"
+                                        checked={revisionModal.targetStatus === "in_progress"}
+                                        onChange={() => setRevisionModal((prev) => ({ ...prev, targetStatus: "in_progress" }))}
+                                        className="revision-dest-radio"
+                                    />
+                                    <div className="revision-dest-content">
+                                        <span className="revision-dest-title">
+                                            ⏪ Return to In Progress (Stage 2)
+                                        </span>
+                                        <span className="revision-dest-desc">
+                                            Mediator must re-enter order placement details, order ID, or order confirmation screenshot.
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Feedback / Reason Input */}
+                        <div>
+                            <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: "var(--slate-800)", marginBottom: "6px" }}>
+                                Rejection Feedback for Mediator:
+                            </label>
+                            <textarea
+                                rows={3}
+                                placeholder="Describe what is wrong and what the mediator needs to fix..."
+                                value={revisionModal.reason}
+                                onChange={(e) => setRevisionModal((prev) => ({ ...prev, reason: e.target.value }))}
+                                className="filter-input"
+                                style={{ width: "100%", boxSizing: "border-box", resize: "vertical", minHeight: "75px" }}
+                            />
+
+                            <div style={{ marginTop: "6px" }}>
+                                <span style={{ fontSize: "11px", color: "var(--slate-500)", fontWeight: 600 }}>
+                                    Quick suggestions:
+                                </span>
+                                <div className="revision-suggestion-chips">
+                                    {[
+                                        "Review screenshot is blurry or cropped",
+                                        "5-star storefront rating not visible",
+                                        "External Order ID does not match",
+                                        "Platform invoice screenshot is missing",
+                                        "Seller feedback proof incomplete",
+                                        "Wrong order placed, re-place in progress",
+                                    ].map((suggestion) => (
+                                        <button
+                                            key={suggestion}
+                                            type="button"
+                                            className="revision-chip-btn"
+                                            onClick={() => setRevisionModal((prev) => ({ ...prev, reason: suggestion }))}
+                                        >
+                                            + {suggestion}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Modal Actions */}
+                        <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>
+                            <button
+                                type="button"
+                                onClick={closeRevisionModal}
+                                className="table-btn table-btn-outline"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                disabled={verifyingId === revisionModal.unitId}
+                                onClick={submitRevisionModal}
+                                className="table-btn table-btn-danger"
+                                style={{ fontWeight: 700, padding: "8px 18px" }}
+                            >
+                                {verifyingId === revisionModal.unitId ? "Returning Unit..." : "Confirm & Return Unit"}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
 
