@@ -43,7 +43,8 @@ export default function RefundSubmission() {
             });
 
             await mediatorRefundSubmit(id, data);
-            navigate("/mediator-pending-verification", { replace: true });
+            alert("Delivery & review proofs submitted successfully! Sent to Executive for verification.");
+            navigate("/mediator-refund_pending-orders", { replace: true });
         } catch (err) {
             console.error("Error submitting refund proofs:", err);
             setError(err.response?.data?.message || "Error submitting refund details. Please try again.");

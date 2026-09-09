@@ -169,9 +169,9 @@ export default function MediatorPendingPayment() {
                     </button>
                 </div>
             ) : (
-                <div className="table-card">
-                    <div className="table-wrapper">
-                        <table className="orders-table">
+                <div className="data-table-container">
+                    <div className="data-table-responsive">
+                        <table className="data-table">
                             <thead>
                                 <tr>
                                     <th>Order Info</th>
@@ -334,41 +334,16 @@ export default function MediatorPendingPayment() {
             {/* COMPACT UPLOAD REFUND MODAL */}
             {activeUploadOrder && (
                 <div
-                    style={{
-                        position: "fixed",
-                        inset: 0,
-                        backgroundColor: "rgba(15, 23, 42, 0.7)",
-                        backdropFilter: "blur(4px)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        zIndex: 9999,
-                        padding: "16px",
-                    }}
+                    className="app-modal-overlay"
                     onClick={handleCloseUploadModal}
                 >
                     <div
-                        style={{
-                            backgroundColor: "#ffffff",
-                            borderRadius: "14px",
-                            maxWidth: "520px",
-                            width: "100%",
-                            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-                            overflow: "hidden",
-                        }}
+                        className="app-modal-content"
+                        style={{ maxWidth: "520px" }}
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Modal Header */}
-                        <div
-                            style={{
-                                padding: "16px 20px",
-                                borderBottom: "1px solid #e2e8f0",
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                                backgroundColor: "#f8fafc",
-                            }}
-                        >
+                        <div className="app-modal-header">
                             <div>
                                 <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#0f172a" }}>
                                     Upload Return Refund Proof
@@ -380,37 +355,27 @@ export default function MediatorPendingPayment() {
                             <button
                                 type="button"
                                 onClick={handleCloseUploadModal}
-                                style={{
-                                    border: "none",
-                                    background: "#e2e8f0",
-                                    borderRadius: "6px",
-                                    width: "28px",
-                                    height: "28px",
-                                    cursor: "pointer",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    color: "#475569",
-                                    fontWeight: 700,
-                                }}
+                                className="app-modal-close"
                             >
                                 ✕
                             </button>
                         </div>
 
                         {/* Modal Form */}
-                        <form onSubmit={handleSubmitPayment} style={{ padding: "20px" }}>
+                        <form onSubmit={handleSubmitPayment} className="app-modal-body">
                             {/* Summary callout */}
                             <div
                                 style={{
                                     display: "flex",
                                     justifyContent: "space-between",
                                     alignItems: "center",
-                                    padding: "10px 14px",
+                                    padding: "12px 16px",
                                     background: "#fff1f2",
                                     border: "1px solid #fecdd3",
                                     borderRadius: "8px",
                                     marginBottom: "16px",
+                                    flexWrap: "wrap",
+                                    gap: "8px",
                                 }}
                             >
                                 <div>
@@ -442,18 +407,19 @@ export default function MediatorPendingPayment() {
                                         padding: "8px",
                                         borderRadius: "6px",
                                         border: "1px solid #cbd5e1",
+                                        boxSizing: "border-box",
                                     }}
                                 />
 
                                 {uploadPreview && (
-                                    <div style={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "10px" }}>
+                                    <div style={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
                                         <img
                                             src={uploadPreview}
                                             alt="Preview"
                                             onClick={() => setModalImage(uploadPreview)}
                                             style={{
-                                                width: "50px",
-                                                height: "50px",
+                                                width: "54px",
+                                                height: "54px",
                                                 objectFit: "cover",
                                                 borderRadius: "6px",
                                                 border: "1px solid #cbd5e1",
@@ -461,8 +427,8 @@ export default function MediatorPendingPayment() {
                                             }}
                                             title="Click to zoom"
                                         />
-                                        <span style={{ fontSize: "12px", color: "#15803d", fontWeight: 600 }}>
-                                            ✓ File selected: {uploadFile?.name}
+                                        <span style={{ fontSize: "12px", color: "#15803d", fontWeight: 600, wordBreak: "break-all" }}>
+                                            ✓ {uploadFile?.name}
                                         </span>
                                     </div>
                                 )}
@@ -491,12 +457,11 @@ export default function MediatorPendingPayment() {
                             </div>
 
                             {/* Actions */}
-                            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                            <div className="app-modal-footer" style={{ padding: "12px 0 0 0", borderTop: "1px solid #e2e8f0" }}>
                                 <button
                                     type="button"
                                     onClick={handleCloseUploadModal}
                                     className="nav-btn nav-btn-default"
-                                    style={{ padding: "8px 14px" }}
                                 >
                                     Cancel
                                 </button>
@@ -504,7 +469,7 @@ export default function MediatorPendingPayment() {
                                     type="submit"
                                     disabled={submitting || !uploadFile}
                                     className="nav-btn nav-btn-primary"
-                                    style={{ padding: "8px 18px", background: "#16a34a" }}
+                                    style={{ background: "#16a34a" }}
                                 >
                                     {submitting ? "Uploading..." : "Submit Refund Proof 📤"}
                                 </button>
@@ -518,43 +483,28 @@ export default function MediatorPendingPayment() {
             {modalImage && (
                 <div
                     onClick={() => setModalImage(null)}
-                    style={{
-                        position: "fixed",
-                        inset: 0,
-                        backgroundColor: "rgba(15, 23, 42, 0.8)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        zIndex: 10000,
-                        padding: "16px",
-                    }}
+                    className="image-modal-overlay"
                 >
                     <div
                         onClick={(e) => e.stopPropagation()}
-                        style={{
-                            maxWidth: "600px",
-                            width: "100%",
-                            backgroundColor: "#ffffff",
-                            borderRadius: "10px",
-                            overflow: "hidden",
-                        }}
+                        className="image-modal-content"
                     >
-                        <div style={{ padding: "12px 16px", borderBottom: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between" }}>
-                            <span style={{ fontWeight: 700, fontSize: "13px" }}>Payment Screenshot</span>
+                        <div className="image-modal-header">
+                            <span style={{ fontWeight: 700, fontSize: "14px", color: "var(--slate-700)" }}>
+                                Payment Screenshot
+                            </span>
                             <button
                                 onClick={() => setModalImage(null)}
-                                style={{ border: "none", background: "none", cursor: "pointer", fontWeight: 700 }}
+                                className="image-modal-close-btn"
                             >
-                                ✕
+                                Close ✕
                             </button>
                         </div>
-                        <div style={{ padding: "16px", textAlign: "center", backgroundColor: "#0b132b" }}>
-                            <img
-                                src={modalImage}
-                                alt="Proof"
-                                style={{ maxWidth: "100%", maxHeight: "70vh", objectFit: "contain" }}
-                            />
-                        </div>
+                        <img
+                            src={modalImage}
+                            alt="Proof"
+                            className="image-modal-img"
+                        />
                     </div>
                 </div>
             )}

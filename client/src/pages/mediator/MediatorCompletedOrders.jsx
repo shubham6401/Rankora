@@ -51,10 +51,10 @@ export default function MediatorCompletedOrders() {
             <div className="table-page-header">
                 <div className="table-header-info">
                     <span className="table-page-badge" style={{ background: "#ecfdf5", color: "#059669", borderColor: "#a7f3d0" }}>
-                        Stage 4 of Mediator Pipeline
+                        Stage 5 of Mediator Pipeline
                     </span>
                     <h1 className="table-page-title">
-                        ✅ Stage 4: Completed Orders Archive
+                        ✅ Stage 5: Completed Orders Archive
                     </h1>
                     <p className="table-page-subtitle">
                         Archived orders where order placement and refund post-delivery details were successfully fulfilled.

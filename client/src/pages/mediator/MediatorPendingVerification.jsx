@@ -122,9 +122,9 @@ export default function MediatorPendingVerification() {
                     </button>
                 </div>
             ) : (
-                <div className="table-card">
-                    <div className="table-wrapper">
-                        <table className="orders-table">
+                <div className="data-table-container">
+                    <div className="data-table-responsive">
+                        <table className="data-table">
                             <thead>
                                 <tr>
                                     <th>Order Info</th>
@@ -272,81 +272,31 @@ export default function MediatorPendingVerification() {
             {/* PROOF PREVIEW MODAL */}
             {selectedProof && (
                 <div
-                    style={{
-                        position: "fixed",
-                        inset: 0,
-                        backgroundColor: "rgba(15, 23, 42, 0.75)",
-                        backdropFilter: "blur(4px)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        zIndex: 9999,
-                        padding: "16px",
-                    }}
                     onClick={() => setSelectedProof(null)}
+                    className="image-modal-overlay"
                 >
                     <div
-                        style={{
-                            backgroundColor: "#ffffff",
-                            borderRadius: "12px",
-                            maxWidth: "680px",
-                            width: "100%",
-                            maxHeight: "90vh",
-                            display: "flex",
-                            flexDirection: "column",
-                            overflow: "hidden",
-                            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2)",
-                        }}
                         onClick={(e) => e.stopPropagation()}
+                        className="image-modal-content"
+                        style={{ maxWidth: "680px" }}
                     >
-                        <div
-                            style={{
-                                padding: "14px 18px",
-                                borderBottom: "1px solid #e2e8f0",
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                            }}
-                        >
-                            <h3 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "#0f172a" }}>
+                        <div className="image-modal-header">
+                            <span style={{ fontWeight: 700, fontSize: "14px", color: "var(--slate-700)" }}>
                                 {selectedProof.title}
-                            </h3>
+                            </span>
                             <button
                                 type="button"
                                 onClick={() => setSelectedProof(null)}
-                                style={{
-                                    border: "none",
-                                    background: "#f1f5f9",
-                                    borderRadius: "6px",
-                                    padding: "4px 8px",
-                                    cursor: "pointer",
-                                    fontSize: "13px",
-                                    fontWeight: 700,
-                                    color: "#475569",
-                                }}
+                                className="image-modal-close-btn"
                             >
-                                ✕ Close
+                                Close ✕
                             </button>
                         </div>
-                        <div
-                            style={{
-                                padding: "16px",
-                                overflowY: "auto",
-                                textAlign: "center",
-                                backgroundColor: "#0b132b",
-                            }}
-                        >
-                            <img
-                                src={selectedProof.url}
-                                alt={selectedProof.title}
-                                style={{
-                                    maxWidth: "100%",
-                                    maxHeight: "75vh",
-                                    objectFit: "contain",
-                                    borderRadius: "6px",
-                                }}
-                            />
-                        </div>
+                        <img
+                            src={selectedProof.url}
+                            alt={selectedProof.title}
+                            className="image-modal-img"
+                        />
                     </div>
                 </div>
             )}

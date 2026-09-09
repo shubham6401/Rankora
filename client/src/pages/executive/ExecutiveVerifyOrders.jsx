@@ -268,9 +268,9 @@ export default function ExecutiveVerifyOrders() {
                 </div>
             ) : (
                 /* Submissions Table */
-                <div className="table-card">
-                    <div className="table-wrapper">
-                        <table className="orders-table">
+                <div className="data-table-container">
+                    <div className="data-table-responsive">
+                        <table className="data-table">
                             <thead>
                                 <tr>
                                     <th>Order Info</th>
