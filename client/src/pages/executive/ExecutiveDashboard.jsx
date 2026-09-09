@@ -157,12 +157,29 @@ export default function ExecutiveDashboard() {
 
                         <div
                             className="action-card"
+                            onClick={() => navigate("/executive-verify-orders")}
+                        >
+                            <div className="action-card-top">
+                                <div className="action-card-icon">🔍</div>
+                                <div>
+                                    <span style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>Stage 6</span>
+                                    <h3 className="action-card-title">Verify Deliveries</h3>
+                                </div>
+                            </div>
+                            <div className="action-card-footer">
+                                <span>Inspect</span>
+                                <span>→</span>
+                            </div>
+                        </div>
+
+                        <div
+                            className="action-card"
                             onClick={() => navigate("/executive-completed-order")}
                         >
                             <div className="action-card-top">
                                 <div className="action-card-icon">✅</div>
                                 <div>
-                                    <span style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>Stage 6</span>
+                                    <span style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>Stage 7</span>
                                     <h3 className="action-card-title">Completed</h3>
                                 </div>
                             </div>

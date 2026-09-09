@@ -83,10 +83,10 @@ export default function Pending_refundOrders() {
                     </button>
                     <button
                         type="button"
-                        className="nav-btn nav-btn-default"
-                        onClick={() => navigate("/executive-completed-order")}
+                        className="nav-btn nav-btn-primary"
+                        onClick={() => navigate("/executive-verify-orders")}
                     >
-                        Completed Orders →
+                        Verify Deliveries →
                     </button>
                 </div>
             </div>

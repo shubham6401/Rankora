@@ -108,34 +108,34 @@ export default function MediatorDashboard() {
 
                         <div
                             className="action-card"
-                            onClick={() => navigate("/mediator-completed-orders")}
+                            onClick={() => navigate("/mediator-pending-verification")}
                         >
                             <div className="action-card-top">
-                                <div className="action-card-icon">✅</div>
+                                <div className="action-card-icon">⏳</div>
                                 <div>
                                     <span style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>Stage 4</span>
-                                    <h3 className="action-card-title">Completed</h3>
+                                    <h3 className="action-card-title">Pending Verification</h3>
                                 </div>
                             </div>
                             <div className="action-card-footer">
-                                <span>View</span>
+                                <span>Awaiting Review</span>
                                 <span>→</span>
                             </div>
                         </div>
 
                         <div
                             className="action-card"
-                            onClick={() => navigate("/mediator-pending-payment")}
+                            onClick={() => navigate("/mediator-completed-orders")}
                         >
                             <div className="action-card-top">
-                                <div className="action-card-icon">💳</div>
+                                <div className="action-card-icon">✅</div>
                                 <div>
                                     <span style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>Stage 5</span>
-                                    <h3 className="action-card-title">Return Refunds</h3>
+                                    <h3 className="action-card-title">Completed</h3>
                                 </div>
                             </div>
                             <div className="action-card-footer">
-                                <span>Upload</span>
+                                <span>View</span>
                                 <span>→</span>
                             </div>
                         </div>
@@ -146,11 +146,27 @@ export default function MediatorDashboard() {
                 <div className="action-hub-section">
                     <div className="action-hub-header" style={{ marginBottom: "14px", paddingBottom: "10px" }}>
                         <h2 className="action-hub-title">
-                            💰 Finance & Earnings
+                            💰 Finance & Returns
                         </h2>
                     </div>
 
                     <div className="action-cards-grid">
+                        <div
+                            className="action-card"
+                            onClick={() => navigate("/mediator-pending-payment")}
+                        >
+                            <div className="action-card-top">
+                                <div className="action-card-icon">↩️</div>
+                                <div>
+                                    <h3 className="action-card-title">Return Refunds</h3>
+                                </div>
+                            </div>
+                            <div className="action-card-footer">
+                                <span>Upload</span>
+                                <span>→</span>
+                            </div>
+                        </div>
+
                         <div
                             className="action-card"
                             onClick={() => navigate("/mediator-earnings")}

@@ -16,6 +16,7 @@ export default function OrderSummary({ orders = [] }) {
     let assignedUnits = 0;
     let inProgressUnits = 0;
     let pendingRefundUnits = 0;
+    let pendingVerificationUnits = 0;
     let completedUnits = 0;
 
     let unassignedOrders = 0;
@@ -23,6 +24,7 @@ export default function OrderSummary({ orders = [] }) {
     let assignedOrders = 0;
     let inProgressOrders = 0;
     let pendingRefundOrders = 0;
+    let pendingVerificationOrders = 0;
     let completedOrders = 0;
 
     orders.forEach((order) => {
@@ -36,6 +38,7 @@ export default function OrderSummary({ orders = [] }) {
         let u_assigned = 0;
         let u_inProgress = 0;
         let u_pendingRefund = 0;
+        let u_pendingVerification = 0;
         let u_completed = 0;
 
         if (Array.isArray(order.orderUnits) && order.orderUnits.length > 0) {
@@ -45,6 +48,7 @@ export default function OrderSummary({ orders = [] }) {
                 else if (u.status === "assigned") u_assigned++;
                 else if (u.status === "in_progress") u_inProgress++;
                 else if (u.status === "pending_refund") u_pendingRefund++;
+                else if (u.status === "pending_verification") u_pendingVerification++;
                 else if (u.status === "completed") u_completed++;
             });
         } else if (order.summary) {
@@ -53,6 +57,7 @@ export default function OrderSummary({ orders = [] }) {
             u_assigned = Number(order.summary.assigned) || 0;
             u_inProgress = Number(order.summary.inProgress) || 0;
             u_pendingRefund = Number(order.summary.pendingRefund) || 0;
+            u_pendingVerification = Number(order.summary.pendingVerification) || 0;
             u_completed = Number(order.summary.completed) || 0;
         } else {
             if (order.status === "pending" || order.status === "unassigned") u_unassigned = qty;
@@ -60,6 +65,7 @@ export default function OrderSummary({ orders = [] }) {
             else if (order.status === "assigned") u_assigned = qty;
             else if (order.status === "in_progress") u_inProgress = qty;
             else if (order.status === "pending_refund") u_pendingRefund = qty;
+            else if (order.status === "pending_verification") u_pendingVerification = qty;
             else if (order.status === "completed") u_completed = qty;
         }
 
@@ -68,6 +74,7 @@ export default function OrderSummary({ orders = [] }) {
         assignedUnits += u_assigned;
         inProgressUnits += u_inProgress;
         pendingRefundUnits += u_pendingRefund;
+        pendingVerificationUnits += u_pendingVerification;
         completedUnits += u_completed;
         completedValue += price * u_completed;
 
@@ -76,6 +83,7 @@ export default function OrderSummary({ orders = [] }) {
         if (u_assigned > 0 || order.status === "assigned") assignedOrders++;
         if (u_inProgress > 0 || order.status === "in_progress") inProgressOrders++;
         if (u_pendingRefund > 0 || order.status === "pending_refund") pendingRefundOrders++;
+        if (u_pendingVerification > 0 || order.status === "pending_verification") pendingVerificationOrders++;
         if (u_completed > 0 || order.status === "completed") completedOrders++;
     });
 
@@ -133,8 +141,18 @@ export default function OrderSummary({ orders = [] }) {
             barColor: "#8b5cf6",
         },
         {
-            title: "Completed",
+            title: "Verify Deliveries",
             subtitle: "Stage 6",
+            icon: "🔍",
+            units: pendingVerificationUnits,
+            ordersCount: pendingVerificationOrders,
+            path: "/executive-verify-orders",
+            className: "status-card-verify",
+            barColor: "#6366f1",
+        },
+        {
+            title: "Completed",
+            subtitle: "Stage 7",
             icon: "✅",
             units: completedUnits,
             ordersCount: completedOrders,

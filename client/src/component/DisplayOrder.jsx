@@ -17,6 +17,7 @@ export default function DisplayOrder({ order }) {
     const [selectedMediatorFilter, setSelectedMediatorFilter] = useState("all");
     const [searchOrderId, setSearchOrderId] = useState("");
     const [searchReviewer, setSearchReviewer] = useState("");
+    const [activeUnitTab, setActiveUnitTab] = useState("all");
     const [previewImage, setPreviewImage] = useState(null);
     const [verifyingUnitId, setVerifyingUnitId] = useState(null);
     const [revisionModal, setRevisionModal] = useState({
@@ -641,6 +642,35 @@ export default function DisplayOrder({ order }) {
                     📋 Order Units Breakdown ({filteredUnits.length} Displayed)
                 </h2>
 
+                {/* Unit Selector Tabs for multi-unit orders */}
+                {filteredUnits.length > 1 && (
+                    <div className="unit-tabs-nav">
+                        <button
+                            type="button"
+                            className={`unit-tab-btn ${activeUnitTab === "all" ? "active" : ""}`}
+                            onClick={() => setActiveUnitTab("all")}
+                        >
+                            All Units ({filteredUnits.length})
+                        </button>
+                        {filteredUnits.map((u, i) => {
+                            const originalIndex = units.findIndex((orig) => orig._id === u._id);
+                            const displayIndex = originalIndex >= 0 ? originalIndex + 1 : i + 1;
+                            return (
+                                <button
+                                    key={u._id || i}
+                                    type="button"
+                                    className={`unit-tab-btn ${activeUnitTab === (u._id || String(i)) ? "active" : ""}`}
+                                    onClick={() => setActiveUnitTab(u._id || String(i))}
+                                >
+                                    Unit #{displayIndex}
+                                    {u.status === "pending_verification" && " ⏳"}
+                                    {u.status === "completed" && " ✓"}
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
+
                 {filteredUnits.length === 0 ? (
                     <div className="empty-state-card">
                         <div className="empty-state-icon">🔍</div>
@@ -655,8 +685,12 @@ export default function DisplayOrder({ order }) {
                     </div>
                 ) : (
                     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                        {filteredUnits.map((unit, index) => {
-                            return (
+                        {filteredUnits
+                            .filter((u, i) => activeUnitTab === "all" || (u._id || String(i)) === activeUnitTab)
+                            .map((unit, index) => {
+                                const originalIndex = units.findIndex((orig) => orig._id === unit._id);
+                                const unitNumber = originalIndex >= 0 ? originalIndex + 1 : index + 1;
+                                return (
                                 <div
                                     key={unit._id || index}
                                     className={`unit-item-card ${unit.verificationRejectionReason && (unit.status === "in_progress" || unit.status === "pending_refund") ? "unit-card-revision" : ""}`}
@@ -665,7 +699,7 @@ export default function DisplayOrder({ order }) {
                                     {/* Unit Header */}
                                     <div className="unit-item-header">
                                         <div className="unit-item-title">
-                                            Unit #{index + 1}
+                                            Unit #{unitNumber}
                                             <span className="unit-item-id">
                                                 ID: {unit._id}
                                             </span>
@@ -824,65 +858,122 @@ export default function DisplayOrder({ order }) {
                                                 )}
                                             </div>
 
-                                            <div className="post-delivery-grid">
+                                            <div className="verification-dossier-grid">
                                                 {/* Proof 1: Ordered Screenshot */}
-                                                {unit.orderedScreenshot && (
-                                                    <div className="post-delivery-item">
-                                                        <span>🛒 Ordered SS</span>
-                                                        <div style={{ cursor: "pointer" }} onClick={() => setPreviewImage(unit.orderedScreenshot)}>
-                                                            <img
-                                                                src={unit.orderedScreenshot}
-                                                                alt="Ordered Screenshot"
-                                                                className="proof-img-thumb"
-                                                                style={{ maxHeight: "100px" }}
-                                                            />
-                                                            <div style={{ fontSize: "11px", color: "var(--primary-600)", marginTop: "2px", fontWeight: "600" }}>🔍 Click to enlarge</div>
-                                                        </div>
+                                                <div className="proof-dossier-card">
+                                                    <div className="proof-dossier-header">
+                                                        <span className="proof-dossier-label">🛒 1. Ordered Screenshot</span>
+                                                        {unit.orderedScreenshot ? (
+                                                            <span className="proof-tag-ok">Uploaded</span>
+                                                        ) : (
+                                                            <span className="proof-tag-na">Missing</span>
+                                                        )}
                                                     </div>
-                                                )}
+                                                    <div className="proof-dossier-body">
+                                                        {unit.orderedScreenshot ? (
+                                                            <div
+                                                                style={{ cursor: "pointer", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                                                onClick={() => setPreviewImage(unit.orderedScreenshot)}
+                                                            >
+                                                                <img
+                                                                    src={unit.orderedScreenshot}
+                                                                    alt="Ordered Screenshot"
+                                                                    className="proof-dossier-img"
+                                                                />
+                                                                <div className="proof-dossier-zoom-pill">🔍 Zoom</div>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="proof-dossier-empty">No screenshot provided</div>
+                                                        )}
+                                                    </div>
+                                                </div>
 
-                                                {unit.postDeliveryDetails?.productReviewScreenshot && (
-                                                    <div className="post-delivery-item">
-                                                        <span>⭐ Product Review</span>
-                                                        <div style={{ cursor: "pointer" }} onClick={() => setPreviewImage(unit.postDeliveryDetails.productReviewScreenshot)}>
-                                                            <img
-                                                                src={unit.postDeliveryDetails.productReviewScreenshot}
-                                                                alt="Product Review"
-                                                                className="proof-img-thumb"
-                                                                style={{ maxHeight: "100px" }}
-                                                            />
-                                                            <div style={{ fontSize: "11px", color: "var(--primary-600)", marginTop: "2px", fontWeight: "600" }}>🔍 Click to enlarge</div>
-                                                        </div>
+                                                {/* Proof 2: Product Review */}
+                                                <div className="proof-dossier-card">
+                                                    <div className="proof-dossier-header">
+                                                        <span className="proof-dossier-label">⭐ 2. Product Review</span>
+                                                        {unit.postDeliveryDetails?.productReviewScreenshot ? (
+                                                            <span className="proof-tag-ok">Uploaded</span>
+                                                        ) : (
+                                                            <span className="proof-tag-na">Missing</span>
+                                                        )}
                                                     </div>
-                                                )}
-                                                {unit.postDeliveryDetails?.invoiceScreenshot && (
-                                                    <div className="post-delivery-item">
-                                                        <span>🧾 Invoice</span>
-                                                        <div style={{ cursor: "pointer" }} onClick={() => setPreviewImage(unit.postDeliveryDetails.invoiceScreenshot)}>
-                                                            <img
-                                                                src={unit.postDeliveryDetails.invoiceScreenshot}
-                                                                alt="Invoice Screenshot"
-                                                                className="proof-img-thumb"
-                                                                style={{ maxHeight: "100px" }}
-                                                            />
-                                                            <div style={{ fontSize: "11px", color: "var(--primary-600)", marginTop: "2px", fontWeight: "600" }}>🔍 Click to enlarge</div>
-                                                        </div>
+                                                    <div className="proof-dossier-body">
+                                                        {unit.postDeliveryDetails?.productReviewScreenshot ? (
+                                                            <div
+                                                                style={{ cursor: "pointer", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                                                onClick={() => setPreviewImage(unit.postDeliveryDetails.productReviewScreenshot)}
+                                                            >
+                                                                <img
+                                                                    src={unit.postDeliveryDetails.productReviewScreenshot}
+                                                                    alt="Product Review"
+                                                                    className="proof-dossier-img"
+                                                                />
+                                                                <div className="proof-dossier-zoom-pill">🔍 Zoom</div>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="proof-dossier-empty">No screenshot provided</div>
+                                                        )}
                                                     </div>
-                                                )}
-                                                {unit.postDeliveryDetails?.sellerFeedbackScreenShot && (
-                                                    <div className="post-delivery-item">
-                                                        <span>💬 Seller Feedback</span>
-                                                        <div style={{ cursor: "pointer" }} onClick={() => setPreviewImage(unit.postDeliveryDetails.sellerFeedbackScreenShot)}>
-                                                            <img
-                                                                src={unit.postDeliveryDetails.sellerFeedbackScreenShot}
-                                                                alt="Seller Feedback"
-                                                                className="proof-img-thumb"
-                                                                style={{ maxHeight: "100px" }}
-                                                            />
-                                                            <div style={{ fontSize: "11px", color: "var(--primary-600)", marginTop: "2px", fontWeight: "600" }}>🔍 Click to enlarge</div>
-                                                        </div>
+                                                </div>
+
+                                                {/* Proof 3: Invoice */}
+                                                <div className="proof-dossier-card">
+                                                    <div className="proof-dossier-header">
+                                                        <span className="proof-dossier-label">🧾 3. Invoice</span>
+                                                        {unit.postDeliveryDetails?.invoiceScreenshot ? (
+                                                            <span className="proof-tag-ok">Uploaded</span>
+                                                        ) : (
+                                                            <span className="proof-tag-na">Missing</span>
+                                                        )}
                                                     </div>
-                                                )}
+                                                    <div className="proof-dossier-body">
+                                                        {unit.postDeliveryDetails?.invoiceScreenshot ? (
+                                                            <div
+                                                                style={{ cursor: "pointer", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                                                onClick={() => setPreviewImage(unit.postDeliveryDetails.invoiceScreenshot)}
+                                                            >
+                                                                <img
+                                                                    src={unit.postDeliveryDetails.invoiceScreenshot}
+                                                                    alt="Invoice Screenshot"
+                                                                    className="proof-dossier-img"
+                                                                />
+                                                                <div className="proof-dossier-zoom-pill">🔍 Zoom</div>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="proof-dossier-empty">No screenshot provided</div>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Proof 4: Seller Feedback */}
+                                                <div className="proof-dossier-card">
+                                                    <div className="proof-dossier-header">
+                                                        <span className="proof-dossier-label">💬 4. Seller Feedback</span>
+                                                        {unit.postDeliveryDetails?.sellerFeedbackScreenShot ? (
+                                                            <span className="proof-tag-ok">Uploaded</span>
+                                                        ) : (
+                                                            <span className="proof-tag-na">Missing</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="proof-dossier-body">
+                                                        {unit.postDeliveryDetails?.sellerFeedbackScreenShot ? (
+                                                            <div
+                                                                style={{ cursor: "pointer", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                                                onClick={() => setPreviewImage(unit.postDeliveryDetails.sellerFeedbackScreenShot)}
+                                                            >
+                                                                <img
+                                                                    src={unit.postDeliveryDetails.sellerFeedbackScreenShot}
+                                                                    alt="Seller Feedback"
+                                                                    className="proof-dossier-img"
+                                                                />
+                                                                <div className="proof-dossier-zoom-pill">🔍 Zoom</div>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="proof-dossier-empty">No screenshot provided</div>
+                                                        )}
+                                                    </div>
+                                                </div>
                                             </div>
 
                                             {unit.submittedForVerificationAt && (

@@ -68,10 +68,10 @@ export default function MediatorRefundPendingOrders() {
                         ← Dashboard
                     </button>
                     <button
-                        onClick={() => navigate("/mediator-pending-orders")}
+                        onClick={() => navigate("/mediator-pending-verification")}
                         className="nav-btn nav-btn-primary"
                     >
-                        In-Progress Orders →
+                        Pending Verification →
                     </button>
                 </div>
             </div>
