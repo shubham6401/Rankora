@@ -9,8 +9,10 @@ import "../../styles/ordersTable.css";
 export default function MediatorPendingPayment() {
     const navigate = useNavigate();
     const [orders, setOrders] = useState([]);
+    const [verifiedOrders, setVerifiedOrders] = useState([]);
+    const [activeTab, setActiveTab] = useState("pending"); // "pending" | "verified"
     const [loading, setLoading] = useState(true);
-    const [activeUploadOrder, setActiveUploadOrder] = useState(null); // order object when modal is open
+    const [activeUploadOrder, setActiveUploadOrder] = useState(null);
     const [uploadFile, setUploadFile] = useState(null);
     const [uploadPreview, setUploadPreview] = useState(null);
     const [uploadMessage, setUploadMessage] = useState("");
@@ -26,6 +28,7 @@ export default function MediatorPendingPayment() {
             setLoading(true);
             const res = await fetchMediatorPendingPaymentOrders();
             setOrders(res.data?.orders || []);
+            setVerifiedOrders(res.data?.verifiedOrders || []);
         } catch (err) {
             console.error("Error fetching pending payment orders:", err);
         } finally {
@@ -91,11 +94,13 @@ export default function MediatorPendingPayment() {
                 <div className="empty-state-card">
                     <div className="empty-state-icon">⏳</div>
                     <h2 className="empty-state-title">Loading Return Refunds...</h2>
-                    <p className="empty-state-text">Fetching rejected orders awaiting refund submission.</p>
+                    <p className="empty-state-text">Fetching rejected orders and return refund statuses.</p>
                 </div>
             </div>
         );
     }
+
+    const currentList = activeTab === "pending" ? orders : verifiedOrders;
 
     const totalOverallRefund = orders.reduce((sum, order) => {
         const units = order.orderUnits || [];
@@ -107,7 +112,7 @@ export default function MediatorPendingPayment() {
 
     return (
         <div className="table-page-container">
-            {/* TOP HEADER - Non-pipeline finance section */}
+            {/* TOP HEADER */}
             <div className="table-page-header">
                 <div className="table-header-info">
                     <span className="table-page-badge" style={{ background: "#fffbeb", color: "#b45309", borderColor: "#fde68a" }}>
@@ -139,34 +144,64 @@ export default function MediatorPendingPayment() {
             {/* METRICS SUMMARY */}
             <div className="table-metrics-bar">
                 <div className="metric-card">
-                    <span className="metric-label">Rejected Orders</span>
+                    <span className="metric-label">Pending Return Orders</span>
                     <span className="metric-value metric-value-amber">{orders.length}</span>
                 </div>
                 <div className="metric-card">
-                    <span className="metric-label">Total Units Returned</span>
+                    <span className="metric-label">Pending Refund Units</span>
                     <span className="metric-value">{totalUnitsCount} Units</span>
                 </div>
                 <div className="metric-card">
-                    <span className="metric-label">Total Refund Due</span>
+                    <span className="metric-label">Pending Refund Due</span>
                     <span className="metric-value metric-value-rose">₹{totalOverallRefund.toLocaleString()}</span>
+                </div>
+                <div className="metric-card">
+                    <span className="metric-label">Verified Refunds</span>
+                    <span className="metric-value metric-value-emerald">{verifiedOrders.length}</span>
                 </div>
             </div>
 
+            {/* TAB SELECTOR */}
+            <div style={{ display: "flex", gap: "8px", marginBottom: "16px", borderBottom: "1px solid var(--slate-200)", paddingBottom: "10px" }}>
+                <button
+                    type="button"
+                    onClick={() => setActiveTab("pending")}
+                    className={activeTab === "pending" ? "nav-btn nav-btn-primary" : "nav-btn nav-btn-default"}
+                    style={{ fontSize: "13px", padding: "8px 16px" }}
+                >
+                    ⏳ Active Pending ({orders.length})
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setActiveTab("verified")}
+                    className={activeTab === "verified" ? "nav-btn nav-btn-primary" : "nav-btn nav-btn-default"}
+                    style={{ fontSize: "13px", padding: "8px 16px" }}
+                >
+                    ✓ Verified History ({verifiedOrders.length})
+                </button>
+            </div>
+
             {/* TABLE / EMPTY STATE */}
-            {orders.length === 0 ? (
+            {currentList.length === 0 ? (
                 <div className="empty-state-card">
-                    <div className="empty-state-icon">✅</div>
-                    <h2 className="empty-state-title">No Pending Return Refunds</h2>
+                    <div className="empty-state-icon">{activeTab === "pending" ? "✅" : "📄"}</div>
+                    <h2 className="empty-state-title">
+                        {activeTab === "pending" ? "No Pending Return Refunds" : "No Verified Refunds Yet"}
+                    </h2>
                     <p className="empty-state-text">
-                        All advance payments and rejected orders are fully settled with the Executive.
+                        {activeTab === "pending"
+                            ? "All advance payments and rejected orders are fully settled with the Executive."
+                            : "Once the Executive verifies and accepts your refund proofs, they will appear here in your verified history."}
                     </p>
-                    <button
-                        onClick={() => navigate("/mediator-neworders")}
-                        className="nav-btn nav-btn-primary"
-                        style={{ marginTop: "14px" }}
-                    >
-                        View Available New Offers →
-                    </button>
+                    {activeTab === "pending" && (
+                        <button
+                            onClick={() => navigate("/mediator-neworders")}
+                            className="nav-btn nav-btn-primary"
+                            style={{ marginTop: "14px" }}
+                        >
+                            View Available New Offers →
+                        </button>
+                    )}
                 </div>
             ) : (
                 <div className="data-table-container">
@@ -178,22 +213,23 @@ export default function MediatorPendingPayment() {
                                     <th>Product / Brand</th>
                                     <th>Platform</th>
                                     <th>Rejected Units</th>
-                                    <th>Total Refund Due</th>
+                                    <th>Total Refund</th>
                                     <th>Executive</th>
                                     <th>Refund Status</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {orders.map((order) => {
+                                {currentList.map((order) => {
                                     const units = order.orderUnits || [];
                                     const unitCount = units.length;
                                     const priceNum = Number(order.price) || 0;
                                     const totalOrderRefund = priceNum * unitCount;
-                                    const submittedUnit = units.find((u) => u.mediatorPaymentScreenshot);
+                                    const submittedUnit = units.find((u) => u.mediatorPaymentScreenshot) || units[0];
                                     const alreadySubmittedProof = submittedUnit?.mediatorPaymentScreenshot;
                                     const alreadySubmittedDate = submittedUnit?.mediatorPaymentSentAt;
-                                    const alreadySubmittedMessage = submittedUnit?.mediatorMessage;
+                                    const paymentStatus = submittedUnit?.mediatorPaymentStatus;
+                                    const isVerified = activeTab === "verified" || paymentStatus === "verified";
 
                                     return (
                                         <tr key={order._id}>
@@ -237,7 +273,7 @@ export default function MediatorPendingPayment() {
                                             {/* Rejected Units */}
                                             <td>
                                                 <div className="units-cell">
-                                                    <span className="units-count" style={{ color: "#b91c1c" }}>
+                                                    <span className="units-count" style={{ color: isVerified ? "#15803d" : "#b91c1c" }}>
                                                         {unitCount} {unitCount === 1 ? "Unit" : "Units"}
                                                     </span>
                                                     <span className="unit-price">
@@ -248,7 +284,7 @@ export default function MediatorPendingPayment() {
 
                                             {/* Total Refund Due */}
                                             <td>
-                                                <div style={{ fontWeight: 800, fontSize: "14px", color: "#e11d48" }}>
+                                                <div style={{ fontWeight: 800, fontSize: "14px", color: isVerified ? "#15803d" : "#e11d48" }}>
                                                     ₹{totalOrderRefund.toLocaleString()}
                                                 </div>
                                             </td>
@@ -269,22 +305,42 @@ export default function MediatorPendingPayment() {
 
                                             {/* Refund Status */}
                                             <td>
-                                                {alreadySubmittedProof ? (
+                                                {isVerified ? (
                                                     <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                                                        <span className="status-badge" style={{ background: "#f0fdf4", color: "#15803d", borderColor: "#bbf7d0" }}>
-                                                            ✓ Proof Sent
+                                                        <span className="status-badge status-badge-completed" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                                            ✓ Verified
                                                         </span>
+                                                        {alreadySubmittedProof && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setModalImage(alreadySubmittedProof)}
+                                                                style={{ fontSize: "11px", color: "#2563eb", background: "none", border: "none", cursor: "pointer", textAlign: "left", padding: 0 }}
+                                                            >
+                                                                🔍 View Proof
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                ) : alreadySubmittedProof ? (
+                                                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                                        <span className="status-badge" style={{ background: "#eff6ff", color: "#1d4ed8", borderColor: "#bfdbfe", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                                            ⏳ Pending Verification
+                                                        </span>
+                                                        {alreadySubmittedDate && (
+                                                            <span style={{ fontSize: "10.5px", color: "var(--slate-500)" }}>
+                                                                Sent: {new Date(alreadySubmittedDate).toLocaleDateString()}
+                                                            </span>
+                                                        )}
                                                         <button
                                                             type="button"
                                                             onClick={() => setModalImage(alreadySubmittedProof)}
                                                             style={{ fontSize: "11px", color: "#2563eb", background: "none", border: "none", cursor: "pointer", textAlign: "left", padding: 0 }}
                                                         >
-                                                            🔍 View Sent SS
+                                                            🔍 View Sent Proof
                                                         </button>
                                                     </div>
                                                 ) : (
-                                                    <span className="status-badge status-badge-pending_payment">
-                                                        ● Proof Required
+                                                    <span className="status-badge" style={{ background: "#fff7ed", color: "#c2410c", borderColor: "#fed7aa" }}>
+                                                        ⚠️ Proof Required
                                                     </span>
                                                 )}
                                             </td>
@@ -292,25 +348,27 @@ export default function MediatorPendingPayment() {
                                             {/* Actions */}
                                             <td>
                                                 <div className="action-btn-group">
-                                                    {!alreadySubmittedProof ? (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleOpenUploadModal(order)}
-                                                            className="table-btn table-btn-primary"
-                                                            style={{ padding: "6px 12px", fontSize: "12px" }}
-                                                        >
-                                                            📤 Upload Refund
-                                                        </button>
-                                                    ) : (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleOpenUploadModal(order)}
-                                                            className="table-btn table-btn-outline"
-                                                            style={{ padding: "6px 10px", fontSize: "11.5px" }}
-                                                            title="Re-upload or update proof"
-                                                        >
-                                                            🔄 Update Proof
-                                                        </button>
+                                                    {!isVerified && (
+                                                        !alreadySubmittedProof ? (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleOpenUploadModal(order)}
+                                                                className="table-btn table-btn-primary"
+                                                                style={{ padding: "6px 12px", fontSize: "12px" }}
+                                                            >
+                                                                📤 Upload Refund
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleOpenUploadModal(order)}
+                                                                className="table-btn table-btn-outline"
+                                                                style={{ padding: "6px 10px", fontSize: "11.5px" }}
+                                                                title="Re-upload or update proof"
+                                                            >
+                                                                🔄 Update Proof
+                                                            </button>
+                                                        )
                                                     )}
 
                                                     {order.productLink ? (
@@ -337,24 +395,24 @@ export default function MediatorPendingPayment() {
                 </div>
             )}
 
-            {/* COMPACT UPLOAD REFUND MODAL */}
+            {/* OVERHAULED UPLOAD REFUND MODAL */}
             {activeUploadOrder && (
                 <div
                     className="app-modal-overlay"
                     onClick={handleCloseUploadModal}
                 >
                     <div
-                        className="app-modal-content"
+                        className="app-modal-dialog"
                         style={{ maxWidth: "520px" }}
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Modal Header */}
                         <div className="app-modal-header">
                             <div>
-                                <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#0f172a" }}>
+                                <h3 className="app-modal-title">
                                     Upload Return Refund Proof
                                 </h3>
-                                <p style={{ margin: "2px 0 0 0", fontSize: "12px", color: "#64748b" }}>
+                                <p style={{ margin: "2px 0 0 0", fontSize: "12px", color: "var(--slate-500)" }}>
                                     {activeUploadOrder.productName} ({activeUploadOrder.brand})
                                 </p>
                             </div>
@@ -362,108 +420,175 @@ export default function MediatorPendingPayment() {
                                 type="button"
                                 onClick={handleCloseUploadModal}
                                 className="app-modal-close"
+                                title="Close modal"
                             >
                                 ✕
                             </button>
                         </div>
 
                         {/* Modal Form */}
-                        <form onSubmit={handleSubmitPayment} className="app-modal-body">
-                            {/* Summary callout */}
-                            <div
-                                style={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "center",
-                                    padding: "12px 16px",
-                                    background: "#fff1f2",
-                                    border: "1px solid #fecdd3",
-                                    borderRadius: "8px",
-                                    marginBottom: "16px",
-                                    flexWrap: "wrap",
-                                    gap: "8px",
-                                }}
-                            >
-                                <div>
-                                    <span style={{ fontSize: "12px", color: "#9f1239", fontWeight: 600 }}>Refund Amount Due:</span>
-                                    <div style={{ fontSize: "18px", fontWeight: 800, color: "#be123c" }}>
-                                        ₹{((Number(activeUploadOrder.price) || 0) * (activeUploadOrder.orderUnits?.length || 1)).toLocaleString()}
-                                    </div>
-                                </div>
-                                <div style={{ textAlign: "right", fontSize: "12px", color: "#475569" }}>
-                                    <div>{activeUploadOrder.orderUnits?.length || 1} Rejected Units</div>
-                                    <div style={{ fontWeight: 600 }}>To: {activeUploadOrder.executiveName || "Executive"}</div>
-                                </div>
-                            </div>
-
-                            {/* File Upload */}
-                            <div style={{ marginBottom: "14px" }}>
-                                <label style={{ display: "block", fontSize: "12.5px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>
-                                    Payment Transaction Screenshot <span style={{ color: "#e11d48" }}>*</span>
-                                </label>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    required
-                                    onChange={handleFileChange}
+                        <form onSubmit={handleSubmitPayment}>
+                            <div className="app-modal-body">
+                                {/* Summary Callout */}
+                                <div
                                     style={{
-                                        display: "block",
-                                        width: "100%",
-                                        fontSize: "12.5px",
-                                        padding: "8px",
-                                        borderRadius: "6px",
-                                        border: "1px solid #cbd5e1",
-                                        boxSizing: "border-box",
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        alignItems: "center",
+                                        padding: "14px 16px",
+                                        background: "#f0fdf4",
+                                        border: "1px solid #bbf7d0",
+                                        borderRadius: "8px",
+                                        flexWrap: "wrap",
+                                        gap: "10px",
                                     }}
-                                />
-
-                                {uploadPreview && (
-                                    <div style={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-                                        <img
-                                            src={uploadPreview}
-                                            alt="Preview"
-                                            onClick={() => setModalImage(uploadPreview)}
-                                            style={{
-                                                width: "54px",
-                                                height: "54px",
-                                                objectFit: "cover",
-                                                borderRadius: "6px",
-                                                border: "1px solid #cbd5e1",
-                                                cursor: "pointer",
-                                            }}
-                                            title="Click to zoom"
-                                        />
-                                        <span style={{ fontSize: "12px", color: "#15803d", fontWeight: 600, wordBreak: "break-all" }}>
-                                            ✓ {uploadFile?.name}
+                                >
+                                    <div>
+                                        <span style={{ fontSize: "11px", color: "#166534", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                                            Refund Amount Due
                                         </span>
+                                        <div style={{ fontSize: "20px", fontWeight: 800, color: "#15803d" }}>
+                                            ₹{((Number(activeUploadOrder.price) || 0) * (activeUploadOrder.orderUnits?.length || 1)).toLocaleString()}
+                                        </div>
                                     </div>
-                                )}
+                                    <div style={{ textAlign: "right", fontSize: "12px", color: "var(--slate-600)" }}>
+                                        <div><b>{activeUploadOrder.orderUnits?.length || 1}</b> Rejected Unit(s)</div>
+                                        <div style={{ marginTop: "2px" }}>Recipient: <b>{activeUploadOrder.executiveName || "Executive"}</b></div>
+                                    </div>
+                                </div>
+
+                                {/* Styled File Upload Dropzone */}
+                                <div>
+                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: "var(--slate-700)", marginBottom: "8px" }}>
+                                        Payment Transaction Screenshot <span style={{ color: "#e11d48" }}>*</span>
+                                    </label>
+
+                                    {!uploadPreview ? (
+                                        <label
+                                            style={{
+                                                display: "flex",
+                                                flexDirection: "column",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                padding: "24px 16px",
+                                                border: "2px dashed #cbd5e1",
+                                                borderRadius: "10px",
+                                                backgroundColor: "#f8fafc",
+                                                cursor: "pointer",
+                                                transition: "all 0.2s ease",
+                                                textAlign: "center",
+                                            }}
+                                            onDragOver={(e) => {
+                                                e.preventDefault();
+                                                e.currentTarget.style.borderColor = "var(--primary-600)";
+                                            }}
+                                            onDragLeave={(e) => {
+                                                e.currentTarget.style.borderColor = "#cbd5e1";
+                                            }}
+                                            onDrop={(e) => {
+                                                e.preventDefault();
+                                                e.currentTarget.style.borderColor = "#cbd5e1";
+                                                const file = e.dataTransfer.files?.[0];
+                                                if (file) {
+                                                    setUploadFile(file);
+                                                    setUploadPreview(URL.createObjectURL(file));
+                                                }
+                                            }}
+                                        >
+                                            <div style={{ fontSize: "32px", marginBottom: "6px" }}>📤</div>
+                                            <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--slate-800)" }}>
+                                                Click to select or drag & drop screenshot
+                                            </div>
+                                            <div style={{ fontSize: "11px", color: "var(--slate-400)", marginTop: "4px" }}>
+                                                PNG, JPG, WEBP formats accepted
+                                            </div>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                required
+                                                onChange={handleFileChange}
+                                                style={{ display: "none" }}
+                                            />
+                                        </label>
+                                    ) : (
+                                        <div
+                                            style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "space-between",
+                                                padding: "12px 14px",
+                                                border: "1px solid #bbf7d0",
+                                                borderRadius: "8px",
+                                                backgroundColor: "#f0fdf4",
+                                                gap: "12px",
+                                            }}
+                                        >
+                                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                                <img
+                                                    src={uploadPreview}
+                                                    alt="Preview"
+                                                    onClick={() => setModalImage(uploadPreview)}
+                                                    style={{
+                                                        width: "56px",
+                                                        height: "56px",
+                                                        objectFit: "cover",
+                                                        borderRadius: "6px",
+                                                        border: "1px solid #86efac",
+                                                        cursor: "pointer",
+                                                    }}
+                                                    title="Click to zoom preview"
+                                                />
+                                                <div>
+                                                    <div style={{ fontSize: "13px", fontWeight: 700, color: "#166534" }}>
+                                                        ✓ Screenshot Attached
+                                                    </div>
+                                                    <div style={{ fontSize: "11px", color: "var(--slate-500)", wordBreak: "break-all" }}>
+                                                        {uploadFile?.name}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    if (uploadPreview) URL.revokeObjectURL(uploadPreview);
+                                                    setUploadFile(null);
+                                                    setUploadPreview(null);
+                                                }}
+                                                className="table-btn table-btn-outline"
+                                                style={{ padding: "4px 8px", fontSize: "11px", color: "#dc2626", borderColor: "#fecaca" }}
+                                            >
+                                                ✕ Remove
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Message / Txn note */}
+                                <div>
+                                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: "var(--slate-700)", marginBottom: "6px" }}>
+                                        Note / UTR / Transaction ID (Optional)
+                                    </label>
+                                    <textarea
+                                        rows="2"
+                                        placeholder="e.g. Returned ₹1500 via UPI UTR: 4098712398"
+                                        value={uploadMessage}
+                                        onChange={(e) => setUploadMessage(e.target.value)}
+                                        style={{
+                                            width: "100%",
+                                            fontSize: "13px",
+                                            padding: "10px 12px",
+                                            borderRadius: "8px",
+                                            border: "1px solid #cbd5e1",
+                                            boxSizing: "border-box",
+                                            resize: "vertical",
+                                            fontFamily: "inherit",
+                                        }}
+                                    />
+                                </div>
                             </div>
 
-                            {/* Message / Txn note */}
-                            <div style={{ marginBottom: "18px" }}>
-                                <label style={{ display: "block", fontSize: "12.5px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>
-                                    Note / UTR / Transaction ID (Optional)
-                                </label>
-                                <textarea
-                                    rows="2"
-                                    placeholder="e.g. Returned ₹1500 via UPI UTR: 4098712398"
-                                    value={uploadMessage}
-                                    onChange={(e) => setUploadMessage(e.target.value)}
-                                    style={{
-                                        width: "100%",
-                                        fontSize: "12.5px",
-                                        padding: "8px 10px",
-                                        borderRadius: "6px",
-                                        border: "1px solid #cbd5e1",
-                                        boxSizing: "border-box",
-                                        resize: "vertical",
-                                    }}
-                                />
-                            </div>
-
-                            {/* Actions */}
-                            <div className="app-modal-footer" style={{ padding: "12px 0 0 0", borderTop: "1px solid #e2e8f0" }}>
+                            {/* Modal Footer */}
+                            <div className="app-modal-footer">
                                 <button
                                     type="button"
                                     onClick={handleCloseUploadModal}
@@ -477,7 +602,7 @@ export default function MediatorPendingPayment() {
                                     className="nav-btn nav-btn-primary"
                                     style={{ background: "#16a34a" }}
                                 >
-                                    {submitting ? "Uploading..." : "Submit Refund Proof 📤"}
+                                    {submitting ? "Uploading Proof..." : "Submit Refund Proof 📤"}
                                 </button>
                             </div>
                         </form>

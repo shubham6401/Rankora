@@ -90,6 +90,16 @@ const orderUnitSchema = new mongoose.Schema({
         type: Date,
         default: null,
     },
+    mediatorPaymentStatus: {
+        type: String,
+        enum: ["pending", "verified", null],
+        default: null,
+    },
+    refundedByMediatorId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null,
+    },
     rejectedAt: {
         type: Date,
         default: null,

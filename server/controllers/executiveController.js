@@ -747,6 +747,8 @@ const acceptMediatorPayment = async (req, res, next) => {
             if (matchMediator && matchUnit && isPendingPayment) {
                 if (quantity === undefined || revertedCount < Number(quantity)) {
                     unit.status = "unassigned";
+                    unit.refundedByMediatorId = unit.mediatorId;
+                    unit.mediatorPaymentStatus = "verified";
                     unit.mediatorId = null;
                     unit.assignedAt = null;
                     revertedCount++;

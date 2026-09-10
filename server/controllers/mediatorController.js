@@ -511,10 +511,34 @@ const getPendingPaymentOrders = async (req, res, next) => {
             return orderObj;
         });
 
+        // Verified refund history for this mediator
+        const verifiedOrders = await Order.find({
+            orderUnits: {
+                $elemMatch: {
+                    refundedByMediatorId: mediatorId,
+                    mediatorPaymentStatus: "verified",
+                },
+            },
+        })
+            .populate("brandUserId", "name brand role")
+            .populate("createdBy", "name email teamCode")
+            .sort({ updatedAt: -1 });
+
+        const mappedVerified = verifiedOrders.map((order) => {
+            const orderObj = order.toObject();
+            orderObj.orderUnits = orderObj.orderUnits.filter(
+                (unit) =>
+                    unit.refundedByMediatorId?.toString() === mediatorId &&
+                    unit.mediatorPaymentStatus === "verified"
+            );
+            return orderObj;
+        });
+
         return res.status(200).json({
             success: true,
             message: "Pending payment orders fetched successfully",
             orders: mappedOrders,
+            verifiedOrders: mappedVerified,
         });
     } catch (err) {
         next(err);
@@ -564,6 +588,7 @@ const submitMediatorPayment = async (req, res, next) => {
             unit.mediatorPaymentScreenshot = screenshotPath;
             unit.mediatorMessage = message;
             unit.mediatorPaymentSentAt = now;
+            unit.mediatorPaymentStatus = "pending";
         });
 
         await order.save();

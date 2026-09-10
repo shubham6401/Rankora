@@ -121,15 +121,11 @@ export default function NewOrders() {
             const res = await RejectOrderByMediator(selectedOrder._id, qty);
             handleCloseDetails();
             if (res.data?.refundRequired) {
-                if (window.confirm("Order rejected with advance payment attached. Go to Payment Pending section now to upload refund payment proof?")) {
-                    navigate("/mediator-pending-payment");
-                } else {
-                    await loadNewOrders();
-                }
+                alert(`✓ Order offer rejected (${qty} unit(s)). Advance payment was attached, so you can upload the refund proof anytime in the Return Refunds section.`);
             } else {
-                alert(`✓ Order offer rejected (${qty} units). Units returned to Executive pool.`);
-                await loadNewOrders();
+                alert(`✓ Order offer rejected (${qty} unit(s)). Units returned to Executive pool.`);
             }
+            await loadNewOrders();
         } catch (err) {
             console.error("Error rejecting order:", err);
             alert(err?.response?.data?.message || "Failed to reject order");
@@ -173,15 +169,11 @@ export default function NewOrders() {
             setActionLoading(true);
             const res = await RejectOrderByMediator(order._id, qty);
             if (res.data?.refundRequired) {
-                if (window.confirm("Order rejected with advance payment. Go to Payment Pending now to upload refund payment proof?")) {
-                    navigate("/mediator-pending-payment");
-                } else {
-                    await loadNewOrders();
-                }
+                alert(`✓ Order offer rejected (${qty} unit(s)). Advance payment was attached, so you can upload the refund proof anytime in the Return Refunds section.`);
             } else {
-                alert("✓ Order offer rejected. Units returned to Executive's unassigned pool.");
-                await loadNewOrders();
+                alert(`✓ Order offer rejected (${qty} unit(s)). Units returned to Executive's unassigned pool.`);
             }
+            await loadNewOrders();
         } catch (err) {
             console.error("Error rejecting order:", err);
             alert(err?.response?.data?.message || "Failed to reject order");

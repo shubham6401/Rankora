@@ -226,11 +226,16 @@ export default function MediatorSentOrders() {
                                                         Brand: <b>{ord.brand}</b> | Platform: <b>{ord.orderPlatform}</b> | Price: <b>₹{ord.price}</b>
                                                     </div>
                                                 </div>
-                                                <div style={{ textAlign: "right" }}>
-                                                    <span className="qty-pill qty-pill-warning">
-                                                        Rejected: {unitCount} Unit(s)
-                                                    </span>
-                                                    <div style={{ fontSize: "16px", fontWeight: "bold", color: "#c2410c", marginTop: "4px" }}>
+                                                <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                                        <span className="qty-pill qty-pill-warning">
+                                                            Rejected: {unitCount} Unit(s)
+                                                        </span>
+                                                        <span className="status-badge" style={{ background: "#eff6ff", color: "#1d4ed8", borderColor: "#bfdbfe" }}>
+                                                            ⏳ Pending Verification
+                                                        </span>
+                                                    </div>
+                                                    <div style={{ fontSize: "16px", fontWeight: "bold", color: "#c2410c" }}>
                                                         Refund Amount: ₹{subtotal.toLocaleString()}
                                                     </div>
                                                 </div>
@@ -238,8 +243,11 @@ export default function MediatorSentOrders() {
 
                                             {/* Proof and Message Box */}
                                             <div className="proof-upload-box" style={{ background: "#ffffff" }}>
-                                                <div className="proof-upload-title" style={{ color: "#9a3412" }}>
-                                                    💳 Mediator Refund Payment Proof & Message
+                                                <div className="proof-upload-title" style={{ color: "#9a3412", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                    <span>💳 Mediator Refund Payment Proof & Message</span>
+                                                    <span className="status-badge" style={{ background: "#eff6ff", color: "#1d4ed8", borderColor: "#bfdbfe", fontSize: "11px" }}>
+                                                        ⏳ Pending Verification
+                                                    </span>
                                                 </div>
 
                                                 <div style={{ display: "flex", gap: "18px", flexWrap: "wrap", alignItems: "flex-start" }}>
