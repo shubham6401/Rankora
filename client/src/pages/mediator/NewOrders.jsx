@@ -381,14 +381,26 @@ export default function NewOrders() {
                                                             >
                                                                 ✕ Reject
                                                             </button>
+                                                            {order.productLink ? (
+                                                                <a
+                                                                    href={order.productLink.startsWith("http") ? order.productLink : `https://${order.productLink}`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="table-btn table-btn-outline"
+                                                                    style={{ padding: "5px 9px", fontSize: "12px" }}
+                                                                    title="Open product link in new tab"
+                                                                >
+                                                                    🛍️ View Product ↗
+                                                                </a>
+                                                            ) : null}
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleOpenDetails(order)}
                                                                 className="table-btn table-btn-primary"
-                                                                title="View full specs, select unit quantity, inspect payment proof"
+                                                                title="Review offer, select unit quantity, inspect payment proof"
                                                                 style={{ padding: "5px 9px", fontSize: "12px" }}
                                                             >
-                                                                Details ↗
+                                                                Review Units ↗
                                                             </button>
                                                         </div>
                                                     </td>
@@ -434,15 +446,18 @@ export default function NewOrders() {
                                     </p>
                                 </div>
                                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                    <button
-                                        type="button"
-                                        onClick={() => navigate(`/order/${selectedOrder._id}`)}
-                                        className="table-btn table-btn-outline"
-                                        style={{ fontSize: "12px", padding: "6px 10px" }}
-                                        title="View complete order details and timeline"
-                                    >
-                                        Order Page ↗
-                                    </button>
+                                    {selectedOrder.productLink && (
+                                        <a
+                                            href={selectedOrder.productLink.startsWith("http") ? selectedOrder.productLink : `https://${selectedOrder.productLink}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="table-btn table-btn-outline"
+                                            style={{ fontSize: "12px", padding: "6px 10px", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                                            title="Open product link in new tab"
+                                        >
+                                            🛍️ View Product ↗
+                                        </a>
+                                    )}
                                     <button
                                         type="button"
                                         onClick={handleCloseDetails}

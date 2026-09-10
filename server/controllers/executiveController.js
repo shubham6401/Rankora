@@ -142,11 +142,14 @@ const assignOrder = async (req, res, next) => {
         const paymentMessage = req.body.paymentMessage || req.body.message || null;
 
         unitsToAssign.forEach((unit) => {
-            unit.status = "assigned";
+            unit.status = paymentScreenshot ? "assigned" : "pending_payment";
             unit.mediatorId = mediator._id;
             unit.assignedAt = now;
             unit.rejectedAt = null;
-            if (paymentScreenshot) unit.paymentScreenshot = paymentScreenshot;
+            if (paymentScreenshot) {
+                unit.paymentScreenshot = paymentScreenshot;
+                unit.paymentSentAt = now;
+            }
             if (paymentMessage) unit.paymentMessage = paymentMessage;
         });
 
@@ -160,7 +163,9 @@ const assignOrder = async (req, res, next) => {
 
         return res.status(200).json({
             success: true,
-            message: "Order assigned to mediator successfully",
+            message: paymentScreenshot
+                ? "Order assigned and forwarded to mediator successfully"
+                : "Order assigned to mediator successfully and moved to Advance Payment",
             order: populatedOrder,
         });
     } catch (err) {
@@ -669,7 +674,7 @@ const submitExecutivePayment = async (req, res, next) => {
 
         return res.status(200).json({
             success: true,
-            message: `Successfully uploaded payment proof. ${totalUnitsForwarded} unit(s) forwarded to assigned orders.`,
+            message: `Successfully uploaded payment proof. ${totalUnitsForwarded} unit(s) forwarded to mediator for verification.`,
             screenshotUrl: screenshotPath,
         });
     } catch (err) {

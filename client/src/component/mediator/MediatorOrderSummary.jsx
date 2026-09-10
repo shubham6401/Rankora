@@ -368,22 +368,32 @@ export default function MediatorOrderSummary() {
                                                     ₹{myVal.toLocaleString()}
                                                 </td>
                                                 <td style={{ textAlign: "center" }}>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => navigate(`/order/${ord._id}`)}
-                                                        style={{
-                                                            padding: "4px 10px",
-                                                            backgroundColor: "#f1f5f9",
-                                                            border: "1px solid #cbd5e1",
-                                                            borderRadius: "4px",
-                                                            cursor: "pointer",
-                                                            fontSize: "12px",
-                                                            fontWeight: "600",
-                                                            color: "var(--primary-600)",
-                                                        }}
-                                                    >
-                                                        Details
-                                                    </button>
+                                                    {ord.productLink ? (
+                                                        <a
+                                                            href={ord.productLink.startsWith("http") ? ord.productLink : `https://${ord.productLink}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            style={{
+                                                                padding: "4px 10px",
+                                                                backgroundColor: "#f1f5f9",
+                                                                border: "1px solid #cbd5e1",
+                                                                borderRadius: "4px",
+                                                                cursor: "pointer",
+                                                                fontSize: "12px",
+                                                                fontWeight: "600",
+                                                                color: "var(--primary-600)",
+                                                                textDecoration: "none",
+                                                                display: "inline-flex",
+                                                                alignItems: "center",
+                                                                gap: "4px"
+                                                            }}
+                                                            title="Open product link in new tab"
+                                                        >
+                                                            🛍️ View Product ↗
+                                                        </a>
+                                                    ) : (
+                                                        <span style={{ fontSize: "11px", color: "var(--slate-400)", fontStyle: "italic" }}>No link</span>
+                                                    )}
                                                 </td>
                                             </tr>
                                         );

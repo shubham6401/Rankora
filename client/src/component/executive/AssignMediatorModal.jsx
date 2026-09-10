@@ -28,7 +28,7 @@ export default function AssignMediatorModal({
         }
 
         const medObj = mediators.find((m) => m._id === selectedMediator);
-        const confirmMsg = `Assign ${currentQty} unit(s) of "${order.productName}" to ${medObj?.name || "selected mediator"}?\n\nTotal Order Value: ₹${totalAdvanceAmount.toLocaleString()}\nThis order will be forwarded directly to the mediator's "New Offers" for acceptance verification.`;
+        const confirmMsg = `Assign ${currentQty} unit(s) of "${order.productName}" to ${medObj?.name || "selected mediator"}?\n\nTotal Order Value: ₹${totalAdvanceAmount.toLocaleString()}\nThis order will move to Stage 2: Advance Payment for payment proof upload before forwarding to the mediator.`;
         if (!window.confirm(confirmMsg)) return;
 
         try {
@@ -37,7 +37,7 @@ export default function AssignMediatorModal({
                 mediatorId: selectedMediator,
                 quantity: currentQty,
             });
-            alert("✓ Order successfully assigned! Forwarded to mediator's New Offers for verification.");
+            alert("✓ Order successfully assigned! Moved to Advance Payment to upload payment screenshot.");
             if (onSuccess) onSuccess();
             onClose();
         } catch (err) {

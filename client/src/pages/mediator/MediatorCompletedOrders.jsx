@@ -150,12 +150,19 @@ export default function MediatorCompletedOrders() {
                                             </td>
                                             <td>{order.teamCode || "N/A"}</td>
                                             <td style={{ textAlign: "center" }}>
-                                                <button
-                                                    onClick={() => navigate(`/order/${order._id}`)}
-                                                    className="table-btn table-btn-outline"
-                                                >
-                                                    View Details
-                                                </button>
+                                                {order.productLink ? (
+                                                    <a
+                                                        href={order.productLink.startsWith("http") ? order.productLink : `https://${order.productLink}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="table-btn table-btn-outline"
+                                                        title="Open product link in new tab"
+                                                    >
+                                                        🛍️ View Product ↗
+                                                    </a>
+                                                ) : (
+                                                    <span style={{ fontSize: "11px", color: "var(--slate-400)", fontStyle: "italic" }}>No link</span>
+                                                )}
                                             </td>
                                         </tr>
                                     );

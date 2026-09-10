@@ -44,7 +44,28 @@ export default function Dashboard() {
                         <div key={index}>
                             <p>Order Id: {order.orderId}</p>
                             <p>Product Name: {order.productName}</p>
-                            <button onClick={()=> navigate(`/order/${order._id}`)}>view details</button> &nbsp; &nbsp;
+                            {order.productLink ? (
+                                <a
+                                    href={order.productLink.startsWith("http") ? order.productLink : `https://${order.productLink}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{
+                                        textDecoration: "none",
+                                        padding: "4px 8px",
+                                        background: "#f1f5f9",
+                                        border: "1px solid #cbd5e1",
+                                        borderRadius: "4px",
+                                        fontSize: "12px",
+                                        fontWeight: "600",
+                                        color: "#2563eb",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "4px"
+                                    }}
+                                >
+                                    🛍️ View Product ↗
+                                </a>
+                            ) : null} &nbsp; &nbsp;
                             <button onClick={()=> navigate(`/refund-submission/${order._id}`)} disabled={order.postDeliveryDetails.success}>{order.postDeliveryDetails.success ?"Refund Added":"Add refund" }</button>
                             <hr />
                             <br />

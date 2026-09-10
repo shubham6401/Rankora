@@ -136,7 +136,7 @@ export default function PendingPaymentOrders() {
         }
 
         const confirmSubmit = window.confirm(
-            `Confirm payment screenshot submission for ${mediatorName}?\nAll orders for this mediator will be forwarded to Assigned Orders.`
+            `Confirm payment screenshot submission for ${mediatorName}?\nAll orders for this mediator will be marked as assigned and forwarded to the mediator's New Offers for verification.`
         );
         if (!confirmSubmit) return;
 
@@ -149,7 +149,7 @@ export default function PendingPaymentOrders() {
             }
 
             const res = await submitExecutivePaymentProof(mediatorId, formData);
-            alert(res.data.message || "Payment proof submitted successfully! Orders forwarded to Assigned.");
+            alert(res.data.message || "Payment proof submitted successfully! Orders forwarded to mediator for verification.");
             handleClearFile(mediatorId);
             setExecMessages((prev) => ({ ...prev, [mediatorId]: "" }));
             await loadOrders();
@@ -341,7 +341,7 @@ export default function PendingPaymentOrders() {
                                     </div>
                                     <div className="proof-upload-desc">
                                         Total payment due for {group.totalUnits} unit(s): <b>₹{group.totalAmount.toLocaleString()}</b>.
-                                        Once uploaded, all these units will be forwarded to <b>Assigned Orders</b> and visible to the mediator.
+                                        Once uploaded, all these units will be forwarded to the <b>mediator's New Offers</b> for verification and acceptance.
                                     </div>
 
                                     {/* Message */}
@@ -392,7 +392,7 @@ export default function PendingPaymentOrders() {
                                             disabled={!hasFile || isUploading}
                                             onClick={() => handleSubmitPayment(med._id, med.name)}
                                         >
-                                            {isUploading ? "Submitting Proof..." : "Submit Proof & Forward to Assigned →"}
+                                            {isUploading ? "Submitting Proof..." : "Submit Proof & Forward to Mediator →"}
                                         </button>
                                     </div>
 

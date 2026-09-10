@@ -313,13 +313,19 @@ export default function MediatorPendingPayment() {
                                                         </button>
                                                     )}
 
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => navigate(`/order/${order._id}`)}
-                                                        className="table-btn table-btn-detail"
-                                                    >
-                                                        Details
-                                                    </button>
+                                                    {order.productLink ? (
+                                                        <a
+                                                            href={order.productLink.startsWith("http") ? order.productLink : `https://${order.productLink}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="table-btn table-btn-outline"
+                                                            title="Open product link in new tab"
+                                                        >
+                                                            🛍️ View Product ↗
+                                                        </a>
+                                                    ) : (
+                                                        <span style={{ fontSize: "11px", color: "var(--slate-400)", fontStyle: "italic" }}>No link</span>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
