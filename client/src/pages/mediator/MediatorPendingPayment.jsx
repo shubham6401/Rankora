@@ -259,6 +259,11 @@ export default function MediatorPendingPayment() {
                                                     </a>
                                                     <div className="product-meta">
                                                         <span className="brand-tag">{order.brand}</span>
+                                                        {submittedUnit?.returnReason && (
+                                                            <div style={{ marginTop: "4px", fontSize: "11px", color: "#b91c1c", backgroundColor: "#fef2f2", padding: "2px 6px", borderRadius: "4px", border: "1px solid #fecaca" }}>
+                                                                ↩️ Return Reason: {submittedUnit.returnReason}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </td>

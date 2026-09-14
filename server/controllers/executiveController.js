@@ -1,5 +1,6 @@
 const Order = require("../models/order");
 const User = require("../models/user");
+const Address = require("../models/address");
 
 // ==========================================
 // ADD NEW MASTER ORDER
@@ -15,6 +16,7 @@ const addOrder = async (req, res, next) => {
             orderPlatform,
             executiveName,
             teamCode,
+            season,
         } = req.body;
 
         if (!brandUserId || !quantity || !productName || !productLink || !price || !orderPlatform) {
@@ -61,6 +63,7 @@ const addOrder = async (req, res, next) => {
             price: String(price),
             quantity: qtyNum,
             orderPlatform,
+            season: season ? season.trim() : "General",
             summary: {
                 unassigned: qtyNum,
                 assigned: 0,
@@ -89,7 +92,7 @@ const addOrder = async (req, res, next) => {
 const assignOrder = async (req, res, next) => {
     try {
         const { orderId } = req.params;
-        const { mediatorId, quantity } = req.body;
+        const { mediatorId, quantity, unitAddresses } = req.body;
 
         if (!mediatorId) {
             return res.status(400).json({
@@ -141,7 +144,7 @@ const assignOrder = async (req, res, next) => {
         const paymentScreenshot = req.file?.path || req.body.paymentScreenshot || null;
         const paymentMessage = req.body.paymentMessage || req.body.message || null;
 
-        unitsToAssign.forEach((unit) => {
+        unitsToAssign.forEach((unit, idx) => {
             unit.status = paymentScreenshot ? "assigned" : "pending_payment";
             unit.mediatorId = mediator._id;
             unit.assignedAt = now;
@@ -151,6 +154,17 @@ const assignOrder = async (req, res, next) => {
                 unit.paymentSentAt = now;
             }
             if (paymentMessage) unit.paymentMessage = paymentMessage;
+
+            if (Array.isArray(unitAddresses) && unitAddresses[idx]) {
+                const addrInfo = unitAddresses[idx];
+                if (typeof addrInfo === "object" && addrInfo !== null) {
+                    unit.addressType = addrInfo.addressType || "custom";
+                    unit.deliveryAddress = addrInfo.deliveryAddress || "";
+                } else if (typeof addrInfo === "string") {
+                    unit.addressType = addrInfo.toLowerCase().includes("yourself") ? "yourself" : "executive_provided";
+                    unit.deliveryAddress = addrInfo;
+                }
+            }
         });
 
         order.recalculateSummary();
@@ -819,6 +833,304 @@ const getBrands = async (req, res, next) => {
     }
 };
 
+// ==========================================
+// EXECUTIVE ADDRESS MANAGEMENT
+// ==========================================
+const createAddress = async (req, res, next) => {
+    try {
+        const { label, recipientName, phoneNumber, addressLine1, addressLine2, city, state, pincode } = req.body;
+        if (!label || !recipientName || !phoneNumber || !addressLine1 || !city || !state || !pincode) {
+            return res.status(400).json({
+                success: false,
+                message: "All address fields (label, recipientName, phoneNumber, addressLine1, city, state, pincode) are required",
+            });
+        }
+        const address = await Address.create({
+            executiveId: req.user.id,
+            label: label.trim(),
+            recipientName: recipientName.trim(),
+            phoneNumber: phoneNumber.trim(),
+            addressLine1: addressLine1.trim(),
+            addressLine2: addressLine2 ? addressLine2.trim() : "",
+            city: city.trim(),
+            state: state.trim(),
+            pincode: pincode.trim(),
+        });
+        return res.status(201).json({
+            success: true,
+            message: "Address saved successfully",
+            address,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+const getAddresses = async (req, res, next) => {
+    try {
+        const addresses = await Address.find({ executiveId: req.user.id }).sort({ createdAt: -1 });
+        return res.status(200).json({
+            success: true,
+            addresses,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+const deleteAddress = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const deleted = await Address.findOneAndDelete({ _id: id, executiveId: req.user.id });
+        if (!deleted) {
+            return res.status(404).json({ success: false, message: "Address not found" });
+        }
+        return res.status(200).json({ success: true, message: "Address deleted successfully" });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ==========================================
+// EXECUTIVE BRAND OVERVIEW & DETAILS
+// ==========================================
+const getExecutiveBrandSummary = async (req, res, next) => {
+    try {
+        const teamCode = req.user.teamCode;
+        const orders = await Order.find(teamCode ? { teamCode } : {})
+            .populate("brandUserId", "name brand role email")
+            .lean();
+
+        const brandMap = {};
+        orders.forEach((ord) => {
+            const brandKey = (ord.brandUserId?._id || ord.brand || "Unknown").toString();
+            if (!brandMap[brandKey]) {
+                brandMap[brandKey] = {
+                    brandId: ord.brandUserId?._id || null,
+                    brandName: ord.brand || ord.brandUserId?.brand || ord.brandUserId?.name || "Unknown Brand",
+                    userName: ord.brandUserId?.name || "",
+                    totalOrders: 0,
+                    totalUnits: 0,
+                    unassignedUnits: 0,
+                    assignedUnits: 0,
+                    inProgressUnits: 0,
+                    pendingRefundUnits: 0,
+                    pendingVerificationUnits: 0,
+                    completedUnits: 0,
+                    totalAmount: 0,
+                };
+            }
+            const bm = brandMap[brandKey];
+            bm.totalOrders++;
+            const units = ord.orderUnits || [];
+            bm.totalUnits += units.length;
+            const unitPrice = Number(ord.price) || 0;
+            bm.totalAmount += unitPrice * units.length;
+
+            units.forEach((u) => {
+                if (u.status === "unassigned") bm.unassignedUnits++;
+                else if (u.status === "assigned" || u.status === "pending_payment") bm.assignedUnits++;
+                else if (u.status === "in_progress") bm.inProgressUnits++;
+                else if (u.status === "pending_refund") bm.pendingRefundUnits++;
+                else if (u.status === "pending_verification") bm.pendingVerificationUnits++;
+                else if (u.status === "completed") bm.completedUnits++;
+            });
+        });
+
+        const brandSummaries = Object.values(brandMap).map((b) => ({
+            ...b,
+            completionRate: b.totalUnits > 0 ? Math.round((b.completedUnits / b.totalUnits) * 100) : 0,
+        })).sort((a, b) => b.totalOrders - a.totalOrders);
+
+        return res.status(200).json({
+            success: true,
+            brandSummaries,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+const getExecutiveBrandDetails = async (req, res, next) => {
+    try {
+        const { brandUserId } = req.params;
+        const teamCode = req.user.teamCode;
+
+        const brandUser = await User.findById(brandUserId).select("-password").lean();
+        const query = {
+            $and: [
+                teamCode ? { teamCode } : {},
+                {
+                    $or: [
+                        { brandUserId },
+                        ...(brandUser?.brand ? [{ brand: brandUser.brand }] : []),
+                        ...(brandUser?.name ? [{ brand: brandUser.name }] : []),
+                    ],
+                },
+            ],
+        };
+
+        const orders = await Order.find(query)
+            .populate("brandUserId", "name brand role")
+            .populate("createdBy", "name")
+            .populate("orderUnits.mediatorId", "name mediatorCode teamCode")
+            .sort({ createdAt: -1 });
+
+        return res.status(200).json({
+            success: true,
+            brand: brandUser || { name: "Brand", _id: brandUserId },
+            orders,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ==========================================
+// MASTER ANALYTICS & BREAKDOWNS
+// ==========================================
+const getExecutiveMasterAnalytics = async (req, res, next) => {
+    try {
+        const teamCode = req.user.teamCode;
+        const { startDate, endDate, brandUserId, mediatorId, status } = req.query;
+
+        const filter = teamCode ? { teamCode } : {};
+
+        if (startDate || endDate) {
+            filter.createdAt = {};
+            if (startDate) filter.createdAt.$gte = new Date(startDate);
+            if (endDate) {
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59, 999);
+                filter.createdAt.$lte = end;
+            }
+        }
+
+        if (brandUserId && brandUserId !== "all") {
+            filter.brandUserId = brandUserId;
+        }
+
+        const orders = await Order.find(filter)
+            .populate("brandUserId", "name brand role")
+            .populate("createdBy", "name")
+            .populate("orderUnits.mediatorId", "name mediatorCode teamCode")
+            .sort({ createdAt: -1 })
+            .lean();
+
+        let filteredOrders = orders;
+        if (mediatorId && mediatorId !== "all") {
+            filteredOrders = filteredOrders.filter((ord) =>
+                ord.orderUnits?.some((u) => u.mediatorId?._id?.toString() === mediatorId || u.mediatorId?.toString() === mediatorId)
+            );
+        }
+
+        if (status && status !== "all") {
+            filteredOrders = filteredOrders.filter((ord) => {
+                const s = ord.summary || {};
+                if (status === "completed") return s.completed > 0;
+                if (status === "in_progress") return s.inProgress > 0;
+                if (status === "pending_refund") return s.pendingRefund > 0;
+                if (status === "pending_payment") return s.pendingPayment > 0;
+                if (status === "unassigned") return s.unassigned > 0;
+                return true;
+            });
+        }
+
+        const brandStats = {};
+        const mediatorStats = {};
+        let totalUnits = 0;
+        let totalCompleted = 0;
+        let totalInProgress = 0;
+        let totalPendingRefund = 0;
+        let totalPendingPayment = 0;
+        let totalUnassigned = 0;
+
+        filteredOrders.forEach((ord) => {
+            const bKey = (ord.brandUserId?._id || ord.brand || "Unknown").toString();
+            if (!brandStats[bKey]) {
+                brandStats[bKey] = {
+                    id: ord.brandUserId?._id || null,
+                    name: ord.brand || ord.brandUserId?.brand || ord.brandUserId?.name || "Unknown Brand",
+                    totalOrders: 0,
+                    totalUnits: 0,
+                    completed: 0,
+                    inProgress: 0,
+                    pendingRefund: 0,
+                    pendingPayment: 0,
+                    unassigned: 0,
+                };
+            }
+            brandStats[bKey].totalOrders++;
+
+            const units = ord.orderUnits || [];
+            units.forEach((u) => {
+                totalUnits++;
+                brandStats[bKey].totalUnits++;
+
+                const medId = u.mediatorId?._id ? u.mediatorId._id.toString() : (u.mediatorId ? u.mediatorId.toString() : "Unassigned");
+                const medName = u.mediatorId?.name || (medId === "Unassigned" ? "Unassigned" : "Mediator");
+                const medCode = u.mediatorId?.mediatorCode || "";
+
+                if (!mediatorStats[medId]) {
+                    mediatorStats[medId] = {
+                        id: medId,
+                        name: medName,
+                        mediatorCode: medCode,
+                        totalUnits: 0,
+                        completed: 0,
+                        inProgress: 0,
+                        pendingRefund: 0,
+                        pendingPayment: 0,
+                        unassigned: 0,
+                    };
+                }
+                mediatorStats[medId].totalUnits++;
+
+                if (u.status === "completed") {
+                    totalCompleted++;
+                    brandStats[bKey].completed++;
+                    mediatorStats[medId].completed++;
+                } else if (u.status === "in_progress") {
+                    totalInProgress++;
+                    brandStats[bKey].inProgress++;
+                    mediatorStats[medId].inProgress++;
+                } else if (u.status === "pending_refund") {
+                    totalPendingRefund++;
+                    brandStats[bKey].pendingRefund++;
+                    mediatorStats[medId].pendingRefund++;
+                } else if (u.status === "pending_payment") {
+                    totalPendingPayment++;
+                    brandStats[bKey].pendingPayment++;
+                    mediatorStats[medId].pendingPayment++;
+                } else if (u.status === "unassigned") {
+                    totalUnassigned++;
+                    brandStats[bKey].unassigned++;
+                    mediatorStats[medId].unassigned++;
+                }
+            });
+        });
+
+        return res.status(200).json({
+            success: true,
+            totals: {
+                totalOrders: filteredOrders.length,
+                totalUnits,
+                totalCompleted,
+                totalInProgress,
+                totalPendingRefund,
+                totalPendingPayment,
+                totalUnassigned,
+                completionRate: totalUnits > 0 ? Math.round((totalCompleted / totalUnits) * 100) : 0,
+            },
+            brandBreakdown: Object.values(brandStats),
+            mediatorBreakdown: Object.values(mediatorStats),
+            orders: filteredOrders,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
 module.exports = {
     addOrder,
     assignOrder,
@@ -838,4 +1150,10 @@ module.exports = {
     acceptMediatorPayment,
     getMediators,
     getBrands,
+    createAddress,
+    getAddresses,
+    deleteAddress,
+    getExecutiveBrandSummary,
+    getExecutiveBrandDetails,
+    getExecutiveMasterAnalytics,
 };

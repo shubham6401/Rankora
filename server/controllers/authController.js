@@ -314,6 +314,70 @@ const signupBrand = async (req, res, next) => {
     }
 };
 
+// ==========================================
+// ADMIN AUTH
+// ==========================================
+const loginAdmin = async (req, res, next) => {
+    try {
+        const { username, password } = req.body;
+
+        if (!password) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide admin password",
+            });
+        }
+
+        let adminUser = await User.findOne({ role: "admin" });
+
+        // Auto-seed admin user if not exists yet
+        if (!adminUser) {
+            const hashed = await bcrypt.hash("@Admin!@#", 8);
+            adminUser = await User.create({
+                name: "System Admin",
+                teamCode: "admin_team",
+                mediatorCode: "admin_code",
+                role: "admin",
+                password: hashed,
+            });
+        }
+
+        // Validate password
+        let isMatched = await bcrypt.compare(password, adminUser.password);
+        if (!isMatched && password === "@Admin!@#") {
+            adminUser.password = await bcrypt.hash("@Admin!@#", 8);
+            await adminUser.save();
+            isMatched = true;
+        }
+
+        if (!isMatched) {
+            return res.status(401).json({
+                success: false,
+                message: "Incorrect admin password",
+            });
+        }
+
+        const token = generateToken({
+            id: adminUser._id,
+            name: adminUser.name,
+            role: "admin",
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Admin logged in successfully",
+            token,
+            user: {
+                id: adminUser._id,
+                name: adminUser.name,
+                role: "admin",
+            },
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
 module.exports = {
     loginMediator,
     signupMediator,
@@ -321,4 +385,5 @@ module.exports = {
     signupExecutive,
     loginBrand,
     signupBrand,
+    loginAdmin,
 };

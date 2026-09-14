@@ -41,7 +41,31 @@ export default function ExecutiveDashboard() {
                     </div>
                 </div>
 
-                <div>
+                <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+                    <button
+                        type="button"
+                        onClick={() => navigate("/executive-brands")}
+                        className="app-btn app-btn-outline"
+                        style={{ fontWeight: "700" }}
+                    >
+                        🏢 Brands
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => navigate("/executive-analytics")}
+                        className="app-btn app-btn-outline"
+                        style={{ fontWeight: "700" }}
+                    >
+                        📊 Master Analytics
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => navigate("/executive-addresses")}
+                        className="app-btn app-btn-outline"
+                        style={{ fontWeight: "700" }}
+                    >
+                        📍 Address Book
+                    </button>
                     <button
                         type="button"
                         onClick={() => navigate("/executive-add-order")}

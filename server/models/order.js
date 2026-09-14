@@ -41,6 +41,23 @@ const orderUnitSchema = new mongoose.Schema({
         type: String,
         default: null,
     },
+    addressType: {
+        type: String,
+        enum: ["custom", "executive_provided", "yourself", null],
+        default: null,
+    },
+    purchasePrice: {
+        type: Number,
+        default: null,
+    },
+    deliveryFee: {
+        type: Number,
+        default: 0,
+    },
+    totalPurchasedAmount: {
+        type: Number,
+        default: null,
+    },
     reviewerName: {
         type: String,
         default: null,
@@ -118,6 +135,19 @@ const orderUnitSchema = new mongoose.Schema({
     },
     verificationRejectionReason: {
         type: String,
+        default: null,
+    },
+    returnReason: {
+        type: String,
+        default: null,
+    },
+    returnStage: {
+        type: String,
+        enum: ["in_progress", "pending_refund", null],
+        default: null,
+    },
+    returnInitiatedAt: {
+        type: Date,
         default: null,
     },
     postDeliveryDetails: {
@@ -207,6 +237,11 @@ const orderSchema = new mongoose.Schema({
         type: String,
         required: true,
         trim: true,
+    },
+    season: {
+        type: String,
+        trim: true,
+        default: null,
     },
     summary: {
         type: orderSummarySchema,

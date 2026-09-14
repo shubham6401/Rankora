@@ -21,6 +21,12 @@ const {
     acceptMediatorPayment,
     getMediators,
     getBrands,
+    createAddress,
+    getAddresses,
+    deleteAddress,
+    getExecutiveBrandSummary,
+    getExecutiveBrandDetails,
+    getExecutiveMasterAnalytics,
 } = require("../controllers/executiveController");
 
 // All executive routes require token verification
@@ -51,5 +57,17 @@ router.post(
 
 router.get("/mediators", getMediators);
 router.get("/brands", getBrands);
+
+// Address Management
+router.get("/addresses", getAddresses);
+router.post("/addresses", createAddress);
+router.delete("/addresses/:id", deleteAddress);
+
+// Brand Summary & Details
+router.get("/brands/summary", getExecutiveBrandSummary);
+router.get("/brands/:brandUserId/details", getExecutiveBrandDetails);
+
+// Master Analytics
+router.get("/analytics", getExecutiveMasterAnalytics);
 
 module.exports = router;

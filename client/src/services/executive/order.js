@@ -76,3 +76,27 @@ export const acceptExecutiveMediatorPayment = (orderId, data) => {
 export const fetchAllBrands = () => {
     return api.get("/executive/brands");
 };
+
+export const fetchExecutiveAddresses = () => {
+    return api.get("/executive/addresses");
+};
+
+export const createExecutiveAddress = (data) => {
+    return api.post("/executive/addresses", data);
+};
+
+export const deleteExecutiveAddress = (id) => {
+    return api.delete(`/executive/addresses/${id}`);
+};
+
+export const fetchExecutiveBrandSummary = () => {
+    return api.get("/executive/brands/summary");
+};
+
+export const fetchExecutiveBrandDetails = (brandUserId) => {
+    return api.get(`/executive/brands/${brandUserId}/details`);
+};
+
+export const fetchExecutiveAnalytics = (params) => {
+    return api.get("/executive/analytics", { params });
+};

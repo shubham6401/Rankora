@@ -214,6 +214,44 @@ export default function RoleSelection() {
                     </div>
                 </div>
 
+                {/* ADMIN ACCESS CONSOLE */}
+                <div style={{
+                    marginTop: "2rem",
+                    padding: "1rem 1.5rem",
+                    backgroundColor: "rgba(99, 102, 241, 0.08)",
+                    border: "1px dashed rgba(99, 102, 241, 0.3)",
+                    borderRadius: "12px",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: "1rem"
+                }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", textAlign: "left" }}>
+                        <span style={{ fontSize: "1.5rem" }}>🛡️</span>
+                        <div>
+                            <div style={{ fontWeight: "700", color: "#f8fafc", fontSize: "0.95rem" }}>System Administrator Access</div>
+                            <div style={{ color: "#94a3b8", fontSize: "0.8rem" }}>Executive account management, brand analytics & operational oversight</div>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => navigate("/admin/login")}
+                        style={{
+                            padding: "0.55rem 1.25rem",
+                            borderRadius: "8px",
+                            background: "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)",
+                            color: "#ffffff",
+                            border: "none",
+                            cursor: "pointer",
+                            fontWeight: "700",
+                            fontSize: "0.85rem",
+                            boxShadow: "0 4px 12px rgba(99, 102, 241, 0.3)"
+                        }}
+                    >
+                        Enter Admin Console →
+                    </button>
+                </div>
+
                 {/* FOOTER */}
                 <div className="role-portal-footer">
                     <span>Rankora Enterprise Architecture</span>

@@ -186,6 +186,20 @@ export default function AddNewOrder() {
                         </div>
                     </div>
 
+                    <div className="form-field">
+                        <label className="form-field-label">
+                            Campaign Season / Event <span className="form-field-req">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            className="form-input-text"
+                            placeholder="e.g. Festival 2026, Prime Days, Summer Launch, General"
+                            value={formData.season || ""}
+                            required
+                            onChange={(e) => setFormData({ ...formData, season: e.target.value })}
+                        />
+                    </div>
+
                     <div className="form-submit-row">
                         <button
                             type="button"

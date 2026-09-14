@@ -12,6 +12,11 @@ export default function OrderSubmission() {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
+    const [copied, setCopied] = useState(false);
+
+    // Price adjustment state
+    const [purchasePrice, setPurchasePrice] = useState("");
+    const [deliveryFee, setDeliveryFee] = useState(0);
 
     useEffect(() => {
         fetchOrder();
@@ -21,7 +26,31 @@ export default function OrderSubmission() {
         try {
             setLoading(true);
             const response = await getOrder(id);
-            setOrder(response.data.order);
+            const ord = response.data.order;
+            setOrder(ord);
+
+            const unit =
+                (ord.orderUnits || []).find((u) => u._id === id) ||
+                (ord.orderUnits || []).find((u) => u.status === "in_progress") ||
+                {};
+
+            const initialPrice = unit.purchasePrice !== undefined ? unit.purchasePrice : (ord.price || "");
+            const initialFee = unit.deliveryFee !== undefined ? unit.deliveryFee : 0;
+            setPurchasePrice(initialPrice);
+            setDeliveryFee(initialFee);
+
+            // Pre-fill address if executive provided
+            const isExecProvided = unit.addressType === "executive_provided" || (unit.deliveryAddress && unit.deliveryAddress.toLowerCase() !== "yourself");
+            const initialAddress = isExecProvided ? unit.deliveryAddress : (unit.address || "");
+
+            // Locked orderReceivedOn date from order.createdAt
+            const orderDateStr = ord.createdAt ? new Date(ord.createdAt).toISOString().split("T")[0] : new Date().toISOString().split("T")[0];
+
+            setFormData({
+                address: initialAddress,
+                addressType: isExecProvided ? "executive_provided" : "yourself",
+                orderReceivedOn: orderDateStr,
+            });
         } catch (err) {
             console.error("Failed to load order:", err);
             setError("Could not retrieve order details.");
@@ -29,6 +58,15 @@ export default function OrderSubmission() {
             setLoading(false);
         }
     };
+
+    const handleCopyAddress = (text) => {
+        if (!text) return;
+        navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    const totalPurchasedAmount = (Number(purchasePrice) || 0) + (Number(deliveryFee) || 0);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -42,6 +80,10 @@ export default function OrderSubmission() {
                     data.append(key, formData[key]);
                 }
             });
+
+            data.append("purchasePrice", purchasePrice);
+            data.append("deliveryFee", deliveryFee);
+            data.append("totalPurchasedAmount", totalPurchasedAmount);
 
             await mediatorOrderSubmit(id, data);
             alert("✓ Unit placement details submitted successfully!");
@@ -81,6 +123,8 @@ export default function OrderSubmission() {
         (order.orderUnits || []).find((u) => u.status === "in_progress") ||
         {};
     const unitsLeft = (order.orderUnits || []).filter((u) => u.status === "in_progress").length;
+    const isExecutiveAddressProvided = currentUnit.addressType === "executive_provided" || (currentUnit.deliveryAddress && currentUnit.deliveryAddress.toLowerCase() !== "yourself");
+    const orderDateStr = order.createdAt ? new Date(order.createdAt).toISOString().split("T")[0] : new Date().toISOString().split("T")[0];
 
     return (
         <div className="form-page-container">
@@ -97,7 +141,7 @@ export default function OrderSubmission() {
                     <span className="form-header-badge badge-emerald">Fulfillment Stage</span>
                     <h1 className="form-title">Submit Order Placement Details</h1>
                     <p className="form-subtitle">
-                        Record the e-commerce purchase details and order confirmation screenshot for this unit.
+                        Record the e-commerce purchase details, adjusted pricing/fees, and order confirmation screenshot for this unit.
                     </p>
                 </div>
 
@@ -139,8 +183,13 @@ export default function OrderSubmission() {
                             <span className="context-label">Platform: </span>{order.orderPlatform}
                         </div>
                         <div className="context-item">
-                            <span className="context-label">Price: </span>₹{order.price}
+                            <span className="context-label">Target Price: </span>₹{order.price}
                         </div>
+                        {order.season && (
+                            <div className="context-item">
+                                <span className="context-label">Season / Event: </span>🏷️ {order.season}
+                            </div>
+                        )}
                         <div className="context-item">
                             <span className="context-label">Units Left: </span>
                             <b style={{ color: "var(--primary-600)" }}>{unitsLeft || 1} Unit(s) Remaining</b>
@@ -149,12 +198,13 @@ export default function OrderSubmission() {
                             <span className="context-label">Executive: </span>{order.executiveName || "N/A"}
                         </div>
                         <div className="context-item">
-                            <span className="context-label">Team Code: </span>{order.teamCode || "N/A"}
+                            <span className="context-label">Order Created: </span>{new Date(order.createdAt).toLocaleDateString()}
                         </div>
                     </div>
                 </div>
 
                 <form onSubmit={handleSubmit} className="form-body">
+                    {/* E-Commerce Order ID */}
                     <div className="form-field">
                         <label className="form-field-label">
                             E-Commerce Order ID <span className="form-field-req">*</span>
@@ -164,10 +214,12 @@ export default function OrderSubmission() {
                             className="form-input-text"
                             placeholder="e.g. 402-1234567-8901234 (Amazon / Flipkart)"
                             required
+                            defaultValue={currentUnit.orderId || ""}
                             onChange={(e) => setFormData({ ...formData, orderId: e.target.value })}
                         />
                     </div>
 
+                    {/* Order Confirmation Screenshot */}
                     <div className="form-field">
                         <label className="form-field-label">
                             Order Confirmation Screenshot <span className="form-field-req">*</span>
@@ -176,11 +228,78 @@ export default function OrderSubmission() {
                             type="file"
                             accept="image/*"
                             className="form-file-input"
-                            required
+                            required={!currentUnit.orderedScreenshot}
                             onChange={(e) => setFormData({ ...formData, orderedScreenshot: e.target.files[0] })}
                         />
+                        {currentUnit.orderedScreenshot && (
+                            <div style={{ marginTop: "6px", fontSize: "12px", color: "var(--slate-500)" }}>
+                                Current screenshot already uploaded. Choose a new file to replace it.
+                            </div>
+                        )}
                     </div>
 
+                    {/* Price & Fee Adjustments Section */}
+                    <div style={{
+                        backgroundColor: "#f8fafc",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "10px",
+                        padding: "16px",
+                        marginBottom: "16px"
+                    }}>
+                        <div style={{ fontSize: "13px", fontWeight: "700", color: "#0f172a", marginBottom: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
+                            <span>💰</span>
+                            <span>Purchase Price & Delivery Fee Adjustments</span>
+                        </div>
+
+                        <div className="form-row-2col">
+                            <div className="form-field" style={{ marginBottom: 0 }}>
+                                <label className="form-field-label">
+                                    Actual Purchase Price (₹) <span className="form-field-req">*</span>
+                                </label>
+                                <input
+                                    type="number"
+                                    className="form-input-text"
+                                    placeholder="e.g. 1499"
+                                    min="0"
+                                    value={purchasePrice}
+                                    required
+                                    onChange={(e) => setPurchasePrice(e.target.value)}
+                                />
+                            </div>
+
+                            <div className="form-field" style={{ marginBottom: 0 }}>
+                                <label className="form-field-label">
+                                    Platform / Delivery Fee (₹)
+                                </label>
+                                <input
+                                    type="number"
+                                    className="form-input-text"
+                                    placeholder="e.g. 40"
+                                    min="0"
+                                    value={deliveryFee}
+                                    onChange={(e) => setDeliveryFee(Number(e.target.value) || 0)}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Calculated Total Box */}
+                        <div style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            marginTop: "12px",
+                            paddingTop: "10px",
+                            borderTop: "1px dashed #cbd5e1",
+                            fontSize: "13px"
+                        }}>
+                            <span style={{ color: "#64748b", fontWeight: "600" }}>Total Amount Incurred:</span>
+                            <span style={{ fontSize: "16px", fontWeight: "800", color: "#2563eb" }}>
+                                ₹{totalPurchasedAmount.toLocaleString()}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Dates Section: Expected Arrival & Locked Order Received Date */}
                     <div className="form-row-2col">
                         <div className="form-field">
                             <label className="form-field-label">
@@ -190,61 +309,111 @@ export default function OrderSubmission() {
                                 type="date"
                                 className="form-input-text"
                                 required
+                                defaultValue={currentUnit.expectedArrivalDate || ""}
                                 onChange={(e) => setFormData({ ...formData, expectedArrivalDate: e.target.value })}
                             />
                         </div>
 
                         <div className="form-field">
                             <label className="form-field-label">
-                                Order Received On (Optional)
+                                Order Received Date (Locked) 🔒
                             </label>
                             <input
                                 type="date"
                                 className="form-input-text"
-                                onChange={(e) => setFormData({ ...formData, orderReceivedOn: e.target.value })}
+                                value={orderDateStr}
+                                disabled
+                                style={{ backgroundColor: "#f1f5f9", cursor: "not-allowed", color: "#64748b" }}
                             />
+                            <span style={{ fontSize: "11px", color: "#94a3b8", marginTop: "2px", display: "block" }}>
+                                Fixed to campaign creation date
+                            </span>
                         </div>
                     </div>
 
-                    <div className="form-row-2col">
-                        <div className="form-field">
-                            <label className="form-field-label">
-                                Reviewer Account Name <span className="form-field-req">*</span>
-                            </label>
-                            <input
-                                type="text"
-                                className="form-input-text"
-                                placeholder="Public reviewer profile name"
-                                required
-                                onChange={(e) => setFormData({ ...formData, reviewerName: e.target.value })}
-                            />
-                        </div>
-
-                        <div className="form-field">
-                            <label className="form-field-label">
-                                Season / Campaign Tag
-                            </label>
-                            <input
-                                type="text"
-                                className="form-input-text"
-                                placeholder="e.g. Spring 2026 Promo"
-                                onChange={(e) => setFormData({ ...formData, season: e.target.value })}
-                            />
-                        </div>
-                    </div>
-
+                    {/* Reviewer Account Name */}
                     <div className="form-field">
                         <label className="form-field-label">
-                            Delivery Shipping Address <span className="form-field-req">*</span>
+                            Reviewer Account Name <span className="form-field-req">*</span>
                         </label>
-                        <textarea
-                            className="form-textarea-input"
-                            rows="3"
-                            placeholder="Complete delivery address where product is shipped"
+                        <input
+                            type="text"
+                            className="form-input-text"
+                            placeholder="Public reviewer profile name"
                             required
-                            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                            defaultValue={currentUnit.reviewerName || ""}
+                            onChange={(e) => setFormData({ ...formData, reviewerName: e.target.value })}
                         />
                     </div>
+
+                    {/* Shipping Address Section with 1-Click Copy */}
+                    {isExecutiveAddressProvided ? (
+                        <div style={{
+                            backgroundColor: "#eff6ff",
+                            border: "1px solid #bfdbfe",
+                            borderRadius: "10px",
+                            padding: "14px 16px",
+                            marginBottom: "16px"
+                        }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                                <span style={{ fontSize: "13px", fontWeight: "700", color: "#1e40af", display: "flex", alignItems: "center", gap: "6px" }}>
+                                    <span>📍</span>
+                                    <span>Executive Assigned Shipping Address (Required)</span>
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => handleCopyAddress(currentUnit.deliveryAddress)}
+                                    style={{
+                                        backgroundColor: copied ? "#10b981" : "#2563eb",
+                                        color: "#ffffff",
+                                        border: "none",
+                                        padding: "5px 12px",
+                                        borderRadius: "6px",
+                                        fontSize: "12px",
+                                        fontWeight: "700",
+                                        cursor: "pointer",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "4px",
+                                        transition: "background-color 0.2s"
+                                    }}
+                                >
+                                    <span>{copied ? "✓" : "📋"}</span>
+                                    <span>{copied ? "Copied!" : "Copy Address"}</span>
+                                </button>
+                            </div>
+
+                            <p style={{
+                                margin: 0,
+                                fontSize: "13.5px",
+                                color: "#1e293b",
+                                lineHeight: "1.5",
+                                background: "#ffffff",
+                                padding: "10px 12px",
+                                borderRadius: "6px",
+                                border: "1px solid #cbd5e1"
+                            }}>
+                                {currentUnit.deliveryAddress}
+                            </p>
+                            <span style={{ fontSize: "11.5px", color: "#64748b", marginTop: "6px", display: "block" }}>
+                                Please ship to the exact address above as assigned by your executive.
+                            </span>
+                        </div>
+                    ) : (
+                        <div className="form-field">
+                            <label className="form-field-label">
+                                Delivery Shipping Address <span className="form-field-req">*</span>
+                            </label>
+                            <textarea
+                                className="form-textarea-input"
+                                rows="3"
+                                placeholder="Enter shipping address used for placing this order"
+                                required
+                                defaultValue={currentUnit.address || ""}
+                                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                            />
+                        </div>
+                    )}
 
                     <div className="form-submit-row">
                         <button

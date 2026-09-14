@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { AssignOrderToMediator } from "../../services/executive/order";
+import { useState, useEffect } from "react";
+import { AssignOrderToMediator, fetchExecutiveAddresses } from "../../services/executive/order";
 import "../../styles/appLayout.css";
 
 export default function AssignMediatorModal({
@@ -12,10 +12,34 @@ export default function AssignMediatorModal({
     const [selectedMediator, setSelectedMediator] = useState("");
     const [quantity, setQuantity] = useState(unassignedUnits > 0 ? 1 : 0);
     const [assigning, setAssigning] = useState(false);
+    const [savedAddresses, setSavedAddresses] = useState([]);
+    const [unitAddresses, setUnitAddresses] = useState({});
 
     const priceNum = Number(order.price) || 0;
     const currentQty = Math.min(Math.max(1, Number(quantity) || 1), unassignedUnits);
     const totalAdvanceAmount = priceNum * currentQty;
+
+    useEffect(() => {
+        loadAddresses();
+    }, []);
+
+    const loadAddresses = async () => {
+        try {
+            const res = await fetchExecutiveAddresses();
+            if (res.data.success) {
+                setSavedAddresses(res.data.addresses || []);
+            }
+        } catch (err) {
+            console.error("Failed to load saved addresses:", err);
+        }
+    };
+
+    const handleAddressChangeForUnit = (unitIdx, val) => {
+        setUnitAddresses((prev) => ({
+            ...prev,
+            [unitIdx]: val,
+        }));
+    };
 
     const handleConfirmAssign = async () => {
         if (!selectedMediator) {
@@ -27,6 +51,32 @@ export default function AssignMediatorModal({
             return;
         }
 
+        // Build array of unit addresses
+        const formattedUnitAddresses = [];
+        for (let i = 0; i < currentQty; i++) {
+            const chosenId = unitAddresses[i] || "yourself";
+            if (chosenId === "yourself") {
+                formattedUnitAddresses.push({
+                    addressType: "yourself",
+                    deliveryAddress: "Yourself",
+                });
+            } else {
+                const addr = savedAddresses.find((a) => a._id === chosenId);
+                if (addr) {
+                    const str = `${addr.recipientName}, Ph: ${addr.phoneNumber}, ${addr.addressLine1}${addr.addressLine2 ? ', ' + addr.addressLine2 : ''}, ${addr.city}, ${addr.state} - ${addr.pincode}`;
+                    formattedUnitAddresses.push({
+                        addressType: "executive_provided",
+                        deliveryAddress: str,
+                    });
+                } else {
+                    formattedUnitAddresses.push({
+                        addressType: "yourself",
+                        deliveryAddress: "Yourself",
+                    });
+                }
+            }
+        }
+
         const medObj = mediators.find((m) => m._id === selectedMediator);
         const confirmMsg = `Assign ${currentQty} unit(s) of "${order.productName}" to ${medObj?.name || "selected mediator"}?\n\nTotal Order Value: ₹${totalAdvanceAmount.toLocaleString()}\nThis order will move to Stage 2: Advance Payment for payment proof upload before forwarding to the mediator.`;
         if (!window.confirm(confirmMsg)) return;
@@ -36,6 +86,7 @@ export default function AssignMediatorModal({
             await AssignOrderToMediator(order._id, {
                 mediatorId: selectedMediator,
                 quantity: currentQty,
+                unitAddresses: formattedUnitAddresses,
             });
             alert("✓ Order successfully assigned! Moved to Advance Payment to upload payment screenshot.");
             if (onSuccess) onSuccess();
@@ -197,6 +248,49 @@ export default function AssignMediatorModal({
                             <span style={{ fontSize: "13px", color: "#64748b", fontWeight: "600" }}>
                                 out of <b>{unassignedUnits}</b> available
                             </span>
+                        </div>
+                    </div>
+
+                    {/* Per-Unit Delivery Address Allocation */}
+                    <div style={{ marginTop: "8px" }}>
+                        <label
+                            style={{
+                                display: "block",
+                                fontSize: "13px",
+                                fontWeight: "700",
+                                color: "#334155",
+                                marginBottom: "6px",
+                            }}
+                        >
+                            📍 Delivery Shipping Address for each unit:
+                        </label>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "160px", overflowY: "auto", paddingRight: "4px" }}>
+                            {Array.from({ length: currentQty }).map((_, idx) => (
+                                <div key={idx} style={{ display: "flex", alignItems: "center", gap: "10px", background: "#f8fafc", padding: "8px 12px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                                    <span style={{ fontSize: "12px", fontWeight: "700", color: "#64748b", minWidth: "55px" }}>
+                                        Unit #{idx + 1}:
+                                    </span>
+                                    <select
+                                        value={unitAddresses[idx] || "yourself"}
+                                        onChange={(e) => handleAddressChangeForUnit(idx, e.target.value)}
+                                        style={{
+                                            flex: 1,
+                                            padding: "6px 10px",
+                                            borderRadius: "6px",
+                                            border: "1px solid #cbd5e1",
+                                            fontSize: "12.5px",
+                                            background: "#ffffff",
+                                        }}
+                                    >
+                                        <option value="yourself">Yourself (Mediator inputs their own address)</option>
+                                        {savedAddresses.map((addr) => (
+                                            <option key={addr._id} value={addr._id}>
+                                                {addr.label} — {addr.recipientName}, {addr.city} ({addr.pincode})
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            ))}
                         </div>
                     </div>
 

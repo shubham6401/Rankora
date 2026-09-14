@@ -8,6 +8,7 @@ const authRoutes = require("./routes/authRoutes");
 const executiveRoutes = require("./routes/executiveRoutes");
 const mediatorRoutes = require("./routes/mediatorRoutes");
 const brandRoutes = require("./routes/brandRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const balanceRoutes = require("./routes/balanceRoutes");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
@@ -46,6 +47,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/executive", executiveRoutes);
 app.use("/api/mediator", mediatorRoutes);
 app.use("/api/brand", brandRoutes);
+app.use("/api/admin", adminRoutes);
 app.use("/api/balance", balanceRoutes);
 app.use("/api", orderRoutes);
 

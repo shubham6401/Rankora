@@ -185,9 +185,25 @@ const submitOrderDetails = async (req, res, next) => {
         if (screenshotPath) unit.orderedScreenshot = screenshotPath;
         if (req.body.expectedArrivalDate) unit.expectedArrivalDate = req.body.expectedArrivalDate;
         if (req.body.address) unit.address = req.body.address;
+        if (req.body.addressType) unit.addressType = req.body.addressType;
         if (req.body.reviewerName) unit.reviewerName = req.body.reviewerName;
-        if (req.body.orderReceivedOn) unit.orderReceivedOn = req.body.orderReceivedOn;
-        if (req.body.season) unit.season = req.body.season;
+
+        // Default orderReceivedOn to order createdAt date (format YYYY-MM-DD)
+        const orderCreatedDateStr = order.createdAt ? new Date(order.createdAt).toISOString().split("T")[0] : new Date().toISOString().split("T")[0];
+        unit.orderReceivedOn = req.body.orderReceivedOn || orderCreatedDateStr;
+
+        // Price & Delivery Fee Adjustments
+        if (req.body.purchasePrice !== undefined && req.body.purchasePrice !== "") {
+            unit.purchasePrice = Number(req.body.purchasePrice);
+        }
+        if (req.body.deliveryFee !== undefined && req.body.deliveryFee !== "") {
+            unit.deliveryFee = Number(req.body.deliveryFee);
+        }
+        if (req.body.totalPurchasedAmount !== undefined && req.body.totalPurchasedAmount !== "") {
+            unit.totalPurchasedAmount = Number(req.body.totalPurchasedAmount);
+        } else if (unit.purchasePrice !== undefined) {
+            unit.totalPurchasedAmount = (unit.purchasePrice || 0) + (unit.deliveryFee || 0);
+        }
 
         unit.status = "pending_refund";
         unit.verificationRejectionReason = null;
@@ -725,10 +741,180 @@ const getMediatorSummary = async (req, res, next) => {
     }
 };
 
+// ==========================================
+// BATCH ACCEPT ORDERS
+// ==========================================
+const batchAcceptOrders = async (req, res, next) => {
+    try {
+        const mediatorId = req.user.id;
+        const { items } = req.body; // array of { orderId, quantity } or empty to accept all available
+
+        let orders;
+        if (Array.isArray(items) && items.length > 0) {
+            const orderIds = items.map((i) => i.orderId);
+            orders = await Order.find({ _id: { $in: orderIds } });
+        } else {
+            orders = await Order.find({
+                "orderUnits.mediatorId": mediatorId,
+                "orderUnits.status": "assigned",
+            });
+        }
+
+        let totalAccepted = 0;
+        for (const order of orders) {
+            const itemConfig = Array.isArray(items)
+                ? items.find((i) => i.orderId === order._id.toString())
+                : null;
+            const assignedUnits = order.orderUnits.filter(
+                (u) => u.mediatorId?.toString() === mediatorId && u.status === "assigned"
+            );
+            const countToAccept = itemConfig?.quantity !== undefined && itemConfig?.quantity !== null
+                ? Math.min(Number(itemConfig.quantity), assignedUnits.length)
+                : assignedUnits.length;
+
+            for (let i = 0; i < countToAccept; i++) {
+                assignedUnits[i].status = "in_progress";
+                totalAccepted++;
+            }
+            order.recalculateSummary();
+            await order.save();
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: `Successfully accepted ${totalAccepted} unit(s)`,
+            totalAccepted,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ==========================================
+// BATCH REJECT ORDERS
+// ==========================================
+const batchRejectOrders = async (req, res, next) => {
+    try {
+        const mediatorId = req.user.id;
+        const { items } = req.body; // array of { orderId, quantity } or empty to reject all available
+
+        let orders;
+        if (Array.isArray(items) && items.length > 0) {
+            const orderIds = items.map((i) => i.orderId);
+            orders = await Order.find({ _id: { $in: orderIds } });
+        } else {
+            orders = await Order.find({
+                "orderUnits.mediatorId": mediatorId,
+                "orderUnits.status": "assigned",
+            });
+        }
+
+        let totalRejected = 0;
+        const now = new Date();
+        for (const order of orders) {
+            const itemConfig = Array.isArray(items)
+                ? items.find((i) => i.orderId === order._id.toString())
+                : null;
+            const assignedUnits = order.orderUnits.filter(
+                (u) => u.mediatorId?.toString() === mediatorId && u.status === "assigned"
+            );
+            const countToReject = itemConfig?.quantity !== undefined && itemConfig?.quantity !== null
+                ? Math.min(Number(itemConfig.quantity), assignedUnits.length)
+                : assignedUnits.length;
+
+            for (let i = 0; i < countToReject; i++) {
+                const unit = assignedUnits[i];
+                if (unit.paymentScreenshot) {
+                    unit.status = "pending_payment";
+                    unit.rejectedAt = now;
+                } else {
+                    unit.status = "unassigned";
+                    unit.mediatorId = null;
+                    unit.assignedAt = null;
+                    unit.rejectedAt = now;
+                }
+                totalRejected++;
+            }
+            order.recalculateSummary();
+            await order.save();
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: `Successfully processed rejection for ${totalRejected} unit(s)`,
+            totalRejected,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ==========================================
+// RETURN ORDER UNIT (FROM IN_PROGRESS OR PENDING_REFUND)
+// ==========================================
+const returnOrderUnit = async (req, res, next) => {
+    try {
+        const { unitId } = req.params;
+        const { reason } = req.body;
+        const mediatorId = req.user.id;
+
+        const order = await Order.findOne({ "orderUnits._id": unitId });
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: "Order unit not found",
+            });
+        }
+
+        const unit = order.orderUnits.id(unitId);
+        if (!unit) {
+            return res.status(404).json({
+                success: false,
+                message: "Unit not found in order",
+            });
+        }
+
+        if (unit.mediatorId?.toString() !== mediatorId) {
+            return res.status(403).json({
+                success: false,
+                message: "Not authorized to return this unit",
+            });
+        }
+
+        if (!["in_progress", "pending_refund"].includes(unit.status)) {
+            return res.status(400).json({
+                success: false,
+                message: `Cannot return unit with status '${unit.status}'`,
+            });
+        }
+
+        const prevStage = unit.status;
+        unit.returnReason = reason || "Order returned by mediator";
+        unit.returnStage = prevStage;
+        unit.returnInitiatedAt = new Date();
+        unit.status = "pending_payment"; // moves to Return Refunds for proof upload to executive
+
+        order.recalculateSummary();
+        await order.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Order unit marked for return. Please upload refund proof to executive.",
+            order,
+            unit,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
 module.exports = {
     getNewOrders,
     acceptOrder,
     rejectOrder,
+    batchAcceptOrders,
+    batchRejectOrders,
+    returnOrderUnit,
     getPendingPaymentOrders,
     submitMediatorPayment,
     getPendingOrders,

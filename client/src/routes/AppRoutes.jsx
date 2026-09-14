@@ -41,6 +41,13 @@ import BrandLogin from "../pages/brand/BrandLogin";
 import BrandSignup from "../pages/brand/BrandSignup";
 import BrandDashboard from "../pages/brand/BrandDashboard";
 
+import AdminLogin from "../pages/admin/AdminLogin";
+import AdminDashboard from "../pages/admin/AdminDashboard";
+import ExecutiveBrands from "../pages/executive/ExecutiveBrands";
+import ExecutiveBrandDetails from "../pages/executive/ExecutiveBrandDetails";
+import ExecutiveAnalytics from "../pages/executive/ExecutiveAnalytics";
+import ExecutiveAddresses from "../pages/executive/ExecutiveAddresses";
+
 function ProtectedLayout({ children }) {
     return (
         <ProtectedRoutes>
@@ -104,6 +111,17 @@ export default function AppRoutes() {
             <Route path="/executive-completed-order" element={<ProtectedLayout><CompletedOrders /></ProtectedLayout>} />
             <Route path="/executive-balance" element={<ProtectedLayout><ExecutiveBalance /></ProtectedLayout>} />
             <Route path="/executive-mediators" element={<ProtectedLayout><AllMediator /></ProtectedLayout>} />
+            <Route path="/executive-brands" element={<ProtectedLayout><ExecutiveBrands /></ProtectedLayout>} />
+            <Route path="/executive-brands/:brandUserId" element={<ProtectedLayout><ExecutiveBrandDetails /></ProtectedLayout>} />
+            <Route path="/executive-analytics" element={<ProtectedLayout><ExecutiveAnalytics /></ProtectedLayout>} />
+            <Route path="/executive-addresses" element={<ProtectedLayout><ExecutiveAddresses /></ProtectedLayout>} />
+
+            {/* Admin Routes */}
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin-login" element={<AdminLogin />} />
+            <Route path="/admin" element={<AdminLogin />} />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin-dashboard" element={<AdminDashboard />} />
 
             {/* Brand Protected Routes */}
             <Route path="/dashboard-brand" element={<ProtectedLayout><BrandDashboard /></ProtectedLayout>} />

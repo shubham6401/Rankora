@@ -6,6 +6,9 @@ const {
     getNewOrders,
     acceptOrder,
     rejectOrder,
+    batchAcceptOrders,
+    batchRejectOrders,
+    returnOrderUnit,
     getPendingPaymentOrders,
     submitMediatorPayment,
     getPendingOrders,
@@ -26,6 +29,9 @@ router.get("/new/orders", getNewOrders);
 router.post("/order/accept/:orderId", acceptOrder);
 router.post("/order/in_progress/:orderId", acceptOrder); // backward compatibility
 router.post("/order/reject/:orderId", rejectOrder);
+router.post("/order/batch-accept", batchAcceptOrders);
+router.post("/order/batch-reject", batchRejectOrders);
+router.post("/order/return/:unitId", returnOrderUnit);
 router.get("/orders/pending_payment", getPendingPaymentOrders);
 router.post(
     "/order/submit-payment/:orderId",

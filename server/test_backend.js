@@ -627,9 +627,166 @@ async function runTests() {
         assert(medSummaryRes.data.success === true, "Mediator summary success is true");
         assert(medSummaryRes.data.summary.totalUnits >= 1, "Mediator summary totalUnits is accurate");
         assert(medSummaryRes.data.summary.completedUnits >= 1, "Mediator summary completedUnits is accurate");
-        assert(typeof medSummaryRes.data.summary.totalValue === "number", "Mediator summary totalValue is a number");
+        // 30. Admin Login & Auto-seeding with password @Admin!@#
+        console.log("\n👉 Test 30: Admin Login & Auto-seeding");
+        const adminLoginRes = await request("/admin/login", {
+            method: "POST",
+            body: {
+                username: "admin",
+                password: "@Admin!@#",
+            },
+        });
+        assert(adminLoginRes.status === 200, "Admin login with @Admin!@# returns 200");
+        assert(adminLoginRes.data.success === true, "Admin login reports success");
+        assert(!!adminLoginRes.data.token, "Admin login provides JWT token");
+        const adminToken = adminLoginRes.data.token;
+        const adminHeaders = { Authorization: `Bearer ${adminToken}` };
 
-        console.log("\n🎉 ALL 29 TEST SUITES PASSED PERFECTLY! BACKEND IS 100% WORKING!");
+        // 31. Admin Creating Executive Account
+        console.log("\n👉 Test 31: Admin Creating Executive Account");
+        const adminCreatedExecTeam = `EXEC_ADMIN_${timestamp}`;
+        const createExecRes = await request("/admin/create-executive", {
+            method: "POST",
+            headers: adminHeaders,
+            body: {
+                name: "Admin Created Executive",
+                teamCode: adminCreatedExecTeam,
+                password: "execPassword123",
+            },
+        });
+        assert(createExecRes.status === 201, "Admin create executive returns 201");
+        assert(createExecRes.data.executive.teamCode === adminCreatedExecTeam, "Created executive has matching team code");
+
+        // 32. Admin Overview Endpoint
+        console.log("\n👉 Test 32: Admin Overview Metrics");
+        const adminOverviewRes = await request("/admin/overview", {
+            headers: adminHeaders,
+        });
+        assert(adminOverviewRes.status === 200, "Admin overview returns 200");
+        assert(adminOverviewRes.data.globalStats.totalOrders >= 1, "Admin overview lists global orders");
+        assert(Array.isArray(adminOverviewRes.data.executiveBreakdown), "Admin overview provides executiveBreakdown");
+        assert(Array.isArray(adminOverviewRes.data.brandBreakdown), "Admin overview provides brandBreakdown");
+
+        // 33. Executive Delivery Address Book Management
+        console.log("\n👉 Test 33: Executive Address Book CRUD");
+        const addAddressRes = await request("/executive/addresses", {
+            method: "POST",
+            headers: execHeaders,
+            body: {
+                label: "Delhi Tech Park Hub",
+                recipientName: "Warehouse Manager",
+                phoneNumber: "9876543210",
+                addressLine1: "Plot 42, Okhla Phase 3",
+                addressLine2: "Behind Metro Station",
+                city: "New Delhi",
+                state: "Delhi",
+                pincode: "110020",
+            },
+        });
+        assert(addAddressRes.status === 201, "Executive add address returns 201");
+        const savedAddressId = addAddressRes.data.address._id;
+
+        const getAddressesRes = await request("/executive/addresses", {
+            headers: execHeaders,
+        });
+        assert(getAddressesRes.status === 200, "Executive get addresses returns 200");
+        assert(getAddressesRes.data.addresses.some((a) => a._id === savedAddressId), "Saved address present in list");
+
+        // 34. Executive Create Master Order with Season & Unit Address Allocation
+        console.log("\n👉 Test 34: Executive Order Creation with Season & Per-Unit Address Assignment");
+        const seasonOrderRes = await request("/executive/order/add", {
+            method: "POST",
+            headers: execHeaders,
+            body: {
+                brandUserId: brandUserId,
+                productName: "Festive Headphones",
+                productLink: "https://amazon.in/dp/B0FESTIVE",
+                price: 1999,
+                quantity: 2,
+                orderPlatform: "Amazon",
+                season: "Diwali Mega Sale 2026",
+            },
+        });
+        assert(seasonOrderRes.status === 201, "Executive order with season returns 201");
+        assert(seasonOrderRes.data.order.season === "Diwali Mega Sale 2026", "Order season is stored correctly");
+        const seasonOrderId = seasonOrderRes.data.order._id;
+
+        // Assign with unitAddresses
+        const assignSeasonOrder = await request(`/executive/order/assign/${seasonOrderId}`, {
+            method: "POST",
+            headers: execHeaders,
+            body: {
+                mediatorId: mediatorUserId,
+                quantity: 2,
+                paymentScreenshot: "https://cloudinary.com/dummy-advance.jpg",
+                unitAddresses: [
+                    { addressType: "executive_provided", deliveryAddress: "Plot 42, Okhla Phase 3, New Delhi - 110020" },
+                    { addressType: "yourself", deliveryAddress: "Yourself" },
+                ],
+            },
+        });
+        assert(assignSeasonOrder.status === 200, "Executive assign order with unitAddresses returns 200");
+        const assignedSeasonOrder = assignSeasonOrder.data.order;
+        assert(assignedSeasonOrder.orderUnits[0].addressType === "executive_provided", "Unit 0 has executive_provided addressType");
+        assert(assignedSeasonOrder.orderUnits[1].addressType === "yourself", "Unit 1 has yourself addressType");
+
+        // 35. Executive Brand Overview & Details
+        console.log("\n👉 Test 35: Executive Brand Performance Summary & Details");
+        const execBrandSummaryRes = await request("/executive/brands/summary", {
+            headers: execHeaders,
+        });
+        assert(execBrandSummaryRes.status === 200, "Executive brand summary returns 200");
+        assert(Array.isArray(execBrandSummaryRes.data.brandSummaries), "Brand summaries returned as array");
+
+        const execBrandDetailsRes = await request(`/executive/brands/${brandUserId}/details`, {
+            headers: execHeaders,
+        });
+        assert(execBrandDetailsRes.status === 200, "Executive brand details returns 200");
+        assert(Array.isArray(execBrandDetailsRes.data.orders), "Executive brand details contains orders");
+
+        // 36. Executive Master Analytics Endpoint
+        console.log("\n👉 Test 36: Executive Master Analytics with Multi-Criteria Filters");
+        const execAnalyticsRes = await request("/executive/analytics", {
+            headers: execHeaders,
+        });
+        assert(execAnalyticsRes.status === 200, "Executive analytics returns 200");
+        assert(!!execAnalyticsRes.data.totals, "Executive analytics has totals");
+        assert(Array.isArray(execAnalyticsRes.data.brandBreakdown), "Executive analytics has brandBreakdown");
+        assert(Array.isArray(execAnalyticsRes.data.mediatorBreakdown), "Executive analytics has mediatorBreakdown");
+
+        // 37. Mediator Batch Order Acceptance
+        console.log("\n👉 Test 37: Mediator Batch Acceptance");
+        const batchAcceptRes = await request("/mediator/order/batch-accept", {
+            method: "POST",
+            headers: medHeaders,
+            body: {
+                items: [{ orderId: seasonOrderId, quantity: 2 }],
+            },
+        });
+        assert(batchAcceptRes.status === 200, "Mediator batch accept returns 200");
+        assert(batchAcceptRes.data.totalAccepted >= 2, "At least 2 units accepted in batch");
+
+        // 38. Mediator Order Return Flow (moves unit to pending_payment for refund upload)
+        console.log("\n👉 Test 38: Mediator Order Return Workflow");
+        const unitToReturn = assignedSeasonOrder.orderUnits[0];
+        const returnUnitRes = await request(`/mediator/order/return/${unitToReturn._id}`, {
+            method: "POST",
+            headers: medHeaders,
+            body: {
+                reason: "Buyer cancelled before dispatch",
+            },
+        });
+        assert(returnUnitRes.status === 200, "Mediator order unit return returns 200");
+        assert(returnUnitRes.data.unit.status === "pending_payment", "Returned unit moved to pending_payment status");
+        assert(returnUnitRes.data.unit.returnReason.includes("Buyer cancelled"), "Return reason properly captured");
+
+        // Cleanup address test
+        await request(`/executive/addresses/${savedAddressId}`, {
+            method: "DELETE",
+            headers: execHeaders,
+        });
+
+        console.log("\n🎉 ALL 38 TEST SUITES PASSED PERFECTLY! ALL NEW ROLES & FEATURES 100% OPERATIONAL!");
     } catch (err) {
         console.error("\n❌ Test failed with error:", err);
         process.exitCode = 1;

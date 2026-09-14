@@ -44,6 +44,9 @@ export default function AppLayout({ children }) {
             title: "Main",
             items: [
                 { title: "Dashboard", path: "/dashboard-executive", icon: "📊" },
+                { title: "Brands Overview", path: "/executive-brands", icon: "🏢" },
+                { title: "Master Analytics", path: "/executive-analytics", icon: "📈" },
+                { title: "Address Book", path: "/executive-addresses", icon: "📍" },
             ],
         },
         {

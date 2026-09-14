@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import { FetchAllRefund_PendingOrders } from "../../services/mediator/orders";
 import { useNavigate } from "react-router-dom";
 import PipelineStepper from "../../component/layout/PipelineStepper";
+import ReturnOrderModal from "../../component/mediator/ReturnOrderModal";
 import "../../styles/ordersTable.css";
 
 export default function MediatorRefundPendingOrders() {
     const navigate = useNavigate();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [returnTarget, setReturnTarget] = useState(null);
 
     useEffect(() => {
         handleFetchAllRefund_PendingOrders();
@@ -189,6 +191,15 @@ export default function MediatorRefundPendingOrders() {
                                                     >
                                                         {hasRevision ? "Fix Proofs ⚠️" : "Submit Delivery Proof"}
                                                     </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setReturnTarget({ unit: revisionUnit || primaryUnit, order })}
+                                                        className="table-btn table-btn-outline"
+                                                        style={{ color: "#dc2626", borderColor: "#fecaca", padding: "5px 9px" }}
+                                                        title="Return this order unit and upload refund proof"
+                                                    >
+                                                        ↩️ Return Order
+                                                    </button>
                                                     {order.productLink ? (
                                                         <a
                                                             href={order.productLink.startsWith("http") ? order.productLink : `https://${order.productLink}`}
@@ -211,6 +222,19 @@ export default function MediatorRefundPendingOrders() {
                         </table>
                     </div>
                 </div>
+            )}
+
+            {/* RETURN ORDER MODAL */}
+            {returnTarget && (
+                <ReturnOrderModal
+                    unit={returnTarget.unit}
+                    order={returnTarget.order}
+                    onClose={() => setReturnTarget(null)}
+                    onSuccess={() => {
+                        setReturnTarget(null);
+                        handleFetchAllRefund_PendingOrders();
+                    }}
+                />
             )}
         </div>
     );
