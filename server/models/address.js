@@ -7,6 +7,17 @@ const addressSchema = new mongoose.Schema({
         required: true,
         index: true,
     },
+    executiveName: {
+        type: String,
+        trim: true,
+        default: "",
+    },
+    teamCode: {
+        type: String,
+        trim: true,
+        default: "",
+        index: true,
+    },
     label: {
         type: String,
         required: true,

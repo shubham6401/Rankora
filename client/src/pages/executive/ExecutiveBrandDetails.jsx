@@ -89,55 +89,51 @@ export default function ExecutiveBrandDetails() {
     };
 
     return (
-        <div className="brand-dashboard-container" style={{ padding: "1.5rem", maxWidth: "1400px", margin: "0 auto" }}>
+        <div className="brand-dashboard-container" style={{ padding: "24px 28px 60px", maxWidth: "1440px", margin: "0 auto" }}>
             {/* Header with Back Navigation */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", flexWrap: "wrap", gap: "1rem" }}>
-                <div>
-                    <button
-                        onClick={() => navigate("/executive-brands")}
-                        style={{
-                            background: "none",
-                            border: "none",
-                            color: "#818cf8",
-                            cursor: "pointer",
-                            fontSize: "0.875rem",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.4rem",
-                            padding: 0,
-                            marginBottom: "0.5rem"
-                        }}
-                    >
-                        ← Back to Brands Overview
-                    </button>
-                    <h1 style={{ fontSize: "1.75rem", fontWeight: "800", color: "#f8fafc", margin: 0 }}>
-                        🏢 {brand?.brand || brand?.name || "Brand"} Campaign Details
-                    </h1>
-                    <span style={{ fontSize: "0.85rem", color: "#94a3b8" }}>
-                        Executive View • Real-time unit lifecycle & order progress
-                    </span>
-                </div>
+            <div className="saas-card" style={{ padding: "20px 24px", marginBottom: "24px", position: "relative", overflow: "hidden" }}>
+                <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "4px", background: "linear-gradient(90deg, #2563eb, #38bdf8)" }} />
 
-                <div style={{ display: "flex", gap: "0.75rem" }}>
-                    <button
-                        onClick={exportToExcel}
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.5rem",
-                            backgroundColor: "#065f46",
-                            color: "#34d399",
-                            border: "1px solid #059669",
-                            padding: "0.6rem 1.25rem",
-                            borderRadius: "8px",
-                            cursor: "pointer",
-                            fontWeight: "600",
-                            fontSize: "0.875rem"
-                        }}
-                    >
-                        <span>📥</span>
-                        <span>Download Excel Sheet</span>
-                    </button>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
+                    <div>
+                        <button
+                            type="button"
+                            onClick={() => navigate("/executive-brands")}
+                            style={{
+                                background: "none",
+                                border: "none",
+                                color: "var(--primary-600)",
+                                cursor: "pointer",
+                                fontSize: "13px",
+                                fontWeight: "700",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "6px",
+                                padding: 0,
+                                marginBottom: "8px"
+                            }}
+                        >
+                            ← Back to Brands Overview
+                        </button>
+                        <h1 style={{ fontSize: "24px", fontWeight: "800", color: "var(--slate-900)", margin: 0 }}>
+                            🏢 {brand?.brand || brand?.name || "Brand"} Campaign Details
+                        </h1>
+                        <span style={{ fontSize: "13px", color: "var(--slate-500)", marginTop: "4px", display: "inline-block" }}>
+                            Executive View • Real-time unit lifecycle & order progress
+                        </span>
+                    </div>
+
+                    <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                        <button
+                            type="button"
+                            onClick={exportToExcel}
+                            className="saas-btn saas-btn-emerald"
+                            disabled={!orders.length}
+                        >
+                            <span>📥</span>
+                            <span>Download Excel Sheet</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -222,8 +218,10 @@ export default function ExecutiveBrandDetails() {
             {loading ? (
                 <div style={{ textAlign: "center", padding: "3rem", color: "#94a3b8" }}>Loading orders...</div>
             ) : filteredOrders.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "3rem", backgroundColor: "#111827", borderRadius: "12px", border: "1px solid #1f2937", color: "#6b7280" }}>
-                    No orders match your filter criteria.
+                <div className="saas-card" style={{ textAlign: "center", padding: "60px 20px" }}>
+                    <div style={{ fontSize: "32px", marginBottom: "12px" }}>📦</div>
+                    <div style={{ fontSize: "16px", fontWeight: "700", color: "var(--slate-700)" }}>No Matching Campaigns Found</div>
+                    <div style={{ fontSize: "13px", color: "var(--slate-500)", marginTop: "4px" }}>Adjust your search keyword or platform filter.</div>
                 </div>
             ) : (
                 <div className="orders-table-wrapper">

@@ -27,8 +27,51 @@ export default function MediatorPendingPayment() {
         try {
             setLoading(true);
             const res = await fetchMediatorPendingPaymentOrders();
-            setOrders(res.data?.orders || []);
-            setVerifiedOrders(res.data?.verifiedOrders || []);
+            const rawOrders = res.data?.orders || [];
+            const rawVerified = res.data?.verifiedOrders || [];
+
+            // Partition orders strictly:
+            // Pending: units with status pending_payment and mediatorPaymentStatus !== 'verified'
+            const pendingList = [];
+            const extraVerified = [];
+
+            rawOrders.forEach((order) => {
+                const pendingUnits = (order.orderUnits || []).filter(
+                    (u) => u.mediatorPaymentStatus !== "verified" && u.status === "pending_payment"
+                );
+                const verifiedUnits = (order.orderUnits || []).filter(
+                    (u) => u.mediatorPaymentStatus === "verified"
+                );
+
+                if (pendingUnits.length > 0) {
+                    pendingList.push({ ...order, orderUnits: pendingUnits });
+                }
+                if (verifiedUnits.length > 0) {
+                    extraVerified.push({ ...order, orderUnits: verifiedUnits });
+                }
+            });
+
+            // Combine verified orders ensuring unique order IDs and only verified units
+            const verifiedMap = new Map();
+            [...rawVerified, ...extraVerified].forEach((order) => {
+                const verifiedUnits = (order.orderUnits || []).filter((u) => u.mediatorPaymentStatus === "verified");
+                if (verifiedUnits.length === 0) return;
+
+                const existing = verifiedMap.get(order._id);
+                if (!existing) {
+                    verifiedMap.set(order._id, {
+                        ...order,
+                        orderUnits: verifiedUnits,
+                    });
+                } else {
+                    const existingUnitIds = new Set(existing.orderUnits.map((u) => u._id));
+                    const newUnits = verifiedUnits.filter((u) => !existingUnitIds.has(u._id));
+                    existing.orderUnits.push(...newUnits);
+                }
+            });
+
+            setOrders(pendingList);
+            setVerifiedOrders(Array.from(verifiedMap.values()).filter((o) => o.orderUnits.length > 0));
         } catch (err) {
             console.error("Error fetching pending payment orders:", err);
         } finally {
@@ -206,17 +249,17 @@ export default function MediatorPendingPayment() {
             ) : (
                 <div className="data-table-container">
                     <div className="data-table-responsive">
-                        <table className="data-table">
+                        <table className="data-table data-table-compact">
                             <thead>
                                 <tr>
-                                    <th>Order Info</th>
-                                    <th>Product / Brand</th>
-                                    <th>Platform</th>
-                                    <th>Rejected Units</th>
-                                    <th>Total Refund</th>
-                                    <th>Executive</th>
-                                    <th>Refund Status</th>
-                                    <th>Actions</th>
+                                    <th style={{ width: "95px" }}>Order Info</th>
+                                    <th style={{ minWidth: "150px", maxWidth: "210px" }}>Product / Brand</th>
+                                    <th style={{ width: "75px" }}>Platform</th>
+                                    <th style={{ width: "105px" }}>Units & Price</th>
+                                    <th style={{ width: "90px" }}>Total Refund</th>
+                                    <th style={{ width: "95px" }}>Executive</th>
+                                    <th style={{ width: "125px" }}>Refund Status</th>
+                                    <th className="sticky-action-col" style={{ width: "145px", textAlign: "center" }}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -236,33 +279,57 @@ export default function MediatorPendingPayment() {
                                             {/* Order Info */}
                                             <td>
                                                 <div className="order-id-cell">
-                                                    <span className="order-id-text">
-                                                        #{order._id.substring(0, 8)}...
+                                                    <span className="order-id-text" style={{ fontSize: "12px", fontWeight: 700, color: "var(--primary-600)" }}>
+                                                        #{order._id.substring(order._id.length - 8)}
                                                     </span>
-                                                    <span className="order-date-text">
+                                                    <span className="order-date-text" style={{ fontSize: "11px" }}>
                                                         {new Date(order.createdAt).toLocaleDateString()}
                                                     </span>
                                                 </div>
                                             </td>
 
                                             {/* Product / Brand */}
-                                            <td>
-                                                <div className="product-info-cell">
+                                            <td style={{ maxWidth: "210px" }}>
+                                                <div className="product-info-cell" style={{ maxWidth: "210px" }}>
                                                     <a
                                                         href={order.productLink}
                                                         target="_blank"
                                                         rel="noreferrer"
                                                         className="product-name-link"
-                                                        title="Open product link"
+                                                        title={order.productName}
+                                                        style={{
+                                                            display: "inline-block",
+                                                            maxWidth: "190px",
+                                                            overflow: "hidden",
+                                                            textOverflow: "ellipsis",
+                                                            whiteSpace: "nowrap",
+                                                            fontWeight: 700,
+                                                            fontSize: "13px",
+                                                        }}
                                                     >
                                                         {order.productName} ↗
                                                     </a>
-                                                    <div className="product-meta">
-                                                        <span className="brand-tag">{order.brand}</span>
+                                                    <div className="product-meta" style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "2px" }}>
+                                                        <span className="brand-tag" style={{ fontSize: "10.5px", padding: "1px 6px" }}>{order.brand}</span>
                                                         {submittedUnit?.returnReason && (
-                                                            <div style={{ marginTop: "4px", fontSize: "11px", color: "#b91c1c", backgroundColor: "#fef2f2", padding: "2px 6px", borderRadius: "4px", border: "1px solid #fecaca" }}>
-                                                                ↩️ Return Reason: {submittedUnit.returnReason}
-                                                            </div>
+                                                            (() => {
+                                                                const rStr = submittedUnit.returnReason;
+                                                                const parts = rStr.split(":");
+                                                                const category = parts[0]?.trim() || rStr;
+                                                                const note = parts.slice(1).join(":").trim();
+                                                                const hasNote = note && !note.toLowerCase().includes("no additional notes");
+                                                                return (
+                                                                    <div
+                                                                        className="return-reason-badge"
+                                                                        title={`Return Reason: ${rStr}`}
+                                                                    >
+                                                                        <span style={{ flexShrink: 0 }}>↩️</span>
+                                                                        <span className="reason-text">
+                                                                            {category}{hasNote ? `: ${note}` : ""}
+                                                                        </span>
+                                                                    </div>
+                                                                );
+                                                            })()
                                                         )}
                                                     </div>
                                                 </div>
@@ -270,18 +337,18 @@ export default function MediatorPendingPayment() {
 
                                             {/* Platform */}
                                             <td>
-                                                <span className="platform-badge">
+                                                <span className="platform-badge" style={{ fontSize: "11px", padding: "3px 7px" }}>
                                                     {order.orderPlatform || "Amazon"}
                                                 </span>
                                             </td>
 
-                                            {/* Rejected Units */}
+                                            {/* Rejected Units & Price */}
                                             <td>
                                                 <div className="units-cell">
-                                                    <span className="units-count" style={{ color: isVerified ? "#15803d" : "#b91c1c" }}>
+                                                    <span className="units-count" style={{ fontSize: "12px", fontWeight: 700, color: isVerified ? "#15803d" : "#b91c1c" }}>
                                                         {unitCount} {unitCount === 1 ? "Unit" : "Units"}
                                                     </span>
-                                                    <span className="unit-price">
+                                                    <span className="unit-price" style={{ fontSize: "11px" }}>
                                                         ₹{priceNum} / unit
                                                     </span>
                                                 </div>
@@ -289,19 +356,19 @@ export default function MediatorPendingPayment() {
 
                                             {/* Total Refund Due */}
                                             <td>
-                                                <div style={{ fontWeight: 800, fontSize: "14px", color: isVerified ? "#15803d" : "#e11d48" }}>
+                                                <div style={{ fontWeight: 800, fontSize: "13.5px", color: isVerified ? "#15803d" : "#e11d48", whiteSpace: "nowrap" }}>
                                                     ₹{totalOrderRefund.toLocaleString()}
                                                 </div>
                                             </td>
 
                                             {/* Executive */}
                                             <td>
-                                                <div style={{ fontSize: "12px", color: "#334155" }}>
+                                                <div style={{ fontSize: "12px", color: "#334155", whiteSpace: "nowrap" }}>
                                                     <div style={{ fontWeight: 600 }}>
                                                         {order.executiveName || order.createdBy?.name || "Executive"}
                                                     </div>
                                                     {order.teamCode && (
-                                                        <div style={{ fontSize: "11px", color: "#64748b" }}>
+                                                        <div style={{ fontSize: "10.5px", color: "#64748b" }}>
                                                             Team: {order.teamCode}
                                                         </div>
                                                     )}
@@ -311,8 +378,8 @@ export default function MediatorPendingPayment() {
                                             {/* Refund Status */}
                                             <td>
                                                 {isVerified ? (
-                                                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                                                        <span className="status-badge status-badge-completed" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                                    <div style={{ display: "flex", flexDirection: "column", gap: "2px", alignItems: "flex-start", whiteSpace: "nowrap" }}>
+                                                        <span className="status-badge status-badge-completed" style={{ padding: "2px 7px", fontSize: "11px" }}>
                                                             ✓ Verified
                                                         </span>
                                                         {alreadySubmittedProof && (
@@ -326,12 +393,12 @@ export default function MediatorPendingPayment() {
                                                         )}
                                                     </div>
                                                 ) : alreadySubmittedProof ? (
-                                                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                                                        <span className="status-badge" style={{ background: "#eff6ff", color: "#1d4ed8", borderColor: "#bfdbfe", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                                                            ⏳ Pending Verification
+                                                    <div style={{ display: "flex", flexDirection: "column", gap: "2px", alignItems: "flex-start", whiteSpace: "nowrap" }}>
+                                                        <span className="status-badge" style={{ background: "#eff6ff", color: "#1d4ed8", borderColor: "#bfdbfe", padding: "2px 7px", fontSize: "11px" }}>
+                                                            ⏳ Verification Pending
                                                         </span>
                                                         {alreadySubmittedDate && (
-                                                            <span style={{ fontSize: "10.5px", color: "var(--slate-500)" }}>
+                                                            <span style={{ fontSize: "10px", color: "var(--slate-500)" }}>
                                                                 Sent: {new Date(alreadySubmittedDate).toLocaleDateString()}
                                                             </span>
                                                         )}
@@ -344,22 +411,22 @@ export default function MediatorPendingPayment() {
                                                         </button>
                                                     </div>
                                                 ) : (
-                                                    <span className="status-badge" style={{ background: "#fff7ed", color: "#c2410c", borderColor: "#fed7aa" }}>
-                                                        ⚠️ Proof Required
+                                                    <span className="status-badge" style={{ background: "#fff7ed", color: "#c2410c", borderColor: "#fed7aa", padding: "2px 7px", fontSize: "11px", whiteSpace: "nowrap" }}>
+                                                        ⚠️ Proof Needed
                                                     </span>
                                                 )}
                                             </td>
 
-                                            {/* Actions */}
-                                            <td>
-                                                <div className="action-btn-group">
+                                            {/* Actions - Always prominently visible */}
+                                            <td className="sticky-action-col">
+                                                <div className="action-btn-group" style={{ justifyContent: "center", flexWrap: "nowrap", gap: "5px" }}>
                                                     {!isVerified && (
                                                         !alreadySubmittedProof ? (
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleOpenUploadModal(order)}
                                                                 className="table-btn table-btn-primary"
-                                                                style={{ padding: "6px 12px", fontSize: "12px" }}
+                                                                style={{ padding: "5px 11px", fontSize: "11.5px", fontWeight: 700, whiteSpace: "nowrap" }}
                                                             >
                                                                 📤 Upload Refund
                                                             </button>
@@ -368,10 +435,10 @@ export default function MediatorPendingPayment() {
                                                                 type="button"
                                                                 onClick={() => handleOpenUploadModal(order)}
                                                                 className="table-btn table-btn-outline"
-                                                                style={{ padding: "6px 10px", fontSize: "11.5px" }}
+                                                                style={{ padding: "5px 9px", fontSize: "11px", whiteSpace: "nowrap" }}
                                                                 title="Re-upload or update proof"
                                                             >
-                                                                🔄 Update Proof
+                                                                🔄 Update
                                                             </button>
                                                         )
                                                     )}
@@ -382,12 +449,13 @@ export default function MediatorPendingPayment() {
                                                             target="_blank"
                                                             rel="noopener noreferrer"
                                                             className="table-btn table-btn-outline"
+                                                            style={{ padding: "5px 8px", fontSize: "11px", whiteSpace: "nowrap" }}
                                                             title="Open product link in new tab"
                                                         >
-                                                            🛍️ View Product ↗
+                                                            🛍️ View ↗
                                                         </a>
                                                     ) : (
-                                                        <span style={{ fontSize: "11px", color: "var(--slate-400)", fontStyle: "italic" }}>No link</span>
+                                                        <span style={{ fontSize: "10.5px", color: "var(--slate-400)", fontStyle: "italic" }}>No link</span>
                                                     )}
                                                 </div>
                                             </td>

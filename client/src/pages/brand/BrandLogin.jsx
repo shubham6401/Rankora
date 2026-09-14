@@ -6,7 +6,6 @@ import "../../styles/auth.css";
 export default function BrandLogin() {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
-        name: "",
         password: "",
         brand: "",
     });
@@ -19,6 +18,7 @@ export default function BrandLogin() {
         try {
             setLoading(true);
             const loginResponse = await loginBrandUser(formData);
+            localStorage.removeItem("adminBackupSession");
             localStorage.setItem("token", loginResponse.data.token);
             localStorage.setItem("user", JSON.stringify(loginResponse.data.user));
             navigate("/dashboard-brand");
@@ -32,7 +32,6 @@ export default function BrandLogin() {
 
     const handleFillDemo = () => {
         setFormData({
-            name: "Aura Audio Global",
             brand: "DEMO_BRAND",
             password: "demo1234",
         });
@@ -68,18 +67,6 @@ export default function BrandLogin() {
                 {error && <div className="auth-error-alert">{error}</div>}
 
                 <form className="auth-form" onSubmit={handleSubmit}>
-                    <div className="form-group">
-                        <label className="form-label" htmlFor="brand-name">Brand Representative Name</label>
-                        <input 
-                            id="brand-name"
-                            className="form-input"
-                            value={formData.name} 
-                            type="text" 
-                            placeholder="Enter your name"
-                            required
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
-                        />
-                    </div>
 
                     <div className="form-group">
                         <label className="form-label" htmlFor="brand-title">Brand / Company Name</label>

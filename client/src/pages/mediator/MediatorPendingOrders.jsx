@@ -220,6 +220,7 @@ export default function MediatorPendingOrders() {
                 <ReturnOrderModal
                     unit={returnTarget.unit}
                     order={returnTarget.order}
+                    stage="in_progress"
                     onClose={() => setReturnTarget(null)}
                     onSuccess={() => {
                         setReturnTarget(null);

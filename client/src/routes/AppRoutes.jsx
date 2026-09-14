@@ -86,6 +86,8 @@ export default function AppRoutes() {
             <Route path="/mediator-completed-orders" element={<ProtectedLayout><MediatorCompletedOrders /></ProtectedLayout>} />
             <Route path="/mediator-earnings" element={<ProtectedLayout><MediatorEarnings /></ProtectedLayout>} />
             <Route path="/mediator-pending-payment" element={<ProtectedLayout><MediatorPendingPayment /></ProtectedLayout>} />
+            <Route path="/mediator-pending_payment-orders" element={<ProtectedLayout><MediatorPendingPayment /></ProtectedLayout>} />
+            <Route path="/mediator-pending-payment-orders" element={<ProtectedLayout><MediatorPendingPayment /></ProtectedLayout>} />
             <Route path="/mediator-balance" element={<ProtectedLayout><MediatorBalance /></ProtectedLayout>} />
             <Route path="/mediator-assigned-orders-breakdown" element={<ProtectedLayout><MediatorDetailedOrdersBreakdown /></ProtectedLayout>} />
             <Route path="/mediator-detailed-orders" element={<ProtectedLayout><MediatorDetailedOrdersBreakdown /></ProtectedLayout>} />
@@ -120,8 +122,8 @@ export default function AppRoutes() {
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin-login" element={<AdminLogin />} />
             <Route path="/admin" element={<AdminLogin />} />
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            <Route path="/admin-dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/dashboard" element={<ProtectedLayout><AdminDashboard /></ProtectedLayout>} />
+            <Route path="/admin-dashboard" element={<ProtectedLayout><AdminDashboard /></ProtectedLayout>} />
 
             {/* Brand Protected Routes */}
             <Route path="/dashboard-brand" element={<ProtectedLayout><BrandDashboard /></ProtectedLayout>} />

@@ -507,8 +507,12 @@ const getPendingPaymentOrders = async (req, res, next) => {
         const orders = await Order.find({
             orderUnits: {
                 $elemMatch: {
-                    mediatorId: mediatorId,
+                    $or: [
+                        { mediatorId: mediatorId },
+                        { refundedByMediatorId: mediatorId },
+                    ],
                     status: "pending_payment",
+                    mediatorPaymentStatus: { $ne: "verified" },
                 },
             },
         })
@@ -519,19 +523,26 @@ const getPendingPaymentOrders = async (req, res, next) => {
 
         const mappedOrders = orders.map((order) => {
             const orderObj = order.toObject();
-            orderObj.orderUnits = orderObj.orderUnits.filter(
-                (unit) =>
-                    unit.mediatorId?._id?.toString() === mediatorId &&
-                    unit.status === "pending_payment"
-            );
+            orderObj.orderUnits = (orderObj.orderUnits || []).filter((unit) => {
+                const uMedId = unit.mediatorId?._id ? unit.mediatorId._id.toString() : unit.mediatorId?.toString();
+                const uRefMedId = unit.refundedByMediatorId?._id ? unit.refundedByMediatorId._id.toString() : unit.refundedByMediatorId?.toString();
+                return (
+                    (uMedId === mediatorId || uRefMedId === mediatorId) &&
+                    unit.status === "pending_payment" &&
+                    unit.mediatorPaymentStatus !== "verified"
+                );
+            });
             return orderObj;
-        });
+        }).filter((order) => order.orderUnits.length > 0);
 
         // Verified refund history for this mediator
         const verifiedOrders = await Order.find({
             orderUnits: {
                 $elemMatch: {
-                    refundedByMediatorId: mediatorId,
+                    $or: [
+                        { refundedByMediatorId: mediatorId },
+                        { mediatorId: mediatorId },
+                    ],
                     mediatorPaymentStatus: "verified",
                 },
             },
@@ -542,13 +553,13 @@ const getPendingPaymentOrders = async (req, res, next) => {
 
         const mappedVerified = verifiedOrders.map((order) => {
             const orderObj = order.toObject();
-            orderObj.orderUnits = orderObj.orderUnits.filter(
-                (unit) =>
-                    unit.refundedByMediatorId?.toString() === mediatorId &&
-                    unit.mediatorPaymentStatus === "verified"
-            );
+            orderObj.orderUnits = (orderObj.orderUnits || []).filter((unit) => {
+                const uRefMedId = unit.refundedByMediatorId?._id ? unit.refundedByMediatorId._id.toString() : unit.refundedByMediatorId?.toString();
+                const uMedId = unit.mediatorId?._id ? unit.mediatorId._id.toString() : unit.mediatorId?.toString();
+                return (uRefMedId === mediatorId || uMedId === mediatorId) && unit.mediatorPaymentStatus === "verified";
+            });
             return orderObj;
-        });
+        }).filter((order) => order.orderUnits.length > 0);
 
         return res.status(200).json({
             success: true,
@@ -632,7 +643,10 @@ const getMediatorSummary = async (req, res, next) => {
         const mediatorId = req.user.id;
 
         const orders = await Order.find({
-            "orderUnits.mediatorId": mediatorId,
+            $or: [
+                { "orderUnits.mediatorId": mediatorId },
+                { "orderUnits.refundedByMediatorId": mediatorId },
+            ],
         })
             .populate("brandUserId", "name brand role")
             .populate("createdBy", "name email teamCode")
@@ -664,7 +678,9 @@ const getMediatorSummary = async (req, res, next) => {
             const myUnits = orderObj.orderUnits.filter(
                 (u) =>
                     u.mediatorId?._id?.toString() === mediatorId ||
-                    u.mediatorId?.toString() === mediatorId
+                    u.mediatorId?.toString() === mediatorId ||
+                    u.refundedByMediatorId?._id?.toString() === mediatorId ||
+                    u.refundedByMediatorId?.toString() === mediatorId
             );
 
             let hasNewAssigned = false;
@@ -682,8 +698,10 @@ const getMediatorSummary = async (req, res, next) => {
                     newAssignedUnits++;
                     hasNewAssigned = true;
                 } else if (unit.status === "pending_payment") {
-                    pendingPaymentUnits++;
-                    hasPendingPayment = true;
+                    if (unit.mediatorPaymentStatus !== "verified") {
+                        pendingPaymentUnits++;
+                        hasPendingPayment = true;
+                    }
                 } else if (unit.status === "in_progress") {
                     inProgressUnits++;
                     hasInProgress = true;
@@ -855,7 +873,7 @@ const batchRejectOrders = async (req, res, next) => {
 const returnOrderUnit = async (req, res, next) => {
     try {
         const { unitId } = req.params;
-        const { reason } = req.body;
+        const { reason, quantity = 1 } = req.body;
         const mediatorId = req.user.id;
 
         const order = await Order.findOne({ "orderUnits._id": unitId });
@@ -889,17 +907,37 @@ const returnOrderUnit = async (req, res, next) => {
         }
 
         const prevStage = unit.status;
-        unit.returnReason = reason || "Order returned by mediator";
-        unit.returnStage = prevStage;
-        unit.returnInitiatedAt = new Date();
-        unit.status = "pending_payment"; // moves to Return Refunds for proof upload to executive
+        const targetQty = Math.max(1, parseInt(quantity, 10) || 1);
+
+        // Find all units for this mediator in this order with the same status
+        const eligibleUnits = order.orderUnits.filter(
+            (u) =>
+                u.mediatorId?.toString() === mediatorId &&
+                u.status === prevStage
+        );
+
+        // Put the target unit first, followed by other eligible units
+        const unitsToReturn = [
+            unit,
+            ...eligibleUnits.filter((u) => u._id.toString() !== unit._id.toString()),
+        ].slice(0, targetQty);
+
+        const returnTime = new Date();
+        unitsToReturn.forEach((u) => {
+            u.returnReason = reason || "Order returned by mediator";
+            u.returnStage = prevStage;
+            u.returnInitiatedAt = returnTime;
+            u.refundedByMediatorId = mediatorId;
+            u.status = "pending_payment"; // moves to Return Refunds for proof upload to executive
+        });
 
         order.recalculateSummary();
         await order.save();
 
         return res.status(200).json({
             success: true,
-            message: "Order unit marked for return. Please upload refund proof to executive.",
+            message: `${unitsToReturn.length} unit(s) marked for return. Please upload refund proof to executive.`,
+            count: unitsToReturn.length,
             order,
             unit,
         });

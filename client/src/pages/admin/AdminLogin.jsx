@@ -22,6 +22,7 @@ export default function AdminLogin() {
             setLoading(true);
             const res = await loginAdminApi(username, password);
             if (res.data.success) {
+                localStorage.removeItem("adminBackupSession");
                 localStorage.setItem("token", res.data.token);
                 localStorage.setItem("user", JSON.stringify(res.data.user));
                 navigate("/admin/dashboard");
@@ -37,67 +38,70 @@ export default function AdminLogin() {
     };
 
     return (
-        <div className="login-container">
-            <div className="login-card">
-                <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+        <div className="auth-page-container">
+            <div className="auth-card" style={{ maxWidth: "480px" }}>
+                <div className="auth-header">
                     <div style={{
                         display: "inline-flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        width: "60px",
-                        height: "60px",
-                        borderRadius: "16px",
-                        background: "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)",
-                        boxShadow: "0 8px 24px rgba(99, 102, 241, 0.4)",
-                        fontSize: "2rem",
-                        marginBottom: "1rem"
+                        width: "56px",
+                        height: "56px",
+                        borderRadius: "14px",
+                        background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)",
+                        boxShadow: "0 8px 20px rgba(124, 58, 237, 0.35)",
+                        fontSize: "26px",
+                        marginBottom: "12px"
                     }}>
                         🛡️
                     </div>
-                    <h1 style={{ fontSize: "1.75rem", fontWeight: "700", color: "#f8fafc", margin: 0 }}>
-                        Admin Control Console
-                    </h1>
-                    <p style={{ color: "#94a3b8", fontSize: "0.9rem", marginTop: "0.4rem" }}>
-                        Master executive creation, global brand tracking & order oversight
+                    <div style={{ display: "flex", justifyContent: "center" }}>
+                        <span className="auth-role-pill pill-admin">System Administrator</span>
+                    </div>
+                    <h1 className="auth-title">Admin Control Console</h1>
+                    <p className="auth-subtitle">
+                        Root operations oversight, executive creation & brand tracking
                     </p>
                 </div>
 
                 {error && (
                     <div style={{
-                        padding: "0.75rem 1rem",
-                        backgroundColor: "rgba(239, 68, 68, 0.15)",
-                        border: "1px solid rgba(239, 68, 68, 0.4)",
+                        padding: "10px 14px",
+                        backgroundColor: "#fef2f2",
+                        border: "1px solid #fecaca",
                         borderRadius: "8px",
-                        color: "#f87171",
-                        fontSize: "0.875rem",
-                        marginBottom: "1rem",
+                        color: "#dc2626",
+                        fontSize: "13px",
+                        marginBottom: "16px",
                         display: "flex",
                         alignItems: "center",
-                        gap: "0.5rem"
+                        gap: "8px"
                     }}>
                         <span>⚠️</span>
                         <span>{error}</span>
                     </div>
                 )}
 
-                <form onSubmit={handleSubmit} className="login-form">
+                <form onSubmit={handleSubmit} className="auth-form">
                     <div className="form-group">
-                        <label htmlFor="admin-username" style={{ color: "#cbd5e1" }}>Admin Username</label>
+                        <label htmlFor="admin-username" className="form-label">Administrator Username</label>
                         <input
                             id="admin-username"
                             type="text"
+                            className="form-input"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
-                            placeholder="admin"
+                            placeholder="Enter username"
                             required
                         />
                     </div>
 
                     <div className="form-group">
-                        <label htmlFor="admin-password" style={{ color: "#cbd5e1" }}>Password</label>
+                        <label htmlFor="admin-password" className="form-label">Console Password</label>
                         <input
                             id="admin-password"
                             type="password"
+                            className="form-input"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="Enter password"
@@ -105,59 +109,24 @@ export default function AdminLogin() {
                         />
                     </div>
 
-                    <div style={{
-                        background: "rgba(99, 102, 241, 0.1)",
-                        border: "1px dashed rgba(99, 102, 241, 0.3)",
-                        padding: "0.6rem 0.8rem",
-                        borderRadius: "6px",
-                        fontSize: "0.8rem",
-                        color: "#a5b4fc",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center"
-                    }}>
-                        <span>Default Password: <code>@Admin!@#</code></span>
-                        <button
-                            type="button"
-                            onClick={() => setPassword("@Admin!@#")}
-                            style={{
-                                background: "none",
-                                border: "none",
-                                color: "#818cf8",
-                                cursor: "pointer",
-                                textDecoration: "underline",
-                                fontSize: "0.75rem"
-                            }}
-                        >
-                            Auto-fill
-                        </button>
-                    </div>
-
                     <button
                         id="admin-login-submit"
                         type="submit"
-                        className="login-btn"
+                        className="auth-submit-btn btn-admin"
                         disabled={loading}
-                        style={{ marginTop: "1rem" }}
                     >
-                        {loading ? "Authenticating Master Admin..." : "Access Control Center →"}
+                        {loading ? "Authenticating Admin..." : "Access Control Center →"}
                     </button>
                 </form>
 
-                <div style={{ marginTop: "1.5rem", textAlign: "center" }}>
+                <div className="auth-footer">
                     <button
                         type="button"
-                        onClick={() => navigate("/")}
-                        style={{
-                            background: "transparent",
-                            border: "none",
-                            color: "#64748b",
-                            cursor: "pointer",
-                            fontSize: "0.85rem",
-                            textDecoration: "underline"
-                        }}
+                        onClick={() => navigate("/role-selection")}
+                        className="auth-back-link"
+                        style={{ background: "none", border: "none", cursor: "pointer" }}
                     >
-                        ← Back to Role Selection
+                        ← Return to Portal Selection
                     </button>
                 </div>
             </div>

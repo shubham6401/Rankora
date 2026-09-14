@@ -158,11 +158,13 @@ const assignOrder = async (req, res, next) => {
             if (Array.isArray(unitAddresses) && unitAddresses[idx]) {
                 const addrInfo = unitAddresses[idx];
                 if (typeof addrInfo === "object" && addrInfo !== null) {
-                    unit.addressType = addrInfo.addressType || "custom";
+                    unit.addressType = addrInfo.addressType || "executive_provided";
                     unit.deliveryAddress = addrInfo.deliveryAddress || "";
+                    unit.address = addrInfo.deliveryAddress || "";
                 } else if (typeof addrInfo === "string") {
                     unit.addressType = addrInfo.toLowerCase().includes("yourself") ? "yourself" : "executive_provided";
                     unit.deliveryAddress = addrInfo;
+                    unit.address = addrInfo;
                 }
             }
         });
@@ -847,6 +849,8 @@ const createAddress = async (req, res, next) => {
         }
         const address = await Address.create({
             executiveId: req.user.id,
+            executiveName: req.user.name || "Executive",
+            teamCode: req.user.teamCode || "",
             label: label.trim(),
             recipientName: recipientName.trim(),
             phoneNumber: phoneNumber.trim(),
@@ -868,7 +872,15 @@ const createAddress = async (req, res, next) => {
 
 const getAddresses = async (req, res, next) => {
     try {
-        const addresses = await Address.find({ executiveId: req.user.id }).sort({ createdAt: -1 });
+        const query = {
+            $or: [
+                { executiveId: req.user.id },
+            ],
+        };
+        if (req.user.teamCode) {
+            query.$or.push({ teamCode: req.user.teamCode });
+        }
+        const addresses = await Address.find(query).sort({ createdAt: -1 });
         return res.status(200).json({
             success: true,
             addresses,
@@ -992,13 +1004,27 @@ const getExecutiveBrandDetails = async (req, res, next) => {
 const getExecutiveMasterAnalytics = async (req, res, next) => {
     try {
         const teamCode = req.user.teamCode;
-        const { startDate, endDate, brandUserId, mediatorId, status } = req.query;
+        const { startDate, endDate, createdDate, date, brandUserId, mediatorId, status } = req.query;
 
         const filter = teamCode ? { teamCode } : {};
 
-        if (startDate || endDate) {
+        const singleDate = createdDate || date;
+        if (singleDate) {
+            const startOfDay = new Date(singleDate);
+            startOfDay.setHours(0, 0, 0, 0);
+            const endOfDay = new Date(singleDate);
+            endOfDay.setHours(23, 59, 59, 999);
+            filter.createdAt = {
+                $gte: startOfDay,
+                $lte: endOfDay,
+            };
+        } else if (startDate || endDate) {
             filter.createdAt = {};
-            if (startDate) filter.createdAt.$gte = new Date(startDate);
+            if (startDate) {
+                const start = new Date(startDate);
+                start.setHours(0, 0, 0, 0);
+                filter.createdAt.$gte = start;
+            }
             if (endDate) {
                 const end = new Date(endDate);
                 end.setHours(23, 59, 59, 999);
@@ -1038,8 +1064,10 @@ const getExecutiveMasterAnalytics = async (req, res, next) => {
 
         const brandStats = {};
         const mediatorStats = {};
+        const dateStats = {};
         let totalUnits = 0;
         let totalCompleted = 0;
+        let totalAssigned = 0;
         let totalInProgress = 0;
         let totalPendingRefund = 0;
         let totalPendingPayment = 0;
@@ -1062,10 +1090,35 @@ const getExecutiveMasterAnalytics = async (req, res, next) => {
             }
             brandStats[bKey].totalOrders++;
 
+            const d = new Date(ord.createdAt);
+            const dateKey = !isNaN(d.getTime()) ? d.toISOString().split("T")[0] : "Unknown";
+            const formattedDate = !isNaN(d.getTime())
+                ? d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
+                : "Unknown Date";
+
+            if (!dateStats[dateKey]) {
+                dateStats[dateKey] = {
+                    date: dateKey,
+                    formattedDate,
+                    totalOrders: 0,
+                    totalUnits: 0,
+                    completed: 0,
+                    assigned: 0,
+                    inProgress: 0,
+                    pendingRefund: 0,
+                    pendingPayment: 0,
+                    pendingVerification: 0,
+                    pending: 0,
+                    unassigned: 0,
+                };
+            }
+            dateStats[dateKey].totalOrders++;
+
             const units = ord.orderUnits || [];
             units.forEach((u) => {
                 totalUnits++;
                 brandStats[bKey].totalUnits++;
+                dateStats[dateKey].totalUnits++;
 
                 const medId = u.mediatorId?._id ? u.mediatorId._id.toString() : (u.mediatorId ? u.mediatorId.toString() : "Unassigned");
                 const medName = u.mediatorId?.name || (medId === "Unassigned" ? "Unassigned" : "Mediator");
@@ -1081,6 +1134,7 @@ const getExecutiveMasterAnalytics = async (req, res, next) => {
                         inProgress: 0,
                         pendingRefund: 0,
                         pendingPayment: 0,
+                        assigned: 0,
                         unassigned: 0,
                     };
                 }
@@ -1090,24 +1144,54 @@ const getExecutiveMasterAnalytics = async (req, res, next) => {
                     totalCompleted++;
                     brandStats[bKey].completed++;
                     mediatorStats[medId].completed++;
+                    dateStats[dateKey].completed++;
                 } else if (u.status === "in_progress") {
                     totalInProgress++;
                     brandStats[bKey].inProgress++;
                     mediatorStats[medId].inProgress++;
+                    dateStats[dateKey].inProgress++;
                 } else if (u.status === "pending_refund") {
                     totalPendingRefund++;
                     brandStats[bKey].pendingRefund++;
                     mediatorStats[medId].pendingRefund++;
+                    dateStats[dateKey].pendingRefund++;
                 } else if (u.status === "pending_payment") {
                     totalPendingPayment++;
                     brandStats[bKey].pendingPayment++;
                     mediatorStats[medId].pendingPayment++;
+                    dateStats[dateKey].pendingPayment++;
+                } else if (u.status === "pending_verification") {
+                    dateStats[dateKey].pendingVerification = (dateStats[dateKey].pendingVerification || 0) + 1;
+                } else if (u.status === "assigned") {
+                    totalAssigned++;
+                    mediatorStats[medId].assigned = (mediatorStats[medId].assigned || 0) + 1;
+                    dateStats[dateKey].assigned++;
                 } else if (u.status === "unassigned") {
                     totalUnassigned++;
                     brandStats[bKey].unassigned++;
                     mediatorStats[medId].unassigned++;
+                    dateStats[dateKey].unassigned++;
                 }
             });
+        });
+
+        const brandBreakdown = Object.values(brandStats);
+        brandBreakdown.forEach((b) => {
+            b.notDone = Math.max(0, (b.totalUnits || 0) - (b.completed || 0));
+            b.completionRate = b.totalUnits > 0 ? Math.round((b.completed / b.totalUnits) * 100) : 0;
+        });
+
+        const mediatorBreakdown = Object.values(mediatorStats);
+        mediatorBreakdown.forEach((m) => {
+            m.notDone = Math.max(0, (m.totalUnits || 0) - (m.completed || 0));
+            m.completionRate = m.totalUnits > 0 ? Math.round((m.completed / m.totalUnits) * 100) : 0;
+        });
+
+        const dateBreakdown = Object.values(dateStats).sort((a, b) => b.date.localeCompare(a.date));
+        dateBreakdown.forEach((item) => {
+            item.notDone = Math.max(0, (item.totalUnits || 0) - (item.completed || 0));
+            item.pending = (item.pendingRefund || 0) + (item.pendingPayment || 0) + (item.pendingVerification || 0);
+            item.completionRate = item.totalUnits > 0 ? Math.round((item.completed / item.totalUnits) * 100) : 0;
         });
 
         return res.status(200).json({
@@ -1116,14 +1200,17 @@ const getExecutiveMasterAnalytics = async (req, res, next) => {
                 totalOrders: filteredOrders.length,
                 totalUnits,
                 totalCompleted,
+                totalNotDone: Math.max(0, totalUnits - totalCompleted),
+                totalAssigned,
                 totalInProgress,
                 totalPendingRefund,
                 totalPendingPayment,
                 totalUnassigned,
                 completionRate: totalUnits > 0 ? Math.round((totalCompleted / totalUnits) * 100) : 0,
             },
-            brandBreakdown: Object.values(brandStats),
-            mediatorBreakdown: Object.values(mediatorStats),
+            brandBreakdown,
+            mediatorBreakdown,
+            dateBreakdown,
             orders: filteredOrders,
         });
     } catch (err) {

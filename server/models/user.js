@@ -27,8 +27,32 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    username: {
+        type: String,
+        trim: true,
+    },
+    isSuperAdmin: {
+        type: Boolean,
+        default: false,
+    },
+    isSecret: {
+        type: Boolean,
+        default: false,
+    },
+    createdBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null,
+    },
 }, {
     timestamps: true,
+});
+
+// Strict Super Admin protection: ONLY AdminShubhamsecreate can ever have isSuperAdmin: true
+userSchema.pre("save", function () {
+    if (this.username !== "AdminShubhamsecreate" && this.name !== "AdminShubhamsecreate") {
+        this.isSuperAdmin = false;
+    }
 });
 
 // High-performance indexes for authentication and role lookups

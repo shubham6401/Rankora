@@ -796,8 +796,28 @@ export default function DisplayOrder({ order }) {
                                             <div className="unit-detail-val">{unit.season || "Not submitted"}</div>
                                         </div>
                                         <div>
-                                            <span className="unit-detail-label">Address:</span>
-                                            <div className="unit-detail-val">{unit.address || "Not submitted"}</div>
+                                            <span className="unit-detail-label">Shipping Address:</span>
+                                            <div className="unit-detail-val">
+                                                {unit.deliveryAddress || unit.address ? (
+                                                    <div>
+                                                        {unit.addressType === "executive_provided" && (
+                                                            <span className="saas-badge" style={{ background: "#eff6ff", color: "#2563eb", border: "1px solid #bfdbfe", marginBottom: "4px", display: "inline-block", fontSize: "10.5px" }}>
+                                                                📍 Executive Assigned Address
+                                                            </span>
+                                                        )}
+                                                        {unit.addressType === "yourself" && (
+                                                            <span className="saas-badge" style={{ background: "#f8fafc", color: "#64748b", border: "1px solid #cbd5e1", marginBottom: "4px", display: "inline-block", fontSize: "10.5px" }}>
+                                                                👤 Mediator (Yourself)
+                                                            </span>
+                                                        )}
+                                                        <div style={{ fontWeight: "600", color: "var(--slate-800)", marginTop: "2px" }}>
+                                                            {unit.deliveryAddress || unit.address}
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <span style={{ color: "var(--slate-400)", fontStyle: "italic" }}>Not configured / Yourself</span>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
 

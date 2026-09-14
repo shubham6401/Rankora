@@ -52,6 +52,6 @@ export const batchRejectOrdersByMediator = (items) => {
     return api.post("/mediator/order/batch-reject", { items });
 };
 
-export const returnMediatorOrderUnit = (unitId, reason) => {
-    return api.post(`/mediator/order/return/${unitId}`, { reason });
+export const returnMediatorOrderUnit = (unitId, reason, quantity = 1) => {
+    return api.post(`/mediator/order/return/${unitId}`, { reason, quantity });
 };

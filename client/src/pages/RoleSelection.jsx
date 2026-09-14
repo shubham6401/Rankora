@@ -10,6 +10,7 @@ export default function RoleSelection() {
     const handleInstantDemo = async (role) => {
         try {
             setLoggingInRole(role);
+            localStorage.removeItem("adminBackupSession");
             if (role === "executive") {
                 const res = await loginExecutiveUser({ teamCode: "DEMO_EXEC", password: "demo1234" });
                 localStorage.setItem("token", res.data.token);
@@ -212,44 +213,48 @@ export default function RoleSelection() {
                             </button>
                         </div>
                     </div>
-                </div>
 
-                {/* ADMIN ACCESS CONSOLE */}
-                <div style={{
-                    marginTop: "2rem",
-                    padding: "1rem 1.5rem",
-                    backgroundColor: "rgba(99, 102, 241, 0.08)",
-                    border: "1px dashed rgba(99, 102, 241, 0.3)",
-                    borderRadius: "12px",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    flexWrap: "wrap",
-                    gap: "1rem"
-                }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", textAlign: "left" }}>
-                        <span style={{ fontSize: "1.5rem" }}>🛡️</span>
+                    {/* ADMIN CARD (Royal Purple / Violet) */}
+                    <div className="role-card role-card-admin">
                         <div>
-                            <div style={{ fontWeight: "700", color: "#f8fafc", fontSize: "0.95rem" }}>System Administrator Access</div>
-                            <div style={{ color: "#94a3b8", fontSize: "0.8rem" }}>Executive account management, brand analytics & operational oversight</div>
+                            <div className="role-card-top">
+                                <div className="role-icon-box">🛡️</div>
+                                <span className="role-pill-badge">System Administration</span>
+                            </div>
+                            <h2 className="role-title">Admin Portal</h2>
+                            <p className="role-description">
+                                Oversee operational performance, manage executive team codes, monitor cross-organization orders, and audit fulfillment.
+                            </p>
+                            <ul className="role-features-list">
+                                <li>
+                                    <span className="check-icon">✓</span>
+                                    <span>Executive Team Allocation & Governance</span>
+                                </li>
+                                <li>
+                                    <span className="check-icon">✓</span>
+                                    <span>Cross-Organization Orders & Volumes</span>
+                                </li>
+                                <li>
+                                    <span className="check-icon">✓</span>
+                                    <span>Global Operations Audit & Analytics</span>
+                                </li>
+                                <li>
+                                    <span className="check-icon">✓</span>
+                                    <span>Master Fulfillment Excel Reports</span>
+                                </li>
+                            </ul>
+                        </div>
+                        <div className="role-card-actions">
+                            <button 
+                                id="role-btn-admin"
+                                className="role-action-btn"
+                                onClick={() => navigate("/admin/login")}
+                            >
+                                <span>Enter Admin Workspace</span>
+                                <span className="arrow-symbol">→</span>
+                            </button>
                         </div>
                     </div>
-                    <button
-                        onClick={() => navigate("/admin/login")}
-                        style={{
-                            padding: "0.55rem 1.25rem",
-                            borderRadius: "8px",
-                            background: "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)",
-                            color: "#ffffff",
-                            border: "none",
-                            cursor: "pointer",
-                            fontWeight: "700",
-                            fontSize: "0.85rem",
-                            boxShadow: "0 4px 12px rgba(99, 102, 241, 0.3)"
-                        }}
-                    >
-                        Enter Admin Console →
-                    </button>
                 </div>
 
                 {/* FOOTER */}

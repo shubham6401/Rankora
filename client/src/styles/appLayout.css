@@ -135,6 +135,13 @@
     border-color: #f3e8ff;
 }
 
+.app-sidebar-role-badge.admin {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #ffffff;
+    border-color: #6d28d9;
+    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+}
+
 .app-sidebar-nav {
     flex: 1;
     overflow-y: auto;

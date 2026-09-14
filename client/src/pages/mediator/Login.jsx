@@ -6,7 +6,6 @@ import "../../styles/auth.css";
 export default function Login() {
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
-        name: "",
         mediatorCode: "",
         password: "",
     });
@@ -19,6 +18,7 @@ export default function Login() {
         try {
             setLoading(true);
             const response = await loginUser(formData);
+            localStorage.removeItem("adminBackupSession");
             localStorage.setItem("token", response.data.token);
             localStorage.setItem("user", JSON.stringify(response.data.user));
             navigate("/panel-mediator");
@@ -32,7 +32,6 @@ export default function Login() {
 
     const handleFillDemo = () => {
         setFormData({
-            name: "Sarah Chen (Demo Mediator)",
             mediatorCode: "DEMO_MED",
             password: "demo1234",
         });
@@ -68,18 +67,6 @@ export default function Login() {
                 {error && <div className="auth-error-alert">{error}</div>}
 
                 <form className="auth-form" onSubmit={handleSubmit}>
-                    <div className="form-group">
-                        <label className="form-label" htmlFor="med-name">Name</label>
-                        <input 
-                            id="med-name"
-                            className="form-input"
-                            value={formData.name} 
-                            type="text" 
-                            placeholder="Enter mediator name"
-                            required
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
-                        />
-                    </div>
 
                     <div className="form-group">
                         <label className="form-label" htmlFor="med-code">Mediator Code</label>

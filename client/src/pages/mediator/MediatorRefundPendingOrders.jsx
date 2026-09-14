@@ -229,6 +229,7 @@ export default function MediatorRefundPendingOrders() {
                 <ReturnOrderModal
                     unit={returnTarget.unit}
                     order={returnTarget.order}
+                    stage="pending_refund"
                     onClose={() => setReturnTarget(null)}
                     onSuccess={() => {
                         setReturnTarget(null);

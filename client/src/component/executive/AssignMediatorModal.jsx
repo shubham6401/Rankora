@@ -282,16 +282,21 @@ export default function AssignMediatorModal({
                                             background: "#ffffff",
                                         }}
                                     >
-                                        <option value="yourself">Yourself (Mediator inputs their own address)</option>
+                                        <option value="yourself">👤 Yourself (Mediator inputs their own address)</option>
                                         {savedAddresses.map((addr) => (
                                             <option key={addr._id} value={addr._id}>
-                                                {addr.label} — {addr.recipientName}, {addr.city} ({addr.pincode})
+                                                📍 Executive Address: {addr.label} — {addr.recipientName}, {addr.city} ({addr.pincode})
                                             </option>
                                         ))}
                                     </select>
                                 </div>
                             ))}
                         </div>
+                        {savedAddresses.length === 0 && (
+                            <span style={{ fontSize: "11px", color: "#64748b", marginTop: "6px", display: "inline-block" }}>
+                                💡 Want to assign a specific address? Add locations in your <b>Address Book</b> to choose from executive options!
+                            </span>
+                        )}
                     </div>
 
                     {/* Financial Preview Box */}

@@ -113,11 +113,11 @@
     font-weight: 400;
 }
 
-/* Cards Grid - 3 Columns on desktop for fit-to-screen */
+/* Cards Grid - 4 Columns on desktop for all 4 roles */
 .role-cards-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: clamp(16px, 2vw, 24px);
+    grid-template-columns: repeat(4, 1fr);
+    gap: clamp(14px, 1.5vw, 20px);
     width: 100%;
     text-align: left;
 }
@@ -308,6 +308,48 @@
 .role-card-brand .role-action-btn:hover {
     background: linear-gradient(135deg, #b45309 0%, #be123c 50%, #be185d 100%);
     box-shadow: 0 6px 25px rgba(225, 29, 72, 0.6);
+}
+
+/* ==========================================================================
+   ROLE 4: SYSTEM ADMINISTRATOR (Royal Purple / Violet Theme)
+   ========================================================================== */
+.role-card-admin::before {
+    background: linear-gradient(90deg, #7c3aed 0%, #a855f7 100%);
+}
+
+.role-card-admin::after {
+    background: radial-gradient(circle at 50% 0%, rgba(124, 58, 237, 0.15) 0%, transparent 70%);
+}
+
+.role-card-admin:hover {
+    border-color: rgba(124, 58, 237, 0.45);
+    box-shadow: 
+        0 20px 40px -10px rgba(124, 58, 237, 0.25),
+        0 0 25px rgba(168, 85, 247, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.role-card-admin .role-icon-box {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.2) 0%, rgba(168, 85, 247, 0.1) 100%);
+    border: 1px solid rgba(124, 58, 237, 0.35);
+    box-shadow: 0 0 20px rgba(124, 58, 237, 0.2);
+}
+
+.role-card-admin .role-pill-badge {
+    background: rgba(124, 58, 237, 0.15);
+    color: #d8b4fe;
+    border: 1px solid rgba(124, 58, 237, 0.35);
+}
+
+.role-card-admin .role-action-btn {
+    background: linear-gradient(135deg, #6d28d9 0%, #7c3aed 50%, #9333ea 100%);
+    color: #ffffff;
+    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);
+}
+
+.role-card-admin .role-action-btn:hover {
+    background: linear-gradient(135deg, #5b21b6 0%, #6d28d9 50%, #7e22ce 100%);
+    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.6);
 }
 
 /* ==========================================================================
@@ -535,9 +577,9 @@
 }
 
 /* Responsive adjustments */
-@media (max-width: 1024px) {
+@media (max-width: 1200px) {
     .role-cards-grid {
-        grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+        grid-template-columns: repeat(2, 1fr);
         gap: 18px;
     }
 }

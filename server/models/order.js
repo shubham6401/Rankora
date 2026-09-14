@@ -41,6 +41,10 @@ const orderUnitSchema = new mongoose.Schema({
         type: String,
         default: null,
     },
+    deliveryAddress: {
+        type: String,
+        default: null,
+    },
     addressType: {
         type: String,
         enum: ["custom", "executive_provided", "yourself", null],

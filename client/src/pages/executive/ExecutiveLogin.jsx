@@ -6,7 +6,6 @@ import "../../styles/auth.css";
 export default function ExecutiveLogin() {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
-        name: "",
         password: "",
         teamCode: "",
     });
@@ -19,6 +18,7 @@ export default function ExecutiveLogin() {
         setLoading(true);
         try {
             const loginResponse = await loginExecutiveUser(formData);
+            localStorage.removeItem("adminBackupSession");
             localStorage.setItem("token", loginResponse.data.token);
             localStorage.setItem("user", JSON.stringify(loginResponse.data.user));
             navigate("/dashboard-executive");
@@ -32,7 +32,6 @@ export default function ExecutiveLogin() {
 
     const handleFillDemo = () => {
         setFormData({
-            name: "Alex Rivera (Demo Executive)",
             teamCode: "DEMO_EXEC",
             password: "demo1234",
         });
@@ -68,18 +67,6 @@ export default function ExecutiveLogin() {
                 {error && <div className="auth-error-alert">{error}</div>}
 
                 <form className="auth-form" onSubmit={handleSubmit}>
-                    <div className="form-group">
-                        <label className="form-label" htmlFor="exec-name">Name</label>
-                        <input 
-                            id="exec-name"
-                            className="form-input"
-                            value={formData.name} 
-                            type="text" 
-                            placeholder="Enter executive name"
-                            required
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
-                        />
-                    </div>
 
                     <div className="form-group">
                         <label className="form-label" htmlFor="exec-teamCode">Team Code</label>

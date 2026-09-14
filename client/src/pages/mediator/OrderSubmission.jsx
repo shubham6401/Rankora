@@ -14,9 +14,8 @@ export default function OrderSubmission() {
     const [error, setError] = useState("");
     const [copied, setCopied] = useState(false);
 
-    // Price adjustment state
+    // Price state (single price option)
     const [purchasePrice, setPurchasePrice] = useState("");
-    const [deliveryFee, setDeliveryFee] = useState(0);
 
     useEffect(() => {
         fetchOrder();
@@ -35,9 +34,7 @@ export default function OrderSubmission() {
                 {};
 
             const initialPrice = unit.purchasePrice !== undefined ? unit.purchasePrice : (ord.price || "");
-            const initialFee = unit.deliveryFee !== undefined ? unit.deliveryFee : 0;
             setPurchasePrice(initialPrice);
-            setDeliveryFee(initialFee);
 
             // Pre-fill address if executive provided
             const isExecProvided = unit.addressType === "executive_provided" || (unit.deliveryAddress && unit.deliveryAddress.toLowerCase() !== "yourself");
@@ -66,7 +63,7 @@ export default function OrderSubmission() {
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const totalPurchasedAmount = (Number(purchasePrice) || 0) + (Number(deliveryFee) || 0);
+    const totalPurchasedAmount = Number(purchasePrice) || 0;
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -82,7 +79,7 @@ export default function OrderSubmission() {
             });
 
             data.append("purchasePrice", purchasePrice);
-            data.append("deliveryFee", deliveryFee);
+            data.append("deliveryFee", 0);
             data.append("totalPurchasedAmount", totalPurchasedAmount);
 
             await mediatorOrderSubmit(id, data);
@@ -238,65 +235,43 @@ export default function OrderSubmission() {
                         )}
                     </div>
 
-                    {/* Price & Fee Adjustments Section */}
-                    <div style={{
-                        backgroundColor: "#f8fafc",
-                        border: "1px solid #e2e8f0",
-                        borderRadius: "10px",
-                        padding: "16px",
-                        marginBottom: "16px"
-                    }}>
-                        <div style={{ fontSize: "13px", fontWeight: "700", color: "#0f172a", marginBottom: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
-                            <span>💰</span>
-                            <span>Purchase Price & Delivery Fee Adjustments</span>
-                        </div>
-
-                        <div className="form-row-2col">
-                            <div className="form-field" style={{ marginBottom: 0 }}>
-                                <label className="form-field-label">
-                                    Actual Purchase Price (₹) <span className="form-field-req">*</span>
-                                </label>
-                                <input
-                                    type="number"
-                                    className="form-input-text"
-                                    placeholder="e.g. 1499"
-                                    min="0"
-                                    value={purchasePrice}
-                                    required
-                                    onChange={(e) => setPurchasePrice(e.target.value)}
-                                />
-                            </div>
-
-                            <div className="form-field" style={{ marginBottom: 0 }}>
-                                <label className="form-field-label">
-                                    Platform / Delivery Fee (₹)
-                                </label>
-                                <input
-                                    type="number"
-                                    className="form-input-text"
-                                    placeholder="e.g. 40"
-                                    min="0"
-                                    value={deliveryFee}
-                                    onChange={(e) => setDeliveryFee(Number(e.target.value) || 0)}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Calculated Total Box */}
-                        <div style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            marginTop: "12px",
-                            paddingTop: "10px",
-                            borderTop: "1px dashed #cbd5e1",
-                            fontSize: "13px"
-                        }}>
-                            <span style={{ color: "#64748b", fontWeight: "600" }}>Total Amount Incurred:</span>
-                            <span style={{ fontSize: "16px", fontWeight: "800", color: "#2563eb" }}>
-                                ₹{totalPurchasedAmount.toLocaleString()}
+                    {/* Actual Purchase Price (Single Option) */}
+                    <div className="form-field">
+                        <label className="form-field-label">
+                            Actual Purchase Price (₹) <span className="form-field-req">*</span>
+                        </label>
+                        <div style={{ position: "relative" }}>
+                            <span style={{
+                                position: "absolute",
+                                left: "14px",
+                                top: "50%",
+                                transform: "translateY(-50%)",
+                                fontWeight: "800",
+                                color: "var(--slate-500)",
+                                fontSize: "15px"
+                            }}>
+                                ₹
                             </span>
+                            <input
+                                type="number"
+                                className="form-input-text"
+                                placeholder="e.g. 1499"
+                                min="0"
+                                step="any"
+                                value={purchasePrice}
+                                required
+                                style={{
+                                    paddingLeft: "32px",
+                                    fontWeight: "700",
+                                    fontSize: "15px",
+                                    color: "var(--slate-900)"
+                                }}
+                                onChange={(e) => setPurchasePrice(e.target.value)}
+                            />
                         </div>
+                        <span style={{ fontSize: "12px", color: "var(--slate-500)", marginTop: "4px", display: "block" }}>
+                            Enter the final invoice / purchase price paid for this unit.
+                        </span>
                     </div>
 
                     {/* Dates Section: Expected Arrival & Locked Order Received Date */}

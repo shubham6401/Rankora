@@ -1,5 +1,10 @@
 import { useState, useEffect } from "react";
-import { fetchExecutiveAddresses, createExecutiveAddress, deleteExecutiveAddress } from "../../services/executive/order";
+import {
+    fetchExecutiveAddresses,
+    createExecutiveAddress,
+    deleteExecutiveAddress,
+} from "../../services/executive/order";
+import "../../styles/theme.css";
 
 export default function ExecutiveAddresses() {
     const [addresses, setAddresses] = useState([]);
@@ -8,7 +13,7 @@ export default function ExecutiveAddresses() {
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
 
-    // Form state
+    // Form fields
     const [label, setLabel] = useState("");
     const [recipientName, setRecipientName] = useState("");
     const [phoneNumber, setPhoneNumber] = useState("");
@@ -25,13 +30,14 @@ export default function ExecutiveAddresses() {
     const loadAddresses = async () => {
         try {
             setLoading(true);
+            setError("");
             const res = await fetchExecutiveAddresses();
             if (res.data.success) {
                 setAddresses(res.data.addresses || []);
             }
         } catch (err) {
-            console.error("Failed to load addresses:", err);
-            setError("Unable to load saved delivery addresses");
+            console.error("Error loading addresses:", err);
+            setError("Failed to load saved delivery addresses");
         } finally {
             setLoading(false);
         }
@@ -43,7 +49,7 @@ export default function ExecutiveAddresses() {
         setSuccess("");
 
         if (!label.trim() || !recipientName.trim() || !phoneNumber.trim() || !addressLine1.trim() || !city.trim() || !state.trim() || !pincode.trim()) {
-            setError("Please fill out all required address fields");
+            setError("Please fill out all required fields marked with *");
             return;
         }
 
@@ -94,129 +100,188 @@ export default function ExecutiveAddresses() {
     };
 
     return (
-        <div style={{ padding: "1.5rem", maxWidth: "1200px", margin: "0 auto", color: "#f8fafc" }}>
-            {/* Header */}
-            <div style={{ marginBottom: "2rem" }}>
-                <h1 style={{ fontSize: "1.75rem", fontWeight: "800", margin: 0, display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                    <span>📍</span>
-                    <span>Executive Delivery Address Book</span>
-                </h1>
-                <p style={{ color: "#94a3b8", fontSize: "0.9rem", marginTop: "0.3rem" }}>
-                    Save pre-configured shipping delivery addresses to assign to mediators during unit allocation
-                </p>
+        <div style={{ padding: "24px 28px 60px", maxWidth: "1280px", margin: "0 auto", boxSizing: "border-box" }}>
+            {/* Header Hero Card */}
+            <div className="saas-card" style={{ padding: "24px 28px", marginBottom: "24px", position: "relative", overflow: "hidden" }}>
+                <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "4px", background: "linear-gradient(90deg, #2563eb, #38bdf8)" }} />
+
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
+                    <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+                            <span className="saas-badge" style={{ background: "#eff6ff", color: "#2563eb", border: "1px solid #bfdbfe" }}>
+                                📍 Logistics Management
+                            </span>
+                            <span style={{ fontSize: "12px", color: "var(--slate-500)", fontWeight: "500" }}>
+                                Saved Shipping Addresses
+                            </span>
+                        </div>
+                        <h1 style={{ fontSize: "26px", fontWeight: "800", color: "var(--slate-900)", margin: 0 }}>
+                            Executive Delivery Address Book
+                        </h1>
+                        <p style={{ color: "var(--slate-500)", fontSize: "13.5px", marginTop: "4px", marginBottom: 0 }}>
+                            Save pre-configured shipping delivery addresses to assign to mediators during unit allocation
+                        </p>
+                    </div>
+
+                    <span className="saas-badge" style={{ background: "#f8fafc", color: "var(--slate-700)", border: "1px solid var(--slate-300)", padding: "6px 14px", fontSize: "13px" }}>
+                        Saved Addresses: <b>{addresses.length}</b>
+                    </span>
+                </div>
             </div>
 
             {error && (
-                <div style={{ padding: "1rem", backgroundColor: "rgba(239, 68, 68, 0.15)", border: "1px solid #ef4444", borderRadius: "8px", color: "#f87171", marginBottom: "1.5rem" }}>
-                    ⚠️ {error}
+                <div style={{
+                    padding: "12px 16px",
+                    backgroundColor: "#fef2f2",
+                    border: "1px solid #fecaca",
+                    borderRadius: "10px",
+                    color: "#dc2626",
+                    fontSize: "13.5px",
+                    marginBottom: "20px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px"
+                }}>
+                    <span>⚠️</span>
+                    <span>{error}</span>
                 </div>
             )}
 
             {success && (
-                <div style={{ padding: "1rem", backgroundColor: "rgba(16, 185, 129, 0.15)", border: "1px solid #10b981", borderRadius: "8px", color: "#34d399", marginBottom: "1.5rem" }}>
-                    ✓ {success}
+                <div style={{
+                    padding: "12px 16px",
+                    backgroundColor: "#ecfdf5",
+                    border: "1px solid #a7f3d0",
+                    borderRadius: "10px",
+                    color: "#059669",
+                    fontSize: "13.5px",
+                    marginBottom: "20px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px"
+                }}>
+                    <span>✓</span>
+                    <span>{success}</span>
                 </div>
             )}
 
-            <div style={{ display: "grid", gridTemplateColumns: "minmax(320px, 420px) 1fr", gap: "2rem", alignItems: "start" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "minmax(320px, 440px) 1fr", gap: "24px", alignItems: "start" }}>
                 {/* Form to Add New Address */}
-                <div style={{ backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "14px", padding: "1.5rem" }}>
-                    <h2 style={{ fontSize: "1.15rem", fontWeight: "700", marginBottom: "1rem" }}>
-                        ➕ Add New Delivery Address
+                <div className="saas-card" style={{ padding: "22px" }}>
+                    <h2 style={{ fontSize: "16px", fontWeight: "800", color: "var(--slate-900)", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                        <span>➕</span>
+                        <span>Add New Delivery Address</span>
                     </h2>
-                    <form onSubmit={handleCreate} style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
+
+                    <form onSubmit={handleCreate} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
                         <div>
-                            <label style={{ display: "block", fontSize: "0.8rem", color: "#cbd5e1", marginBottom: "0.25rem" }}>Address Label / Nickname *</label>
+                            <label style={{ display: "block", fontSize: "11.5px", fontWeight: "700", color: "var(--slate-700)", marginBottom: "4px", textTransform: "uppercase" }}>
+                                Address Label / Nickname *
+                            </label>
                             <input
                                 type="text"
                                 placeholder="e.g. Delhi Warehouse Hub #1"
                                 value={label}
                                 onChange={(e) => setLabel(e.target.value)}
                                 required
-                                style={{ width: "100%", padding: "0.6rem", borderRadius: "6px", backgroundColor: "#1f2937", border: "1px solid #374151", color: "#ffffff", boxSizing: "border-box" }}
+                                className="saas-input"
                             />
                         </div>
 
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                             <div>
-                                <label style={{ display: "block", fontSize: "0.8rem", color: "#cbd5e1", marginBottom: "0.25rem" }}>Recipient Name *</label>
+                                <label style={{ display: "block", fontSize: "11.5px", fontWeight: "700", color: "var(--slate-700)", marginBottom: "4px", textTransform: "uppercase" }}>
+                                    Recipient Name *
+                                </label>
                                 <input
                                     type="text"
                                     placeholder="Full Name"
                                     value={recipientName}
                                     onChange={(e) => setRecipientName(e.target.value)}
                                     required
-                                    style={{ width: "100%", padding: "0.6rem", borderRadius: "6px", backgroundColor: "#1f2937", border: "1px solid #374151", color: "#ffffff", boxSizing: "border-box" }}
+                                    className="saas-input"
                                 />
                             </div>
                             <div>
-                                <label style={{ display: "block", fontSize: "0.8rem", color: "#cbd5e1", marginBottom: "0.25rem" }}>Phone Number *</label>
+                                <label style={{ display: "block", fontSize: "11.5px", fontWeight: "700", color: "var(--slate-700)", marginBottom: "4px", textTransform: "uppercase" }}>
+                                    Phone Number *
+                                </label>
                                 <input
                                     type="text"
                                     placeholder="10-digit number"
                                     value={phoneNumber}
                                     onChange={(e) => setPhoneNumber(e.target.value)}
                                     required
-                                    style={{ width: "100%", padding: "0.6rem", borderRadius: "6px", backgroundColor: "#1f2937", border: "1px solid #374151", color: "#ffffff", boxSizing: "border-box" }}
+                                    className="saas-input"
                                 />
                             </div>
                         </div>
 
                         <div>
-                            <label style={{ display: "block", fontSize: "0.8rem", color: "#cbd5e1", marginBottom: "0.25rem" }}>Address Line 1 *</label>
+                            <label style={{ display: "block", fontSize: "11.5px", fontWeight: "700", color: "var(--slate-700)", marginBottom: "4px", textTransform: "uppercase" }}>
+                                Address Line 1 (Flat, House no., Building) *
+                            </label>
                             <input
                                 type="text"
-                                placeholder="Flat, House no., Building, Street"
+                                placeholder="e.g. Flat 402, Lotus Towers"
                                 value={addressLine1}
                                 onChange={(e) => setAddressLine1(e.target.value)}
                                 required
-                                style={{ width: "100%", padding: "0.6rem", borderRadius: "6px", backgroundColor: "#1f2937", border: "1px solid #374151", color: "#ffffff", boxSizing: "border-box" }}
+                                className="saas-input"
                             />
                         </div>
 
                         <div>
-                            <label style={{ display: "block", fontSize: "0.8rem", color: "#cbd5e1", marginBottom: "0.25rem" }}>Address Line 2 (Optional)</label>
+                            <label style={{ display: "block", fontSize: "11.5px", fontWeight: "700", color: "var(--slate-700)", marginBottom: "4px", textTransform: "uppercase" }}>
+                                Address Line 2 (Area, Street, Landmark)
+                            </label>
                             <input
                                 type="text"
-                                placeholder="Area, Landmark, Colony"
+                                placeholder="e.g. Sector 62, Near Metro Station"
                                 value={addressLine2}
                                 onChange={(e) => setAddressLine2(e.target.value)}
-                                style={{ width: "100%", padding: "0.6rem", borderRadius: "6px", backgroundColor: "#1f2937", border: "1px solid #374151", color: "#ffffff", boxSizing: "border-box" }}
+                                className="saas-input"
                             />
                         </div>
 
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
                             <div>
-                                <label style={{ display: "block", fontSize: "0.8rem", color: "#cbd5e1", marginBottom: "0.25rem" }}>City *</label>
+                                <label style={{ display: "block", fontSize: "11.5px", fontWeight: "700", color: "var(--slate-700)", marginBottom: "4px", textTransform: "uppercase" }}>
+                                    City *
+                                </label>
                                 <input
                                     type="text"
                                     placeholder="City"
                                     value={city}
                                     onChange={(e) => setCity(e.target.value)}
                                     required
-                                    style={{ width: "100%", padding: "0.6rem", borderRadius: "6px", backgroundColor: "#1f2937", border: "1px solid #374151", color: "#ffffff", boxSizing: "border-box" }}
+                                    className="saas-input"
                                 />
                             </div>
                             <div>
-                                <label style={{ display: "block", fontSize: "0.8rem", color: "#cbd5e1", marginBottom: "0.25rem" }}>State *</label>
+                                <label style={{ display: "block", fontSize: "11.5px", fontWeight: "700", color: "var(--slate-700)", marginBottom: "4px", textTransform: "uppercase" }}>
+                                    State *
+                                </label>
                                 <input
                                     type="text"
                                     placeholder="State"
                                     value={state}
                                     onChange={(e) => setState(e.target.value)}
                                     required
-                                    style={{ width: "100%", padding: "0.6rem", borderRadius: "6px", backgroundColor: "#1f2937", border: "1px solid #374151", color: "#ffffff", boxSizing: "border-box" }}
+                                    className="saas-input"
                                 />
                             </div>
                             <div>
-                                <label style={{ display: "block", fontSize: "0.8rem", color: "#cbd5e1", marginBottom: "0.25rem" }}>Pincode *</label>
+                                <label style={{ display: "block", fontSize: "11.5px", fontWeight: "700", color: "var(--slate-700)", marginBottom: "4px", textTransform: "uppercase" }}>
+                                    PIN *
+                                </label>
                                 <input
                                     type="text"
-                                    placeholder="Pincode"
+                                    placeholder="6 digits"
                                     value={pincode}
                                     onChange={(e) => setPincode(e.target.value)}
                                     required
-                                    style={{ width: "100%", padding: "0.6rem", borderRadius: "6px", backgroundColor: "#1f2937", border: "1px solid #374151", color: "#ffffff", boxSizing: "border-box" }}
+                                    className="saas-input"
                                 />
                             </div>
                         </div>
@@ -224,79 +289,87 @@ export default function ExecutiveAddresses() {
                         <button
                             type="submit"
                             disabled={submitting}
-                            style={{
-                                marginTop: "0.5rem",
-                                padding: "0.75rem",
-                                borderRadius: "8px",
-                                background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)",
-                                color: "#ffffff",
-                                border: "none",
-                                cursor: "pointer",
-                                fontWeight: "600",
-                                fontSize: "0.9rem",
-                                opacity: submitting ? 0.7 : 1
-                            }}
+                            className="saas-btn saas-btn-primary"
+                            style={{ width: "100%", marginTop: "6px", padding: "11px" }}
                         >
-                            {submitting ? "Saving..." : "Save Delivery Address"}
+                            {submitting ? "Saving Address..." : "💾 Save Address to Book"}
                         </button>
                     </form>
                 </div>
 
                 {/* Saved Addresses List */}
-                <div>
-                    <h2 style={{ fontSize: "1.15rem", fontWeight: "700", marginBottom: "1rem" }}>
-                        Saved Delivery Locations ({addresses.length})
-                    </h2>
+                <div className="saas-card" style={{ padding: "22px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                        <h2 style={{ fontSize: "16px", fontWeight: "800", color: "var(--slate-900)", margin: 0 }}>
+                            Saved Delivery Locations ({addresses.length})
+                        </h2>
+                    </div>
+
                     {loading ? (
-                        <div style={{ color: "#9ca3af" }}>Loading addresses...</div>
+                        <div style={{ textAlign: "center", padding: "40px 10px", color: "var(--slate-500)", fontSize: "13px" }}>
+                            Loading saved addresses...
+                        </div>
                     ) : addresses.length === 0 ? (
-                        <div style={{ padding: "3rem", textAlign: "center", backgroundColor: "#111827", borderRadius: "12px", border: "1px solid #1f2937", color: "#6b7280" }}>
-                            No addresses saved yet. Use the form on the left to add your delivery hubs or test locations.
+                        <div style={{ textAlign: "center", padding: "50px 20px" }}>
+                            <div style={{ fontSize: "32px", marginBottom: "10px" }}>📍</div>
+                            <div style={{ fontSize: "15px", fontWeight: "700", color: "var(--slate-700)" }}>No Saved Addresses Yet</div>
+                            <div style={{ fontSize: "13px", color: "var(--slate-500)", marginTop: "4px" }}>
+                                Use the form on the left to add shipping destinations. You can assign these addresses to individual units during mediator allocation!
+                            </div>
                         </div>
                     ) : (
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "1rem" }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
                             {addresses.map((addr) => (
                                 <div
                                     key={addr._id}
                                     style={{
-                                        backgroundColor: "#111827",
-                                        border: "1px solid #1f2937",
-                                        borderRadius: "12px",
-                                        padding: "1.25rem",
-                                        position: "relative"
+                                        border: "1px solid var(--slate-200)",
+                                        borderRadius: "10px",
+                                        padding: "16px",
+                                        background: "var(--slate-50)",
+                                        transition: "all 0.15s ease",
                                     }}
                                 >
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.5rem" }}>
-                                        <span style={{
-                                            backgroundColor: "rgba(99, 102, 241, 0.2)",
-                                            color: "#818cf8",
-                                            fontWeight: "700",
-                                            fontSize: "0.75rem",
-                                            padding: "0.2rem 0.5rem",
-                                            borderRadius: "4px"
-                                        }}>
-                                            {addr.label}
-                                        </span>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                                            <span style={{ fontSize: "16px" }}>🏷️</span>
+                                            <h3 style={{ margin: 0, fontSize: "15px", fontWeight: "800", color: "var(--slate-900)" }}>
+                                                {addr.label}
+                                            </h3>
+                                            {(addr.executiveName || addr.teamCode) && (
+                                                <span className="saas-badge" style={{ background: "#f5f3ff", color: "#7c3aed", border: "1px solid #ddd6fe", fontSize: "11px", textTransform: "none" }}>
+                                                    👤 {addr.executiveName || "Executive"} {addr.teamCode ? `(${addr.teamCode})` : ""}
+                                                </span>
+                                            )}
+                                        </div>
                                         <button
+                                            type="button"
                                             onClick={() => handleDelete(addr._id)}
-                                            title="Delete address"
-                                            style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "0.9rem" }}
+                                            style={{
+                                                background: "none",
+                                                border: "none",
+                                                color: "#dc2626",
+                                                cursor: "pointer",
+                                                fontSize: "12px",
+                                                fontWeight: "600",
+                                                padding: "4px 8px",
+                                                borderRadius: "6px"
+                                            }}
+                                            title="Delete Address"
                                         >
-                                            🗑️
+                                            🗑️ Remove
                                         </button>
                                     </div>
 
-                                    <div style={{ fontWeight: "700", color: "#f3f4f6", fontSize: "0.95rem" }}>
-                                        {addr.recipientName}
+                                    <div style={{ fontSize: "13.5px", color: "var(--slate-800)", marginBottom: "4px" }}>
+                                        <b>Recipient:</b> {addr.recipientName} • <b>Phone:</b> {addr.phoneNumber}
                                     </div>
-                                    <div style={{ fontSize: "0.8rem", color: "#9ca3af", marginBottom: "0.5rem" }}>
-                                        📞 {addr.phoneNumber}
-                                    </div>
-                                    <div style={{ fontSize: "0.85rem", color: "#cbd5e1", lineHeight: "1.4" }}>
+
+                                    <div style={{ fontSize: "13px", color: "var(--slate-600)", lineHeight: "1.4" }}>
                                         {addr.addressLine1}
-                                        {addr.addressLine2 ? `, ${addr.addressLine2}` : ""}
+                                        {addr.addressLine2 && `, ${addr.addressLine2}`}
                                         <br />
-                                        {addr.city}, {addr.state} - {addr.pincode}
+                                        {addr.city}, {addr.state} - <b>{addr.pincode}</b>
                                     </div>
                                 </div>
                             ))}

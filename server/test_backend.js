@@ -9,6 +9,8 @@ const app = require("./app");
 const connectDB = require("./config/db");
 const User = require("./models/user");
 const Order = require("./models/order");
+const Address = require("./models/address");
+const BalanceTransaction = require("./models/balanceTransaction");
 
 const PORT = 8001;
 let server;
@@ -786,7 +788,181 @@ async function runTests() {
             headers: execHeaders,
         });
 
-        console.log("\n🎉 ALL 38 TEST SUITES PASSED PERFECTLY! ALL NEW ROLES & FEATURES 100% OPERATIONAL!");
+        // 39. Executive Creation with Exact Casing Preservation
+        console.log("\n👉 Test 39: Executive Code Exact Casing Preservation");
+        const mixedCaseCode = `ExactCase_Exec_${timestamp}`;
+        const createExactCaseExecRes = await request("/admin/create-executive", {
+            method: "POST",
+            headers: adminHeaders,
+            body: {
+                name: "Exact Casing Executive",
+                teamCode: mixedCaseCode,
+                password: "exactPassword123",
+            },
+        });
+        assert(createExactCaseExecRes.status === 201, "Admin create executive with mixed case returns 201");
+        assert(
+            createExactCaseExecRes.data.executive.teamCode === mixedCaseCode,
+            `Executive teamCode preserves exact casing: "${createExactCaseExecRes.data.executive.teamCode}" === "${mixedCaseCode}"`
+        );
+        const createdExecId = createExactCaseExecRes.data.executive._id || createExactCaseExecRes.data.executive.id;
+
+        // Verify login with exact casing
+        const exactLoginRes = await request("/auth/login/executive", {
+            method: "POST",
+            body: {
+                teamCode: mixedCaseCode,
+                password: "exactPassword123",
+            },
+        });
+        assert(exactLoginRes.status === 200, "Executive with exact casing code logs in successfully");
+        const exactExecToken = exactLoginRes.data.token;
+        const exactExecHeaders = { Authorization: `Bearer ${exactExecToken}` };
+
+        // Create related data for this executive:
+        // A) Mediator registered under this teamCode
+        const exactMedCode = `MED_EXACT_${timestamp}`;
+        const exactMedSignup = await request("/auth/signup/mediator", {
+            method: "POST",
+            headers: exactExecHeaders,
+            body: {
+                name: "Exact Team Mediator",
+                password: "medPassword123",
+                mediatorCode: exactMedCode,
+                teamCode: mixedCaseCode,
+            },
+        });
+        assert(exactMedSignup.status === 201, "Mediator created under exact casing executive");
+        const exactMedId = exactMedSignup.data.user.id;
+
+        // B) Order created by this executive
+        const exactOrderRes = await request("/executive/order/add", {
+            method: "POST",
+            headers: exactExecHeaders,
+            body: {
+                brandUserId: brandUserId,
+                productName: "Exact Team Headphones",
+                productLink: "https://amazon.in/dp/EXACT",
+                price: 999,
+                quantity: 1,
+                orderPlatform: "Amazon",
+            },
+        });
+        assert(exactOrderRes.status === 201, "Order created under exact casing executive");
+        const exactOrderId = exactOrderRes.data.order._id;
+
+        // C) Address created by this executive
+        const exactAddressRes = await request("/executive/addresses", {
+            method: "POST",
+            headers: exactExecHeaders,
+            body: {
+                label: "Warehouse Exact",
+                recipientName: "Warehouse Manager",
+                phoneNumber: "9876543210",
+                addressLine1: "Sector 62",
+                city: "Noida",
+                state: "UP",
+                pincode: "201309",
+            },
+        });
+        assert(exactAddressRes.status === 201, "Address created under exact casing executive");
+
+        // D) Balance Transaction involving this executive
+        const exactTxnRes = await request("/balance/send", {
+            method: "POST",
+            headers: exactExecHeaders,
+            body: {
+                receiverId: exactMedId,
+                amount: 500,
+                type: "order_payment",
+                paymentScreenshot: "https://cloudinary.com/exact-txn.jpg",
+                note: "Advance payment balance test",
+            },
+        });
+        assert(exactTxnRes.status === 201, "Balance transaction created under exact casing executive");
+
+        // 40. Admin Cascading Executive Deletion
+        console.log("\n👉 Test 40: Admin Cascading Executive Deletion");
+        const deleteExecRes = await request(`/admin/executive/${createdExecId}`, {
+            method: "DELETE",
+            headers: adminHeaders,
+        });
+        assert(deleteExecRes.status === 200, "Admin delete executive returns 200");
+        assert(deleteExecRes.data.success === true, "Admin delete executive reports success");
+
+        // Verify all related records are completely wiped:
+        const remainingExecUser = await User.findById(createdExecId);
+        assert(remainingExecUser === null, "Executive User record completely deleted");
+
+        const remainingOrders = await Order.find({
+            $or: [{ createdBy: createdExecId }, { teamCode: mixedCaseCode }],
+        });
+        assert(remainingOrders.length === 0, "All orders for executive completely deleted");
+
+        const remainingAddresses = await Address.find({ executiveId: createdExecId });
+        assert(remainingAddresses.length === 0, "All executive shipping addresses completely deleted");
+
+        const remainingTxns = await BalanceTransaction.find({
+            $or: [{ sender: createdExecId }, { receiver: createdExecId }, { teamCode: mixedCaseCode }],
+        });
+        assert(remainingTxns.length === 0, "All balance transactions for executive completely deleted");
+
+        const remainingMeds = await User.find({ role: "mediator", teamCode: mixedCaseCode });
+        assert(remainingMeds.length === 0, "All mediators for executive teamCode completely deleted");
+
+        // 41. Admin Cascading Brand Deletion
+        console.log("\n👉 Test 41: Admin Cascading Brand Deletion");
+        // Create a temporary brand account with an order to test deletion
+        const tempBrandName = `TempBrand_${timestamp}`;
+        const tempBrandSignup = await request("/auth/signup/brand", {
+            method: "POST",
+            body: {
+                name: "Temp Brand Co",
+                password: "brandPassword123",
+                brand: tempBrandName,
+            },
+        });
+        assert(tempBrandSignup.status === 201, "Temp brand signup returns 201");
+        const tempBrandUserId = tempBrandSignup.data.user.id;
+
+        // Create an order for this temp brand
+        const tempOrderRes = await request("/executive/order/add", {
+            method: "POST",
+            headers: execHeaders,
+            body: {
+                brandUserId: tempBrandUserId,
+                productName: "Temp Brand Watch",
+                productLink: "https://flipkart.com/watch",
+                price: 1500,
+                quantity: 1,
+                orderPlatform: "Flipkart",
+            },
+        });
+        assert(tempOrderRes.status === 201, "Order created for temp brand");
+
+        const ordersBeforeDelete = await Order.find({
+            $or: [{ brandUserId: tempBrandUserId }, { brand: tempBrandName }],
+        });
+        assert(ordersBeforeDelete.length >= 1, "Order exists before brand deletion");
+
+        // Delete the brand via Admin
+        const deleteBrandRes = await request(`/admin/brand/${tempBrandUserId}`, {
+            method: "DELETE",
+            headers: adminHeaders,
+        });
+        assert(deleteBrandRes.status === 200, "Admin delete brand returns 200");
+        assert(deleteBrandRes.data.success === true, "Admin delete brand reports success");
+
+        // Verify all brand records and orders are completely wiped
+        const remainingBrandUser = await User.findById(tempBrandUserId);
+        assert(remainingBrandUser === null, "Brand User record completely deleted");
+
+        const ordersAfterDelete = await Order.find({
+            $or: [{ brandUserId: tempBrandUserId }, { brand: tempBrandName }],
+        });
+        assert(ordersAfterDelete.length === 0, "All brand orders completely deleted");
+
+        console.log("\n🎉 ALL 41 TEST SUITES PASSED PERFECTLY! EXACT CASING & CASCADING DELETES 100% VERIFIED!");
     } catch (err) {
         console.error("\n❌ Test failed with error:", err);
         process.exitCode = 1;

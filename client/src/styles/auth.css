@@ -265,6 +265,12 @@
     border: 1px solid #e9d8fd;
 }
 
+.pill-admin {
+    background: #f5f3ff;
+    color: #7c3aed;
+    border: 1px solid #ddd6fe;
+}
+
 .auth-title {
     font-size: 26px;
     font-weight: 800;

@@ -20,24 +20,118 @@ export default function AppLayout({ children }) {
         }
     }, [location.pathname]);
 
+    // Track super admin backup session (strictly active when Super Admin impersonates an executive or mediator)
+    const [adminBackup, setAdminBackup] = useState(() => {
+        try {
+            const raw = localStorage.getItem("adminBackupSession");
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (
+                parsed &&
+                parsed.token &&
+                parsed.user &&
+                (parsed.user.isSuperAdmin === true ||
+                 parsed.user.username === "AdminShubhamsecreate" ||
+                 parsed.user.name === "AdminShubhamsecreate")
+            ) {
+                return parsed;
+            }
+            localStorage.removeItem("adminBackupSession");
+            return null;
+        } catch {
+            localStorage.removeItem("adminBackupSession");
+            return null;
+        }
+    });
+
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem("adminBackupSession");
+            if (!raw) {
+                setAdminBackup(null);
+                return;
+            }
+            const parsed = JSON.parse(raw);
+            if (
+                parsed &&
+                parsed.token &&
+                parsed.user &&
+                (parsed.user.isSuperAdmin === true ||
+                 parsed.user.username === "AdminShubhamsecreate" ||
+                 parsed.user.name === "AdminShubhamsecreate")
+            ) {
+                setAdminBackup(parsed);
+            } else {
+                localStorage.removeItem("adminBackupSession");
+                setAdminBackup(null);
+            }
+        } catch {
+            localStorage.removeItem("adminBackupSession");
+            setAdminBackup(null);
+        }
+    }, [location.pathname]);
+
+    const handleReturnToSuperAdmin = () => {
+        const raw = localStorage.getItem("adminBackupSession");
+        if (raw) {
+            try {
+                const parsed = JSON.parse(raw);
+                if (parsed && parsed.token && parsed.user) {
+                    localStorage.setItem("token", parsed.token);
+                    localStorage.setItem("user", JSON.stringify(parsed.user));
+                    localStorage.removeItem("adminBackupSession");
+                    setAdminBackup(null);
+                    navigate(parsed.returnPath || "/admin/dashboard", { replace: true });
+                    return;
+                }
+            } catch (err) {
+                console.error("Failed to restore admin session:", err);
+            }
+        }
+        localStorage.removeItem("adminBackupSession");
+        setAdminBackup(null);
+        navigate("/admin/login");
+    };
+
     const user = JSON.parse(localStorage.getItem("user")) || {};
     const role = (user.role || "").toLowerCase();
 
-    const isExecutive = role === "executive" || location.pathname.includes("executive");
-    const isBrand = role === "brand" || location.pathname.includes("brand");
-    const isMediator = !isExecutive && !isBrand;
+    const isAdmin = role === "admin" || location.pathname.includes("admin");
+    const isExecutive = !isAdmin && (role === "executive" || location.pathname.includes("executive"));
+    const isBrand = !isAdmin && (role === "brand" || location.pathname.includes("brand"));
+    const isMediator = !isAdmin && !isExecutive && !isBrand;
 
-    const userRoleDisplay = isExecutive
+    const userRoleDisplay = isAdmin
+        ? (user.isSuperAdmin ? "Super Admin" : "Admin")
+        : isExecutive
         ? "Executive"
         : isBrand
         ? "Brand"
         : "Mediator";
 
-    const roleBadgeClass = isExecutive
+    const roleBadgeClass = isAdmin
+        ? "admin"
+        : isExecutive
         ? "executive"
         : isBrand
         ? "brand"
         : "mediator";
+
+    const adminNavSections = [
+        {
+            title: "Control Console",
+            items: [
+                { title: "Admin Dashboard", path: "/admin/dashboard", icon: "🛡️" },
+            ],
+        },
+        {
+            title: "Operations Oversight",
+            items: [
+                { title: "Brands Overview", path: "/executive-brands", icon: "🏢" },
+                { title: "Master Analytics", path: "/executive-analytics", icon: "📈" },
+            ],
+        },
+    ];
 
     const executiveNavSections = [
         {
@@ -81,13 +175,7 @@ export default function AppLayout({ children }) {
 
     const mediatorNavSections = [
         {
-            title: "Main",
-            items: [
-                { title: "Dashboard", path: "/panel-mediator", icon: "📊" },
-            ],
-        },
-        {
-            title: "Order Pipeline",
+            title: "Campaign Operations",
             items: [
                 { title: "New Offers", path: "/mediator-neworders", icon: "📥" },
                 { title: "In Progress", path: "/mediator-pending-orders", icon: "🚀" },
@@ -99,46 +187,107 @@ export default function AppLayout({ children }) {
         {
             title: "Finance & Returns",
             items: [
-                { title: "Return Refunds", path: "/mediator-pending-payment", icon: "↩️" },
+                { title: "Return Refunds", path: "/mediator-pending-payment", icon: "💳" },
+                { title: "Balance Overview", path: "/mediator-balance", icon: "⚖️" },
                 { title: "Earnings", path: "/mediator-earnings", icon: "💰" },
-                { title: "Balance", path: "/mediator-balance", icon: "⚖️" },
-                { title: "Order Breakdown", path: "/mediator-detailed-orders", icon: "📋" },
             ],
         },
     ];
 
     const brandNavSections = [
         {
-            title: "Main",
+            title: "Brand Overview",
             items: [
-                { title: "Dashboard", path: "/dashboard-brand", icon: "📊" },
+                { title: "Master Orders", path: "/brand-dashboard", icon: "🏢" },
             ],
         },
     ];
 
-    const navSections = isExecutive
+    const navSections = isAdmin
+        ? adminNavSections
+        : isExecutive
         ? executiveNavSections
         : isBrand
         ? brandNavSections
         : mediatorNavSections;
 
-    let currentBreadcrumb = "Dashboard";
-    for (const sec of navSections) {
-        for (const item of sec.items) {
-            if (location.pathname === item.path) {
-                currentBreadcrumb = item.title;
-                break;
+    const findBreadcrumb = (path) => {
+        for (const sec of navSections) {
+            for (const item of sec.items) {
+                if (item.path === path) return item.title;
             }
         }
-    }
-    if (location.pathname.startsWith("/order/")) {
-        currentBreadcrumb = "Order Details";
-    }
+        return "Dashboard";
+    };
 
-    const initial = (user.name || user.brand || "U").charAt(0).toUpperCase();
+    const currentBreadcrumb = findBreadcrumb(location.pathname);
+
+    const initial = (user.name || user.brand || (isAdmin ? "Admin" : "U")).charAt(0).toUpperCase();
 
     return (
-        <div className="app-shell">
+        <div className="app-shell" style={{ paddingTop: adminBackup ? "44px" : "0" }}>
+            {/* TOP HEADING: RETURN TO SUPER ADMIN (STRICTLY DISPLAYED ONLY FOR SUPER ADMIN IMPERSONATION) */}
+            {adminBackup && (
+                <header
+                    id="super-admin-return-header"
+                    style={{
+                        position: "fixed",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: "44px",
+                        zIndex: 99999,
+                        background: "linear-gradient(90deg, #581c87 0%, #7e22ce 50%, #6b21a8 100%)",
+                        color: "#ffffff",
+                        padding: "0 24px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        boxShadow: "0 4px 14px rgba(0, 0, 0, 0.35)",
+                        boxSizing: "border-box"
+                    }}
+                >
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <span style={{ fontSize: "16px" }}>👑</span>
+                        <h2 style={{
+                            margin: 0,
+                            padding: 0,
+                            fontSize: "14px",
+                            fontWeight: "800",
+                            letterSpacing: "0.3px",
+                            color: "#ffffff"
+                        }}>
+                            Return to Super Admin
+                        </h2>
+                    </div>
+
+                    <button
+                        type="button"
+                        id="return-to-super-admin-btn"
+                        onClick={handleReturnToSuperAdmin}
+                        style={{
+                            background: "#ffffff",
+                            color: "#581c87",
+                            border: "none",
+                            borderRadius: "6px",
+                            padding: "6px 16px",
+                            fontWeight: "800",
+                            fontSize: "12.5px",
+                            cursor: "pointer",
+                            boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            whiteSpace: "nowrap",
+                            transition: "all 0.15s ease"
+                        }}
+                    >
+                        <span>↩</span>
+                        <span>Return to Super Admin</span>
+                    </button>
+                </header>
+            )}
+
             {sidebarOpen && (
                 <div
                     className="sidebar-overlay"
@@ -147,10 +296,10 @@ export default function AppLayout({ children }) {
             )}
 
             {/* SIDEBAR */}
-            <aside className={`app-sidebar ${sidebarOpen ? "open" : "collapsed"}`}>
+            <aside className={`app-sidebar ${sidebarOpen ? "open" : "collapsed"}`} style={{ top: adminBackup ? "44px" : "0", height: adminBackup ? "calc(100vh - 44px)" : "100vh" }}>
                 <div className="app-sidebar-header">
                     <Link
-                        to={isExecutive ? "/dashboard-executive" : isBrand ? "/dashboard-brand" : "/panel-mediator"}
+                        to={isAdmin ? "/admin/dashboard" : isExecutive ? "/dashboard-executive" : isBrand ? "/dashboard-brand" : "/panel-mediator"}
                         className="app-brand"
                     >
                         <div className="app-brand-icon">R</div>
@@ -199,7 +348,7 @@ export default function AppLayout({ children }) {
                     <div className="sidebar-user-info">
                         <div className="sidebar-avatar">{initial}</div>
                         <div className="sidebar-user-details">
-                            <div className="sidebar-user-name">{user.name || "User"}</div>
+                            <div className="sidebar-user-name">{user.name || (isAdmin ? "System Admin" : "User")}</div>
                             <div className="sidebar-user-meta">
                                 {user.teamCode ? `Team: ${user.teamCode}` : userRoleDisplay}
                             </div>
@@ -234,6 +383,13 @@ export default function AppLayout({ children }) {
                         </div>
 
                         <div className="app-topbar-right">
+                            {isAdmin && (
+                                <div className="app-meta-pill" style={{ background: "rgba(124, 58, 237, 0.08)", border: "1px solid rgba(124, 58, 237, 0.25)" }}>
+                                    <span style={{ color: "#7c3aed" }}>Console:</span>
+                                    <b style={{ color: "#7c3aed" }}>Root Admin</b>
+                                </div>
+                            )}
+
                             {user.teamCode && (
                                 <div className="app-meta-pill">
                                     <span>Team:</span>

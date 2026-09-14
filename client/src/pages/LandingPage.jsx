@@ -35,7 +35,7 @@ export default function LandingPage() {
                 <section className="landing-hero">
                     <div className="hero-pill-badge">
                         <span className="pulse-point"></span>
-                        <span>Interactive Demo Accounts Available • 3 Roles</span>
+                        <span>Interactive Operational Workspaces • 4 Roles</span>
                     </div>
 
                     <h1 className="hero-main-title">
@@ -44,7 +44,7 @@ export default function LandingPage() {
                     </h1>
 
                     <p className="hero-description">
-                        The unified operations network connecting Brand Partners, Operations Executives, 
+                        The unified operations network connecting System Administrators, Brand Partners, Operations Executives, 
                         and Fulfillment Mediators with automated screenshot verification, multi-unit pipeline 
                         tracking, and two-way financial reconciliation.
                     </p>
@@ -73,7 +73,7 @@ export default function LandingPage() {
                             <span className="hero-stat-label">Verified Proofs</span>
                         </div>
                         <div className="hero-stat-item">
-                            <span className="hero-stat-number">3 Roles</span>
+                            <span className="hero-stat-number">4 Roles</span>
                             <span className="hero-stat-label">Unified Workspaces</span>
                         </div>
                         <div className="hero-stat-item">
@@ -87,7 +87,7 @@ export default function LandingPage() {
                     </div>
                 </section>
 
-                {/* THE 3 WORKSPACES SECTION */}
+                {/* THE 4 WORKSPACES SECTION */}
                 <section id="workspaces" className="landing-section">
                     <div className="section-header-wrap">
                         <span className="section-tag-badge">Unified Architecture</span>
@@ -206,6 +206,42 @@ export default function LandingPage() {
                                 <span>→</span>
                             </button>
                         </div>
+
+                        {/* 4. SYSTEM ADMINISTRATION */}
+                        <div className="pillar-card pillar-admin">
+                            <div>
+                                <div className="pillar-icon-box">🛡️</div>
+                                <h3 className="pillar-title">System Administration</h3>
+                                <p className="pillar-description">
+                                    Executive team governance, global order analytics, cross-organization audits, and fulfillment performance tracking.
+                                </p>
+                                <ul className="pillar-checklist">
+                                    <li>
+                                        <span className="check-symbol">✓</span>
+                                        <span>Executive team allocation & governance</span>
+                                    </li>
+                                    <li>
+                                        <span className="check-symbol">✓</span>
+                                        <span>Cross-organization volume & order auditing</span>
+                                    </li>
+                                    <li>
+                                        <span className="check-symbol">✓</span>
+                                        <span>Client brand operations oversight</span>
+                                    </li>
+                                    <li>
+                                        <span className="check-symbol">✓</span>
+                                        <span>Master fulfillment Excel reports</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            <button
+                                onClick={() => navigate("/admin/login")}
+                                className="pillar-action-btn"
+                            >
+                                <span>Access Admin Portal</span>
+                                <span>→</span>
+                            </button>
+                        </div>
                     </div>
                 </section>
 
@@ -321,6 +357,7 @@ export default function LandingPage() {
                         <Link to="/login-executive" className="footer-link">Executive Login</Link>
                         <Link to="/login-mediator" className="footer-link">Mediator Login</Link>
                         <Link to="/login-brand" className="footer-link">Brand Login</Link>
+                        <Link to="/admin/login" className="footer-link">Admin Login</Link>
                     </div>
                 </footer>
             </div>
