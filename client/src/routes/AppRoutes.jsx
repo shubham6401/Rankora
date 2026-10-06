@@ -127,6 +127,7 @@ export default function AppRoutes() {
 
             {/* Brand Protected Routes */}
             <Route path="/dashboard-brand" element={<ProtectedLayout><BrandDashboard /></ProtectedLayout>} />
+            <Route path="/brand-dashboard" element={<ProtectedLayout><BrandDashboard /></ProtectedLayout>} />
         </Routes>
     );
 }

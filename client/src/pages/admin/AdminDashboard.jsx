@@ -743,28 +743,56 @@ export default function AdminDashboard() {
                                                 </span>
                                             </td>
                                             <td style={{ padding: "12px", textAlign: "center" }}>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleDeleteBrand(b)}
-                                                    className="saas-btn"
-                                                    style={{
-                                                        background: "#fef2f2",
-                                                        color: "#dc2626",
-                                                        border: "1px solid #fecaca",
-                                                        padding: "5px 12px",
-                                                        fontSize: "12px",
-                                                        borderRadius: "6px",
-                                                        cursor: "pointer",
-                                                        fontWeight: "600",
-                                                        display: "inline-flex",
-                                                        alignItems: "center",
-                                                        gap: "4px"
-                                                    }}
-                                                    title={`Delete Brand "${b.brandName}" and all related orders completely`}
-                                                >
-                                                    <span>🗑️</span>
-                                                    <span>Delete</span>
-                                                </button>
+                                                <div style={{ display: "inline-flex", gap: "6px", alignItems: "center", justifyContent: "center", flexWrap: "wrap" }}>
+                                                    {isSuperAdmin && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleImpersonateUser(b.id || b.brandUserId || b.brandName, b.brandName, "brand")}
+                                                            disabled={impersonatingId === (b.id || b.brandUserId || b.brandName)}
+                                                            className="saas-btn"
+                                                            style={{
+                                                                background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                                                                color: "#ffffff",
+                                                                padding: "5px 10px",
+                                                                fontSize: "12px",
+                                                                borderRadius: "6px",
+                                                                cursor: "pointer",
+                                                                fontWeight: "700",
+                                                                display: "inline-flex",
+                                                                alignItems: "center",
+                                                                gap: "4px",
+                                                                border: "none",
+                                                                boxShadow: "0 1px 3px rgba(217, 119, 6, 0.3)"
+                                                            }}
+                                                            title={`Directly login as brand "${b.brandName}" (Secret Super Admin only)`}
+                                                        >
+                                                            <span>⚡</span>
+                                                            <span>{impersonatingId === (b.id || b.brandUserId || b.brandName) ? "Connecting..." : "Login as Brand"}</span>
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleDeleteBrand(b)}
+                                                        className="saas-btn"
+                                                        style={{
+                                                            background: "#fef2f2",
+                                                            color: "#dc2626",
+                                                            border: "1px solid #fecaca",
+                                                            padding: "5px 12px",
+                                                            fontSize: "12px",
+                                                            borderRadius: "6px",
+                                                            cursor: "pointer",
+                                                            fontWeight: "600",
+                                                            display: "inline-flex",
+                                                            alignItems: "center",
+                                                            gap: "4px"
+                                                        }}
+                                                        title={`Delete Brand "${b.brandName}" and all related orders completely`}
+                                                    >
+                                                        <span>🗑️</span>
+                                                        <span>Delete</span>
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}

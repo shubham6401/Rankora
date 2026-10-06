@@ -170,9 +170,11 @@ const getAdminOverview = async (req, res, next) => {
         brands.forEach((brandUser) => {
             const bName = brandUser.brand || brandUser.name;
             brandMap[bName] = {
-                id: brandUser._id,
+                id: brandUser._id ? brandUser._id.toString() : bName,
+                brandUserId: brandUser._id ? brandUser._id.toString() : null,
                 brandName: bName,
                 userName: brandUser.name,
+                email: brandUser.email,
                 totalOrders: 0,
                 totalUnits: 0,
                 completedUnits: 0,
@@ -188,8 +190,10 @@ const getAdminOverview = async (req, res, next) => {
         orders.forEach((ord) => {
             const bName = ord.brand || "Unspecified";
             if (!brandMap[bName]) {
+                const bId = ord.brandUserId ? ord.brandUserId.toString() : bName;
                 brandMap[bName] = {
-                    id: ord.brandUserId ? ord.brandUserId.toString() : bName,
+                    id: bId,
+                    brandUserId: ord.brandUserId ? ord.brandUserId.toString() : null,
                     brandName: bName,
                     userName: "—",
                     totalOrders: 0,
@@ -201,6 +205,9 @@ const getAdminOverview = async (req, res, next) => {
                     unassignedUnits: 0,
                     totalValue: 0,
                 };
+            } else if (!brandMap[bName].brandUserId && ord.brandUserId) {
+                brandMap[bName].brandUserId = ord.brandUserId.toString();
+                brandMap[bName].id = ord.brandUserId.toString();
             }
 
             brandMap[bName].totalOrders++;
@@ -432,11 +439,48 @@ const impersonateUser = async (req, res, next) => {
         }
 
         const { userId } = req.params;
-        const targetUser = await User.findById(userId);
+        let targetUser = null;
+
+        // 1. Try finding by ObjectId
+        if (mongoose.Types.ObjectId.isValid(userId)) {
+            targetUser = await User.findById(userId);
+        }
+
+        // 2. If not found by ID, look up brand account by brand name, user name, or email
+        if (!targetUser) {
+            targetUser = await User.findOne({
+                role: "brand",
+                $or: [{ brand: userId }, { name: userId }, { email: userId }],
+            });
+        }
+
+        // 3. If not registered yet, check if there are orders for this brand and auto-provision brand account
+        if (!targetUser) {
+            const orderWithBrand = await Order.findOne({ brand: userId });
+            if (orderWithBrand) {
+                if (orderWithBrand.brandUserId) {
+                    targetUser = await User.findById(orderWithBrand.brandUserId);
+                }
+                if (!targetUser) {
+                    const salt = await bcrypt.genSalt(10);
+                    const hashedPassword = await bcrypt.hash("BrandPass@123", salt);
+                    const cleanSlug = userId.toLowerCase().replace(/[^a-z0-9]/g, "");
+                    targetUser = new User({
+                        name: userId,
+                        brand: userId,
+                        email: `${cleanSlug || "brand"}_${Date.now()}@rankora.local`,
+                        password: hashedPassword,
+                        role: "brand",
+                    });
+                    await targetUser.save();
+                }
+            }
+        }
+
         if (!targetUser) {
             return res.status(404).json({
                 success: false,
-                message: "Target user not found",
+                message: "Target user or brand not found",
             });
         }
 
