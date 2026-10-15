@@ -222,6 +222,14 @@ export default function ExecutiveInspectOrder() {
                             <span>Unit Price: <b style={{ color: "#16a34a" }}>₹{order.price}</b></span>
                             <span>Master ID: <code style={{ fontSize: "11.5px", background: "#f1f5f9", padding: "2px 6px", borderRadius: "4px" }}>{order._id}</code></span>
                         </div>
+                        <div className="unit-spec-summary-bar" style={{ marginTop: "8px" }}>
+                            <span style={{ fontWeight: 700, color: "var(--slate-700)" }}>Specifications:</span>
+                            <span className="unit-spec-chip warehouse">🏢 {allUnits.filter((u) => u.unitType === "warehouse").length} Warehouse</span>
+                            <span className="unit-spec-chip empty">📦 {allUnits.filter((u) => u.unitType === "empty").length} Empty</span>
+                            {allUnits.filter((u) => !u.unitType).length > 0 && (
+                                <span className="unit-spec-chip unclassified">⚪ {allUnits.filter((u) => !u.unitType).length} Unclassified</span>
+                            )}
+                        </div>
                     </div>
 
                     <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
@@ -326,6 +334,9 @@ export default function ExecutiveInspectOrder() {
                                                 <span className="unit-item-id">ID: {unit._id}</span>
                                             </div>
                                             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                                <span className={`unit-spec-chip ${unit.unitType || "unclassified"}`}>
+                                                    {unit.unitType === "warehouse" ? "🏢 Warehouse" : unit.unitType === "empty" ? "📦 Empty" : "⚪ Unclassified"}
+                                                </span>
                                                 <span className="status-badge status-badge-pending_verification">
                                                     ● Awaiting Verification
                                                 </span>
@@ -360,6 +371,18 @@ export default function ExecutiveInspectOrder() {
 
                                         {/* Required Order Placement Specs */}
                                         <div className="unit-details-grid" style={{ marginBottom: "14px" }}>
+                                            <div>
+                                                <span className="unit-detail-label">Specification:</span>
+                                                <div className="unit-detail-val" style={{ fontWeight: 700 }}>
+                                                    {unit.unitType === "warehouse" ? (
+                                                        <span style={{ color: "#4338ca" }}>🏢 Warehouse Order</span>
+                                                    ) : unit.unitType === "empty" ? (
+                                                        <span style={{ color: "#c2410c" }}>📦 Empty Box Order</span>
+                                                    ) : (
+                                                        <span style={{ color: "#64748b", fontStyle: "italic" }}>⚪ Unclassified</span>
+                                                    )}
+                                                </div>
+                                            </div>
                                             <div>
                                                 <span className="unit-detail-label">Amazon/Platform Order ID:</span>
                                                 <div className="unit-detail-val" style={{ fontWeight: 700, color: "var(--primary-600)" }}>

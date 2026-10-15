@@ -29,6 +29,15 @@ const orderUnitSchema = new mongoose.Schema({
         type: String,
         default: null,
     },
+    orderedAt: {
+        type: Date,
+        default: null,
+    },
+    unitType: {
+        type: String,
+        enum: ["warehouse", "empty", null],
+        default: null,
+    },
     orderedScreenshot: {
         type: String,
         default: null,
@@ -157,6 +166,14 @@ const orderUnitSchema = new mongoose.Schema({
     postDeliveryDetails: {
         type: postDeliveryDetailsSchema,
         default: () => ({}),
+    },
+    brandIssue: {
+        isReported: { type: Boolean, default: false },
+        reason: { type: String, default: null },
+        details: { type: String, default: null },
+        reportedAt: { type: Date, default: null },
+        resolved: { type: Boolean, default: false },
+        resolvedAt: { type: Date, default: null },
     }
 }, { timestamps: true });
 
@@ -252,6 +269,10 @@ const orderSchema = new mongoose.Schema({
         default: () => ({}),
     },
     orderUnits: [orderUnitSchema],
+    isMovedToAllCampaigns: {
+        type: Boolean,
+        default: false,
+    },
 }, {
     timestamps: true,
 });

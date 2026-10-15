@@ -7,17 +7,12 @@ export default function AppLayout({ children }) {
     const location = useLocation();
     const navigate = useNavigate();
 
-    const [sidebarOpen, setSidebarOpen] = useState(() => {
-        if (typeof window !== "undefined") {
-            return window.innerWidth > 1024;
-        }
-        return true;
-    });
+    // Auto-close sidebar by default to provide full-width dashboard workspace
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
+    // Auto-close sidebar whenever route or page changes
     useEffect(() => {
-        if (typeof window !== "undefined" && window.innerWidth <= 1024) {
-            setSidebarOpen(false);
-        }
+        setSidebarOpen(false);
     }, [location.pathname]);
 
     // Track super admin backup session (strictly active when Super Admin impersonates an executive or mediator)
@@ -331,7 +326,7 @@ export default function AppLayout({ children }) {
                                         key={item.path}
                                         to={item.path}
                                         onClick={() => {
-                                            if (window.innerWidth <= 1024) setSidebarOpen(false);
+                                            setSidebarOpen(false);
                                         }}
                                         className={`nav-item ${isActive ? "active" : ""}`}
                                     >

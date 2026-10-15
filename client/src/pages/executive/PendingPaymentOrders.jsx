@@ -292,10 +292,24 @@ export default function PendingPaymentOrders() {
                                                     const unitCount = ord.units.length;
                                                     const subtotal = ord.price * unitCount;
                                                     const isReverting = revertingKey === `${ord.orderId}-${med._id}`;
+                                                    const whUnits = ord.units.filter((u) => u.unitType === "warehouse").length;
+                                                    const emUnits = ord.units.filter((u) => u.unitType === "empty").length;
 
                                                     return (
                                                         <tr key={ord.orderId}>
-                                                            <td className="product-name-cell">{ord.productName}</td>
+                                                            <td className="product-name-cell">
+                                                                <div>{ord.productName}</div>
+                                                                {(whUnits > 0 || emUnits > 0) && (
+                                                                    <div className="unit-spec-group" style={{ marginTop: "4px" }}>
+                                                                        {whUnits > 0 && (
+                                                                            <span className="unit-spec-chip warehouse">🏢 {whUnits} WH</span>
+                                                                        )}
+                                                                        {emUnits > 0 && (
+                                                                            <span className="unit-spec-chip empty">📦 {emUnits} Empty</span>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                            </td>
                                                             <td>{ord.brand}</td>
                                                             <td>{ord.orderPlatform}</td>
                                                             <td className="price-pill">₹{ord.price}</td>

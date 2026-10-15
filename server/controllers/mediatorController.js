@@ -1,6 +1,29 @@
 const Order = require("../models/order");
 
 // ==========================================
+// HELPER: SANITIZE / REDACT UNIT SPECIFICATIONS FOR MEDIATORS
+// (Warehouse / Empty specifications are strictly executive/brand internal)
+// ==========================================
+const sanitizeForMediator = (data) => {
+    if (!data) return data;
+    if (Array.isArray(data)) {
+        return data.map((item) => sanitizeForMediator(item));
+    }
+    const obj = typeof data.toObject === "function" ? data.toObject() : { ...data };
+    if (obj.unitType !== undefined) {
+        delete obj.unitType;
+    }
+    if (Array.isArray(obj.orderUnits)) {
+        obj.orderUnits = obj.orderUnits.map((u) => {
+            const unitObj = typeof u.toObject === "function" ? u.toObject() : { ...u };
+            delete unitObj.unitType;
+            return unitObj;
+        });
+    }
+    return obj;
+};
+
+// ==========================================
 // GET NEW ASSIGNED ORDERS FOR MEDIATOR
 // ==========================================
 const getNewOrders = async (req, res, next) => {
@@ -33,7 +56,7 @@ const getNewOrders = async (req, res, next) => {
         return res.status(200).json({
             success: true,
             message: "Orders fetched successfully",
-            orders: mediatorOrders,
+            orders: sanitizeForMediator(mediatorOrders),
         });
     } catch (err) {
         next(err);
@@ -90,7 +113,7 @@ const acceptOrder = async (req, res, next) => {
         return res.status(200).json({
             success: true,
             message: "Order Accepted succeffully",
-            order: populatedOrder,
+            order: sanitizeForMediator(populatedOrder),
         });
     } catch (err) {
         next(err);
@@ -133,7 +156,7 @@ const getPendingOrders = async (req, res, next) => {
         return res.status(200).json({
             success: true,
             message: "Pending Orders fetched succeffully",
-            orders: mappedOrders,
+            orders: sanitizeForMediator(mappedOrders),
         });
     } catch (err) {
         next(err);
@@ -188,6 +211,9 @@ const submitOrderDetails = async (req, res, next) => {
         if (req.body.addressType) unit.addressType = req.body.addressType;
         if (req.body.reviewerName) unit.reviewerName = req.body.reviewerName;
 
+        // Record the exact time and date when mediator entered the order details
+        unit.orderedAt = req.body.orderedAt ? new Date(req.body.orderedAt) : new Date();
+
         // Default orderReceivedOn to order createdAt date (format YYYY-MM-DD)
         const orderCreatedDateStr = order.createdAt ? new Date(order.createdAt).toISOString().split("T")[0] : new Date().toISOString().split("T")[0];
         unit.orderReceivedOn = req.body.orderReceivedOn || orderCreatedDateStr;
@@ -214,7 +240,7 @@ const submitOrderDetails = async (req, res, next) => {
         return res.status(200).json({
             success: true,
             message: "Order added successfully",
-            order,
+            order: sanitizeForMediator(order),
         });
     } catch (err) {
         next(err);
@@ -256,7 +282,7 @@ const getRefundPendingOrders = async (req, res, next) => {
         return res.status(200).json({
             success: true,
             message: " Orders with refund Pending are fetched succeffully",
-            orders: mappedOrders,
+            orders: sanitizeForMediator(mappedOrders),
         });
     } catch (err) {
         next(err);
@@ -331,7 +357,7 @@ const submitRefundDetails = async (req, res, next) => {
         return res.status(200).json({
             success: true,
             message: "Successfully submitted refund proofs for verification",
-            order,
+            order: sanitizeForMediator(order),
         });
     } catch (err) {
         next(err);
@@ -373,7 +399,7 @@ const getPendingVerificationOrders = async (req, res, next) => {
         return res.status(200).json({
             success: true,
             message: "Fetched pending verification orders successfully",
-            orders: formattedOrders,
+            orders: sanitizeForMediator(formattedOrders),
         });
     } catch (err) {
         next(err);
@@ -415,7 +441,7 @@ const getCompletedOrders = async (req, res, next) => {
         return res.status(200).json({
             success: true,
             message: "Completed Orders fetched succeffully",
-            orders: mappedOrders,
+            orders: sanitizeForMediator(mappedOrders),
         });
     } catch (err) {
         next(err);
@@ -490,7 +516,7 @@ const rejectOrder = async (req, res, next) => {
             success: true,
             message,
             refundRequired,
-            order: populatedOrder,
+            order: sanitizeForMediator(populatedOrder),
         });
     } catch (err) {
         next(err);
@@ -564,8 +590,8 @@ const getPendingPaymentOrders = async (req, res, next) => {
         return res.status(200).json({
             success: true,
             message: "Pending payment orders fetched successfully",
-            orders: mappedOrders,
-            verifiedOrders: mappedVerified,
+            orders: sanitizeForMediator(mappedOrders),
+            verifiedOrders: sanitizeForMediator(mappedVerified),
         });
     } catch (err) {
         next(err);
@@ -938,8 +964,8 @@ const returnOrderUnit = async (req, res, next) => {
             success: true,
             message: `${unitsToReturn.length} unit(s) marked for return. Please upload refund proof to executive.`,
             count: unitsToReturn.length,
-            order,
-            unit,
+            order: sanitizeForMediator(order),
+            unit: sanitizeForMediator(unit),
         });
     } catch (err) {
         next(err);

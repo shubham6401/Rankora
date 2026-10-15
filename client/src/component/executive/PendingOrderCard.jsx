@@ -8,11 +8,26 @@ export default function PendingOrderCard({ order, mediators, status, onOrderUpda
     const [modalOpen, setModalOpen] = useState(false);
 
     const unassignedUnits = order.summary?.unassigned || 0;
+    const unassignedList = (order.orderUnits || []).filter((u) => u.status === "unassigned");
+    const whCount = unassignedList.filter((u) => u.unitType === "warehouse").length;
+    const emCount = unassignedList.filter((u) => u.unitType === "empty").length;
 
     return (
         <>
             <tr>
-                <td className="product-name-cell">{order.productName}</td>
+                <td className="product-name-cell">
+                    <div>{order.productName}</div>
+                    {(whCount > 0 || emCount > 0) && (
+                        <div className="unit-spec-group" style={{ marginTop: "4px" }}>
+                            {whCount > 0 && (
+                                <span className="unit-spec-chip warehouse">🏢 {whCount} WH</span>
+                            )}
+                            {emCount > 0 && (
+                                <span className="unit-spec-chip empty">📦 {emCount} Empty</span>
+                            )}
+                        </div>
+                    )}
+                </td>
                 <td>{order.brand}</td>
                 <td>{order.orderPlatform}</td>
                 <td className="price-pill">₹{order.price}</td>

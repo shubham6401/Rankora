@@ -40,6 +40,8 @@ export default function ExecutiveBrandDetails() {
     const totalCompleted = orders.reduce((acc, o) => acc + (o.summary?.completed || 0), 0);
     const totalInProgress = orders.reduce((acc, o) => acc + (o.summary?.inProgress || 0), 0);
     const totalPendingRefund = orders.reduce((acc, o) => acc + (o.summary?.pendingRefund || 0), 0);
+    const totalWarehouse = orders.reduce((acc, o) => acc + (o.orderUnits || []).filter((u) => u.unitType === "warehouse").length, 0);
+    const totalEmpty = orders.reduce((acc, o) => acc + (o.orderUnits || []).filter((u) => u.unitType === "empty").length, 0);
     const completionRate = totalUnits > 0 ? Math.round((totalCompleted / totalUnits) * 100) : 0;
 
     // Filtered orders
@@ -174,6 +176,18 @@ export default function ExecutiveBrandDetails() {
                         <span className="metric-sub">{completionRate}% total completion</span>
                     </div>
                 </div>
+
+                <div className="metric-card" style={{ background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+                    <div className="metric-icon">⚙️</div>
+                    <div className="metric-info">
+                        <span className="metric-label">Specifications</span>
+                        <div style={{ display: "flex", gap: "6px", marginTop: "4px", flexWrap: "wrap" }}>
+                            <span className="unit-spec-chip warehouse">🏢 {totalWarehouse} WH</span>
+                            <span className="unit-spec-chip empty">📦 {totalEmpty} Empty</span>
+                        </div>
+                        <span className="metric-sub">Classified by brand</span>
+                    </div>
+                </div>
             </div>
 
             {/* Filters Bar */}
@@ -247,6 +261,20 @@ export default function ExecutiveBrandDetails() {
                                         <td>
                                             <div className="product-cell">
                                                 <span className="product-name">{order.productName}</span>
+                                                {((order.orderUnits || []).some((u) => u.unitType)) && (
+                                                    <div className="unit-spec-group" style={{ marginTop: "4px" }}>
+                                                        {(order.orderUnits || []).filter((u) => u.unitType === "warehouse").length > 0 && (
+                                                            <span className="unit-spec-chip warehouse">
+                                                                🏢 {(order.orderUnits || []).filter((u) => u.unitType === "warehouse").length} WH
+                                                            </span>
+                                                        )}
+                                                        {(order.orderUnits || []).filter((u) => u.unitType === "empty").length > 0 && (
+                                                            <span className="unit-spec-chip empty">
+                                                                📦 {(order.orderUnits || []).filter((u) => u.unitType === "empty").length} Empty
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )}
                                                 {order.productLink && (
                                                     <a
                                                         href={order.productLink}

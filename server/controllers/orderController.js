@@ -47,6 +47,17 @@ const getOrderById = async (req, res, next) => {
         orderObj.assignedTo = primaryUnit.mediatorId || null;
         orderObj.postDeliveryDetails = primaryUnit.postDeliveryDetails || { success: false };
 
+        // Redact internal unitType specifications (warehouse/empty) for mediator users
+        if (req.user?.role === "mediator") {
+            delete orderObj.unitType;
+            if (Array.isArray(orderObj.orderUnits)) {
+                orderObj.orderUnits = orderObj.orderUnits.map((u) => {
+                    delete u.unitType;
+                    return u;
+                });
+            }
+        }
+
         return res.status(200).json({
             success: true,
             message: "Order fetched successfully",
@@ -86,10 +97,26 @@ const getOrderHistory = async (req, res, next) => {
             .populate("orderUnits.mediatorId", "name mediatorCode teamCode")
             .sort({ createdAt: -1 });
 
+        // Redact internal unitType specifications (warehouse/empty) for mediator users
+        let sanitizedOrders = orders;
+        if (user.role === "mediator") {
+            sanitizedOrders = orders.map((o) => {
+                const obj = o.toObject();
+                delete obj.unitType;
+                if (Array.isArray(obj.orderUnits)) {
+                    obj.orderUnits = obj.orderUnits.map((u) => {
+                        delete u.unitType;
+                        return u;
+                    });
+                }
+                return obj;
+            });
+        }
+
         return res.status(200).json({
             success: true,
             message: "Order fetched successfully",
-            orders,
+            orders: sanitizedOrders,
         });
     } catch (err) {
         next(err);

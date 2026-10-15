@@ -11,6 +11,7 @@ export default function ExecutiveVerifyOrders() {
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedMediator, setSelectedMediator] = useState("all");
     const [selectedBrand, setSelectedBrand] = useState("all");
+    const [selectedSpec, setSelectedSpec] = useState("all");
 
     useEffect(() => {
         loadVerificationOrders();
@@ -74,6 +75,19 @@ export default function ExecutiveVerifyOrders() {
             }
         }
 
+        // Specification filter
+        if (selectedSpec !== "all") {
+            if (selectedSpec === "warehouse" && !pendingUnits.some((u) => u.unitType === "warehouse")) {
+                return false;
+            }
+            if (selectedSpec === "empty" && !pendingUnits.some((u) => u.unitType === "empty")) {
+                return false;
+            }
+            if (selectedSpec === "unclassified" && !pendingUnits.some((u) => !u.unitType)) {
+                return false;
+            }
+        }
+
         // Search query filter
         if (searchQuery.trim()) {
             const q = searchQuery.toLowerCase().trim();
@@ -103,7 +117,7 @@ export default function ExecutiveVerifyOrders() {
         return sum + (parseFloat(order.price) || 0) * count;
     }, 0);
 
-    const isFiltered = searchQuery.trim() !== "" || selectedMediator !== "all" || selectedBrand !== "all";
+    const isFiltered = searchQuery.trim() !== "" || selectedMediator !== "all" || selectedBrand !== "all" || selectedSpec !== "all";
 
     if (loading) {
         return (
@@ -217,6 +231,18 @@ export default function ExecutiveVerifyOrders() {
                     ))}
                 </select>
 
+                <select
+                    value={selectedSpec}
+                    onChange={(e) => setSelectedSpec(e.target.value)}
+                    className="filter-input-text"
+                    style={{ flex: "1 1 150px" }}
+                >
+                    <option value="all">⚙️ All Specifications</option>
+                    <option value="warehouse">🏢 Warehouse Only</option>
+                    <option value="empty">📦 Empty Box Only</option>
+                    <option value="unclassified">⚪ Unclassified</option>
+                </select>
+
                 {isFiltered && (
                     <button
                         type="button"
@@ -224,6 +250,7 @@ export default function ExecutiveVerifyOrders() {
                             setSearchQuery("");
                             setSelectedMediator("all");
                             setSelectedBrand("all");
+                            setSelectedSpec("all");
                         }}
                         className="filter-btn-clear"
                     >
@@ -295,11 +322,22 @@ export default function ExecutiveVerifyOrders() {
                                     const revisionUnit = pendingUnits.find((u) => !!u.verificationRejectionReason);
                                     const submittedDate = primaryUnit.submittedForVerificationAt || order.updatedAt || order.createdAt;
 
+                                    const whUnits = pendingUnits.filter((u) => u.unitType === "warehouse").length;
+                                    const emUnits = pendingUnits.filter((u) => u.unitType === "empty").length;
+
                                     return (
                                         <tr key={order._id} className={hasRevision ? "row-revision-alert" : ""}>
                                             <td className="product-name-cell">
                                                 <div style={{ fontWeight: 700, color: "var(--slate-900)" }}>
                                                     {order.productName}
+                                                </div>
+                                                <div className="unit-spec-group" style={{ marginTop: "4px" }}>
+                                                    {whUnits > 0 && (
+                                                        <span className="unit-spec-chip warehouse">🏢 {whUnits} WH</span>
+                                                    )}
+                                                    {emUnits > 0 && (
+                                                        <span className="unit-spec-chip empty">📦 {emUnits} Empty</span>
+                                                    )}
                                                 </div>
                                                 {hasRevision && revisionUnit && (
                                                     <div className="revision-feedback-callout" style={{ marginTop: "4px", maxWidth: "280px" }}>

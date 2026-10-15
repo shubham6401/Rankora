@@ -29,6 +29,9 @@ export default function OrderCard({ order, status }) {
     });
     const assignedMediatorsList = Object.values(assignedMediatorsMap);
 
+    const whCount = matchingUnits.filter((u) => u.unitType === "warehouse").length;
+    const emCount = matchingUnits.filter((u) => u.unitType === "empty").length;
+
     const getBadgeClass = (s) => {
         const lower = (s || "").toLowerCase();
         if (lower.includes("progress")) return "status-badge status-badge-in_progress";
@@ -39,7 +42,19 @@ export default function OrderCard({ order, status }) {
 
     return (
         <tr>
-            <td className="product-name-cell">{order.productName}</td>
+            <td className="product-name-cell">
+                <div>{order.productName}</div>
+                {(whCount > 0 || emCount > 0) && (
+                    <div className="unit-spec-group" style={{ marginTop: "4px" }}>
+                        {whCount > 0 && (
+                            <span className="unit-spec-chip warehouse">🏢 {whCount} WH</span>
+                        )}
+                        {emCount > 0 && (
+                            <span className="unit-spec-chip empty">📦 {emCount} Empty</span>
+                        )}
+                    </div>
+                )}
+            </td>
             <td>{order.brand}</td>
             <td>{order.orderPlatform}</td>
             <td className="price-pill">₹{order.price}</td>

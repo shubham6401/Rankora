@@ -40,6 +40,8 @@ export default function CompletedOrders() {
     const mediatorBreakdownMap = {};
     let totalCompletedUnits = 0;
     let totalCompletedValue = 0;
+    let totalWarehouseCompleted = 0;
+    let totalEmptyCompleted = 0;
 
     orders.forEach((order) => {
         const price = parseFloat(order.price) || 0;
@@ -47,6 +49,8 @@ export default function CompletedOrders() {
             if (unit.status === "completed") {
                 totalCompletedUnits++;
                 totalCompletedValue += price;
+                if (unit.unitType === "warehouse") totalWarehouseCompleted++;
+                if (unit.unitType === "empty") totalEmptyCompleted++;
 
                 const mId = unit.mediatorId?._id?.toString() || unit.mediatorId?.toString();
                 if (mId) {
@@ -159,6 +163,13 @@ export default function CompletedOrders() {
                     <span className="metric-value" style={{ color: "#15803d" }}>
                         {totalCompletedUnits} Units
                     </span>
+                </div>
+                <div className="metric-card">
+                    <span className="metric-label">Specifications</span>
+                    <div style={{ display: "flex", gap: "6px", marginTop: "4px", flexWrap: "wrap" }}>
+                        <span className="unit-spec-chip warehouse">🏢 {totalWarehouseCompleted} WH</span>
+                        <span className="unit-spec-chip empty">📦 {totalEmptyCompleted} Empty</span>
+                    </div>
                 </div>
                 <div className="metric-card">
                     <span className="metric-label">Completed Value</span>

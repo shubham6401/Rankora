@@ -153,6 +153,24 @@ export default function AssignMediatorModal({
                             <span style={{ color: "#64748b", fontSize: "11px", textTransform: "uppercase", fontWeight: "700" }}>Available to Assign</span>
                             <div style={{ fontWeight: "700", color: "#d97706" }}>{unassignedUnits} Units</div>
                         </div>
+                        <div>
+                            <span style={{ color: "#64748b", fontSize: "11px", textTransform: "uppercase", fontWeight: "700" }}>Specifications</span>
+                            <div style={{ display: "flex", gap: "4px", marginTop: "3px", flexWrap: "wrap" }}>
+                                {((order.orderUnits || []).filter((u) => u.status === "unassigned" && u.unitType === "warehouse").length > 0) && (
+                                    <span className="unit-spec-chip warehouse" style={{ fontSize: "11px", padding: "2px 6px" }}>
+                                        🏢 {(order.orderUnits || []).filter((u) => u.status === "unassigned" && u.unitType === "warehouse").length} WH
+                                    </span>
+                                )}
+                                {((order.orderUnits || []).filter((u) => u.status === "unassigned" && u.unitType === "empty").length > 0) && (
+                                    <span className="unit-spec-chip empty" style={{ fontSize: "11px", padding: "2px 6px" }}>
+                                        📦 {(order.orderUnits || []).filter((u) => u.status === "unassigned" && u.unitType === "empty").length} Empty
+                                    </span>
+                                )}
+                                {!((order.orderUnits || []).some((u) => u.status === "unassigned" && u.unitType)) && (
+                                    <span style={{ color: "#64748b", fontSize: "12px" }}>Unclassified</span>
+                                )}
+                            </div>
+                        </div>
                     </div>
 
                     {/* Choose Mediator */}

@@ -199,6 +199,8 @@ export default function MediatorSentOrders() {
                                 {group.orders.map((ord) => {
                                     const unitCount = ord.units.length;
                                     const subtotal = ord.price * unitCount;
+                                    const whUnits = ord.units.filter((u) => u.unitType === "warehouse").length;
+                                    const emUnits = ord.units.filter((u) => u.unitType === "empty").length;
                                     const firstUnitWithProof = ord.units.find((u) => u.mediatorPaymentScreenshot) || ord.units[0];
                                     const refundProofUrl = firstUnitWithProof?.mediatorPaymentScreenshot;
                                     const mediatorMsg = firstUnitWithProof?.mediatorMessage;
@@ -225,6 +227,16 @@ export default function MediatorSentOrders() {
                                                     <div style={{ fontSize: "13px", color: "var(--slate-500)" }}>
                                                         Brand: <b>{ord.brand}</b> | Platform: <b>{ord.orderPlatform}</b> | Price: <b>₹{ord.price}</b>
                                                     </div>
+                                                    {(whUnits > 0 || emUnits > 0) && (
+                                                        <div className="unit-spec-group" style={{ marginTop: "6px" }}>
+                                                             {whUnits > 0 && (
+                                                                 <span className="unit-spec-chip warehouse">🏢 {whUnits} WH</span>
+                                                             )}
+                                                             {emUnits > 0 && (
+                                                                 <span className="unit-spec-chip empty">📦 {emUnits} Empty</span>
+                                                             )}
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
                                                     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>

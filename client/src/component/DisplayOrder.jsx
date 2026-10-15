@@ -14,6 +14,7 @@ export default function DisplayOrder({ order }) {
     const isExecutive = currentUser.role === "executive" || currentUser.role === "admin";
 
     const [statusFilter, setStatusFilter] = useState("all");
+    const [specFilter, setSpecFilter] = useState("all");
     const [selectedMediatorFilter, setSelectedMediatorFilter] = useState("all");
     const [searchOrderId, setSearchOrderId] = useState("");
     const [searchReviewer, setSearchReviewer] = useState("");
@@ -57,6 +58,12 @@ export default function DisplayOrder({ order }) {
         pendingRefund: units.filter((u) => u.status === "pending_refund").length,
         pendingVerification: units.filter((u) => u.status === "pending_verification").length,
         completed: units.filter((u) => u.status === "completed").length,
+    };
+
+    const specStats = {
+        warehouse: units.filter((u) => u.unitType === "warehouse").length,
+        empty: units.filter((u) => u.unitType === "empty").length,
+        unclassified: units.filter((u) => !u.unitType).length,
     };
 
     const handleVerifyUnit = async (unitId) => {
@@ -213,6 +220,12 @@ export default function DisplayOrder({ order }) {
             return false;
         }
 
+        if (isExecutive && specFilter !== "all") {
+            if (specFilter === "warehouse" && unit.unitType !== "warehouse") return false;
+            if (specFilter === "empty" && unit.unitType !== "empty") return false;
+            if (specFilter === "unclassified" && (unit.unitType === "warehouse" || unit.unitType === "empty")) return false;
+        }
+
         if (selectedMediatorFilter !== "all") {
             if (selectedMediatorFilter === "unassigned") {
                 if (unit.mediatorId) return false;
@@ -245,6 +258,7 @@ export default function DisplayOrder({ order }) {
 
     const resetFilters = () => {
         setStatusFilter("all");
+        setSpecFilter("all");
         setSelectedMediatorFilter("all");
         setSearchOrderId("");
         setSearchReviewer("");
@@ -306,6 +320,16 @@ export default function DisplayOrder({ order }) {
                             <span>•</span>
                             <span>Price: <b style={{ color: "var(--primary-600)" }}>₹{order.price}</b></span>
                         </div>
+                        {isExecutive && (
+                            <div className="unit-spec-summary-bar" style={{ marginTop: "10px" }}>
+                                <span style={{ fontWeight: 700, color: "var(--slate-700)" }}>Specification:</span>
+                                <span className="unit-spec-chip warehouse">🏢 {specStats.warehouse} Warehouse</span>
+                                <span className="unit-spec-chip empty">📦 {specStats.empty} Empty</span>
+                                {specStats.unclassified > 0 && (
+                                    <span className="unit-spec-chip unclassified">⚪ {specStats.unclassified} Unclassified</span>
+                                )}
+                            </div>
+                        )}
                     </div>
                     {order.productLink && (
                         <a
@@ -618,6 +642,25 @@ export default function DisplayOrder({ order }) {
                         </select>
                     </div>
 
+                    {/* Executive Only: Specification Dropdown */}
+                    {isExecutive && (
+                        <div>
+                            <label className="filter-group-label">
+                                Filter Specification
+                            </label>
+                            <select
+                                value={specFilter}
+                                onChange={(e) => setSpecFilter(e.target.value)}
+                                className="filter-select"
+                            >
+                                <option value="all">All Specifications ({units.length})</option>
+                                <option value="warehouse">🏢 Warehouse ({specStats.warehouse})</option>
+                                <option value="empty">📦 Empty ({specStats.empty})</option>
+                                <option value="unclassified">⚪ Unclassified ({specStats.unclassified})</option>
+                            </select>
+                        </div>
+                    )}
+
                     {/* Mediator Dropdown */}
                     <div>
                         <label className="filter-group-label">
@@ -741,6 +784,11 @@ export default function DisplayOrder({ order }) {
                                             </span>
                                         </div>
                                         <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                                            {isExecutive && (
+                                                <span className={`unit-spec-chip ${unit.unitType || "unclassified"}`}>
+                                                    {unit.unitType === "warehouse" ? "🏢 Warehouse" : unit.unitType === "empty" ? "📦 Empty" : "⚪ Unclassified"}
+                                                </span>
+                                            )}
                                             <span className={`status-badge status-badge-${unit.status}`}>
                                                 ● {unit.status.replace("_", " ")}
                                             </span>
@@ -771,6 +819,20 @@ export default function DisplayOrder({ order }) {
 
                                     {/* Order Placement Details Grid */}
                                     <div className="unit-details-grid">
+                                        {isExecutive && (
+                                            <div>
+                                                <span className="unit-detail-label">Classification:</span>
+                                                <div className="unit-detail-val" style={{ fontWeight: 700 }}>
+                                                    {unit.unitType === "warehouse" ? (
+                                                        <span style={{ color: "#4338ca" }}>🏢 Warehouse</span>
+                                                    ) : unit.unitType === "empty" ? (
+                                                        <span style={{ color: "#c2410c" }}>📦 Empty</span>
+                                                    ) : (
+                                                        <span style={{ color: "#64748b", fontStyle: "italic" }}>⚪ Unclassified</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
                                         <div>
                                             <span className="unit-detail-label">Order ID:</span>
                                             <div className="unit-detail-val">{unit.orderId || "Not submitted"}</div>
