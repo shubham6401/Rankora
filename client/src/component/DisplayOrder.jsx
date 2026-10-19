@@ -4,6 +4,8 @@ import {
     verifyExecutiveOrderUnit,
     rejectExecutiveOrderUnitVerification,
 } from "../services/executive/order";
+import ProofThumbnail from "./common/ProofThumbnail";
+import ProofPreviewModal from "./common/ProofPreviewModal";
 import "../styles/displayOrder.css";
 import "../styles/ordersTable.css";
 
@@ -75,7 +77,7 @@ export default function DisplayOrder({ order }) {
                 alert("Unit verified successfully and marked as Completed!");
                 setUnitsList((prev) =>
                     prev.map((u) =>
-                        u._id === unitId ? { ...u, status: "completed", completedAt: new Date() } : u
+                        u._id === unitId ? { ...u, status: "completed", completedAt: new Date(), settlementStatus: "unsettled" } : u
                     )
                 );
             }
@@ -535,10 +537,10 @@ export default function DisplayOrder({ order }) {
                                                             style={{ cursor: "pointer", display: "inline-block" }}
                                                             onClick={() => setPreviewImage(execPay.url)}
                                                         >
-                                                            <img
+                                                            <ProofThumbnail
                                                                 src={execPay.url}
-                                                                alt="Executive Payment Screenshot"
-                                                                className="proof-img-thumb"
+                                                                size={70}
+                                                                onClick={() => setPreviewImage(execPay.url)}
                                                             />
                                                             <div style={{ fontSize: "11px", color: "var(--primary-600)", marginTop: "3px", fontWeight: "600" }}>
                                                                 🔍 Click to enlarge
@@ -575,10 +577,10 @@ export default function DisplayOrder({ order }) {
                                                             style={{ cursor: "pointer", display: "inline-block" }}
                                                             onClick={() => setPreviewImage(medRefund.url)}
                                                         >
-                                                            <img
+                                                            <ProofThumbnail
                                                                 src={medRefund.url}
-                                                                alt="Mediator Refund Screenshot"
-                                                                className="proof-img-thumb"
+                                                                size={70}
+                                                                onClick={() => setPreviewImage(medRefund.url)}
                                                             />
                                                             <div style={{ fontSize: "11px", color: "var(--primary-600)", marginTop: "3px", fontWeight: "600" }}>
                                                                 🔍 Click to enlarge
@@ -890,10 +892,10 @@ export default function DisplayOrder({ order }) {
                                                 💳 Executive Advance Payment Proof:
                                             </b>
                                             <div style={{ cursor: "pointer", display: "inline-block" }} onClick={() => setPreviewImage(unit.paymentScreenshot)}>
-                                                <img
+                                                <ProofThumbnail
                                                     src={unit.paymentScreenshot}
-                                                    alt="Executive Payment Screenshot"
-                                                    className="proof-img-thumb"
+                                                    size={80}
+                                                    onClick={() => setPreviewImage(unit.paymentScreenshot)}
                                                 />
                                                 <div style={{ fontSize: "11px", color: "var(--primary-600)", marginTop: "2px", fontWeight: "600" }}>🔍 Click to enlarge</div>
                                             </div>
@@ -917,10 +919,10 @@ export default function DisplayOrder({ order }) {
                                                 💳 Mediator Refund Payment Proof:
                                             </b>
                                             <div style={{ cursor: "pointer", display: "inline-block" }} onClick={() => setPreviewImage(unit.mediatorPaymentScreenshot)}>
-                                                <img
+                                                <ProofThumbnail
                                                     src={unit.mediatorPaymentScreenshot}
-                                                    alt="Mediator Refund Screenshot"
-                                                    className="proof-img-thumb"
+                                                    size={80}
+                                                    onClick={() => setPreviewImage(unit.mediatorPaymentScreenshot)}
                                                 />
                                                 <div style={{ fontSize: "11px", color: "var(--primary-600)", marginTop: "2px", fontWeight: "600" }}>🔍 Click to enlarge</div>
                                             </div>
@@ -937,6 +939,33 @@ export default function DisplayOrder({ order }) {
                                         </div>
                                     )}
 
+                                    {/* Executive Final Settlement Payout Proof (Stage 8) */}
+                                    {unit.settlementScreenshot && (
+                                        <div className="proof-upload-box" style={{ background: "#f0fdf4", borderColor: "#86efac", marginBottom: "12px" }}>
+                                            <b style={{ color: "#15803d", fontSize: "13px", display: "block", marginBottom: "6px" }}>
+                                                💰 Executive Settlement Payout: ₹{unit.settlementAmount !== undefined ? unit.settlementAmount : 0} (Stage 8)
+                                            </b>
+                                            <div style={{ cursor: "pointer", display: "inline-block" }} onClick={() => setPreviewImage(unit.settlementScreenshot)}>
+                                                <ProofThumbnail
+                                                    src={unit.settlementScreenshot}
+                                                    size={80}
+                                                    onClick={() => setPreviewImage(unit.settlementScreenshot)}
+                                                />
+                                                <div style={{ fontSize: "11px", color: "var(--primary-600)", marginTop: "2px", fontWeight: "600" }}>🔍 Click to enlarge</div>
+                                            </div>
+                                            {unit.settlementMessage && (
+                                                <div className="proof-note-bubble" style={{ background: "#ffffff", color: "#15803d", marginTop: "6px" }}>
+                                                    <b>Settlement Note / UTR:</b> {unit.settlementMessage}
+                                                </div>
+                                            )}
+                                            {unit.settledAt && (
+                                                <div className="proof-timestamp">
+                                                    Settled on: {new Date(unit.settledAt).toLocaleString()}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
                                     {/* Ordered Screenshot (Standalone view when not in verification/completed) */}
                                     {unit.orderedScreenshot && !(unit.postDeliveryDetails?.success || unit.status === "pending_verification" || unit.status === "completed") && (
                                         <div style={{ marginTop: "10px", marginBottom: "12px" }}>
@@ -944,10 +973,10 @@ export default function DisplayOrder({ order }) {
                                                 Ordered Screenshot:
                                             </b>
                                             <div style={{ cursor: "pointer", display: "inline-block" }} onClick={() => setPreviewImage(unit.orderedScreenshot)}>
-                                                <img
+                                                <ProofThumbnail
                                                     src={unit.orderedScreenshot}
-                                                    alt="Ordered Screenshot"
-                                                    className="proof-img-thumb"
+                                                    size={80}
+                                                    onClick={() => setPreviewImage(unit.orderedScreenshot)}
                                                 />
                                                 <div style={{ fontSize: "11px", color: "var(--primary-600)", marginTop: "2px", fontWeight: "600" }}>🔍 Click to enlarge</div>
                                             </div>
@@ -993,12 +1022,11 @@ export default function DisplayOrder({ order }) {
                                                                 style={{ cursor: "pointer", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}
                                                                 onClick={() => setPreviewImage(unit.orderedScreenshot)}
                                                             >
-                                                                <img
+                                                                <ProofThumbnail
                                                                     src={unit.orderedScreenshot}
-                                                                    alt="Ordered Screenshot"
-                                                                    className="proof-dossier-img"
+                                                                    size={110}
+                                                                    onClick={() => setPreviewImage(unit.orderedScreenshot)}
                                                                 />
-                                                                <div className="proof-dossier-zoom-pill">🔍 Zoom</div>
                                                             </div>
                                                         ) : (
                                                             <div className="proof-dossier-empty">No screenshot provided</div>
@@ -1022,12 +1050,11 @@ export default function DisplayOrder({ order }) {
                                                                 style={{ cursor: "pointer", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}
                                                                 onClick={() => setPreviewImage(unit.postDeliveryDetails.productReviewScreenshot)}
                                                             >
-                                                                <img
+                                                                <ProofThumbnail
                                                                     src={unit.postDeliveryDetails.productReviewScreenshot}
-                                                                    alt="Product Review"
-                                                                    className="proof-dossier-img"
+                                                                    size={110}
+                                                                    onClick={() => setPreviewImage(unit.postDeliveryDetails.productReviewScreenshot)}
                                                                 />
-                                                                <div className="proof-dossier-zoom-pill">🔍 Zoom</div>
                                                             </div>
                                                         ) : (
                                                             <div className="proof-dossier-empty">No screenshot provided</div>
@@ -1051,12 +1078,11 @@ export default function DisplayOrder({ order }) {
                                                                 style={{ cursor: "pointer", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}
                                                                 onClick={() => setPreviewImage(unit.postDeliveryDetails.invoiceScreenshot)}
                                                             >
-                                                                <img
+                                                                <ProofThumbnail
                                                                     src={unit.postDeliveryDetails.invoiceScreenshot}
-                                                                    alt="Invoice Screenshot"
-                                                                    className="proof-dossier-img"
+                                                                    size={110}
+                                                                    onClick={() => setPreviewImage(unit.postDeliveryDetails.invoiceScreenshot)}
                                                                 />
-                                                                <div className="proof-dossier-zoom-pill">🔍 Zoom</div>
                                                             </div>
                                                         ) : (
                                                             <div className="proof-dossier-empty">No screenshot provided</div>
@@ -1080,12 +1106,11 @@ export default function DisplayOrder({ order }) {
                                                                 style={{ cursor: "pointer", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}
                                                                 onClick={() => setPreviewImage(unit.postDeliveryDetails.sellerFeedbackScreenShot)}
                                                             >
-                                                                <img
+                                                                <ProofThumbnail
                                                                     src={unit.postDeliveryDetails.sellerFeedbackScreenShot}
-                                                                    alt="Seller Feedback"
-                                                                    className="proof-dossier-img"
+                                                                    size={110}
+                                                                    onClick={() => setPreviewImage(unit.postDeliveryDetails.sellerFeedbackScreenShot)}
                                                                 />
-                                                                <div className="proof-dossier-zoom-pill">🔍 Zoom</div>
                                                             </div>
                                                         ) : (
                                                             <div className="proof-dossier-empty">No screenshot provided</div>
@@ -1309,35 +1334,13 @@ export default function DisplayOrder({ order }) {
                 </div>
             )}
 
-            {/* FULLSCREEN IMAGE PREVIEW MODAL */}
-            {previewImage && (
-                <div
-                    onClick={() => setPreviewImage(null)}
-                    className="image-modal-overlay"
-                >
-                    <div
-                        onClick={(e) => e.stopPropagation()}
-                        className="image-modal-content"
-                    >
-                        <div className="image-modal-header">
-                            <span style={{ fontWeight: 700, fontSize: "14px", color: "var(--slate-700)" }}>
-                                Proof Preview
-                            </span>
-                            <button
-                                onClick={() => setPreviewImage(null)}
-                                className="image-modal-close-btn"
-                            >
-                                Close ✕
-                            </button>
-                        </div>
-                        <img
-                            src={previewImage}
-                            alt="Zoomed Payment Screenshot"
-                            className="image-modal-img"
-                        />
-                    </div>
-                </div>
-            )}
+            {/* FULLSCREEN PROOF PREVIEW MODAL */}
+            <ProofPreviewModal
+                isOpen={!!previewImage}
+                onClose={() => setPreviewImage(null)}
+                fileUrl={previewImage}
+                title="Proof Preview"
+            />
         </div>
     );
 }

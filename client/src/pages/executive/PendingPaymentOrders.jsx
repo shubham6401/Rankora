@@ -6,6 +6,8 @@ import {
     submitExecutivePaymentProof,
 } from "../../services/executive/order";
 import PipelineStepper from "../../component/layout/PipelineStepper";
+import ProofThumbnail from "../../component/common/ProofThumbnail";
+import ProofPreviewModal from "../../component/common/ProofPreviewModal";
 import "../../styles/ordersTable.css";
 
 export default function PendingPaymentOrders() {
@@ -371,13 +373,13 @@ export default function PendingPaymentOrders() {
                                     <div className="proof-inputs-row">
                                         <input
                                             type="file"
-                                            accept="image/*"
+                                            accept="image/*,application/pdf"
                                             id={`file-${med._id}`}
                                             style={{ display: "none" }}
                                             onChange={(e) => handleFileSelect(med._id, e)}
                                         />
                                         <label htmlFor={`file-${med._id}`} className="nav-btn nav-btn-default">
-                                            {hasFile ? `✓ File: ${selectedFiles[med._id].name}` : "📁 Choose Payment Screenshot"}
+                                            {hasFile ? `✓ File: ${selectedFiles[med._id].name}` : "📁 Choose Payment Proof (Image/PDF)"}
                                         </label>
 
                                         {hasFile && (
@@ -411,14 +413,16 @@ export default function PendingPaymentOrders() {
                                     </div>
 
                                     {previewUrls[med._id] && (
-                                        <div>
-                                            <img
-                                                src={previewUrls[med._id]}
-                                                alt="Preview"
-                                                className="proof-thumb"
-                                                style={{ width: "80px", height: "80px" }}
+                                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "8px" }}>
+                                            <ProofThumbnail
+                                                url={selectedFiles[med._id] || previewUrls[med._id]}
+                                                alt="Payment Proof"
+                                                size={60}
                                                 onClick={() => setModalImage(previewUrls[med._id])}
                                             />
+                                            <span style={{ fontSize: "12px", color: "var(--slate-600)" }}>
+                                                {selectedFiles[med._id]?.name}
+                                            </span>
                                         </div>
                                     )}
                                 </div>
@@ -428,25 +432,13 @@ export default function PendingPaymentOrders() {
                 </div>
             )}
 
-            {/* Modal Lightbox */}
+            {/* Modal Lightbox (Image & PDF supported) */}
             {modalImage && (
-                <div className="image-modal-overlay" onClick={() => setModalImage(null)}>
-                    <div className="image-modal-content" onClick={(e) => e.stopPropagation()}>
-                        <div className="image-modal-header">
-                            <span style={{ fontWeight: "700", fontSize: "14px" }}>
-                                Advance Payment Screenshot Preview
-                            </span>
-                            <button
-                                type="button"
-                                className="image-modal-close-btn"
-                                onClick={() => setModalImage(null)}
-                            >
-                                Close ✕
-                            </button>
-                        </div>
-                        <img src={modalImage} alt="Enlarged Screenshot" className="image-modal-img" />
-                    </div>
-                </div>
+                <ProofPreviewModal
+                    url={modalImage}
+                    title="Advance Payment Proof Preview"
+                    onClose={() => setModalImage(null)}
+                />
             )}
         </div>
     );

@@ -33,6 +33,18 @@ export const fetchAllExecutiveCompletedOrders=()=>{
     return api.get("/executive/orders/completed");
 }
 
+export const fetchSettledOrders = () => {
+    return api.get("/executive/orders/settled");
+};
+
+export const settleExecutivePayout = (formData) => {
+    return api.post("/executive/order/settle-payout", formData, {
+        headers: {
+            "Content-Type": "multipart/form-data",
+        },
+    });
+};
+
 export const verifyExecutiveOrderUnit=(data)=>{
     return api.post("/executive/order/verify-unit", data);
 }

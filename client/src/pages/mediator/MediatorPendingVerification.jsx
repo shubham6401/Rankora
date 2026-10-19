@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { FetchAllPendingVerificationOrders } from "../../services/mediator/orders";
 import { useNavigate } from "react-router-dom";
 import PipelineStepper from "../../component/layout/PipelineStepper";
+import ProofThumbnail from "../../component/common/ProofThumbnail";
+import ProofPreviewModal from "../../component/common/ProofPreviewModal";
 import "../../styles/ordersTable.css";
 
 export default function MediatorPendingVerification() {
@@ -32,7 +34,6 @@ export default function MediatorPendingVerification() {
                 <div className="empty-state-card">
                     <div className="empty-state-icon">⏳</div>
                     <h2 className="empty-state-title">Loading Verification Queue...</h2>
-                    <p className="empty-state-text">Fetching orders submitted and awaiting executive verification.</p>
                 </div>
             </div>
         );
@@ -54,17 +55,15 @@ export default function MediatorPendingVerification() {
             {/* Visual Pipeline Stepper */}
             <PipelineStepper role="mediator" />
 
-            {/* TOP HEADER */}
+            {/* Header */}
             <div className="table-page-header">
                 <div className="table-header-info">
-                    <span className="table-page-badge" style={{ background: "#eef2ff", color: "#4338ca", borderColor: "#c7d2fe" }}>
+                    <span className="table-page-badge">
                         Stage 4 of Mediator Pipeline
                     </span>
-                    <h1 className="table-page-title">
-                        ⏳ Stage 4: Pending Executive Verification
-                    </h1>
+                    <h1 className="table-page-title">Pending Verification</h1>
                     <p className="table-page-subtitle">
-                        Your review proofs, invoices, and seller feedback submissions are under verification by the Executive team. Once approved, units transition to Completed.
+                        Submitted proofs awaiting executive approval.
                     </p>
                 </div>
                 <div className="table-header-actions">
@@ -75,16 +74,16 @@ export default function MediatorPendingVerification() {
                         ← Dashboard
                     </button>
                     <button
-                        onClick={() => navigate("/mediator-refund_pending-orders")}
+                        onClick={() => navigate("/mediator-completed-orders")}
                         className="nav-btn nav-btn-default"
                     >
-                        Pending Refund →
+                        Completed Orders →
                     </button>
                     <button
-                        onClick={() => navigate("/mediator-completed-orders")}
+                        onClick={() => navigate("/mediator-settled-orders")}
                         className="nav-btn nav-btn-primary"
                     >
-                        Completed Orders →
+                        Settled Orders →
                     </button>
                 </div>
             </div>
@@ -111,7 +110,7 @@ export default function MediatorPendingVerification() {
                     <div className="empty-state-icon">📋</div>
                     <h2 className="empty-state-title">No Orders Awaiting Verification</h2>
                     <p className="empty-state-text">
-                        When you submit review screenshots and invoices for delivered items in Stage 3, they will appear here while being reviewed by the Executive.
+                        No orders currently awaiting executive verification.
                     </p>
                     <button
                         onClick={() => navigate("/mediator-refund_pending-orders")}
@@ -232,12 +231,12 @@ export default function MediatorPendingVerification() {
                                                                             boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
                                                                             transition: "transform 0.15s ease",
                                                                         }}
-                                                                        title="Click to zoom Ordered SS"
+                                                                        title="Click to view Ordered Proof"
                                                                     >
-                                                                        <img
-                                                                            src={u.orderedScreenshot}
+                                                                        <ProofThumbnail
+                                                                            url={u.orderedScreenshot}
                                                                             alt="Ordered SS"
-                                                                            style={{ width: "24px", height: "24px", objectFit: "cover", borderRadius: "4px" }}
+                                                                            size={24}
                                                                         />
                                                                         <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--slate-800)" }}>
                                                                             🛒 Ordered SS
@@ -259,12 +258,12 @@ export default function MediatorPendingVerification() {
                                                                             boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
                                                                             transition: "transform 0.15s ease",
                                                                         }}
-                                                                        title="Click to zoom Review SS"
+                                                                        title="Click to view Review Proof"
                                                                     >
-                                                                        <img
-                                                                            src={u.postDeliveryDetails.productReviewScreenshot}
+                                                                        <ProofThumbnail
+                                                                            url={u.postDeliveryDetails.productReviewScreenshot}
                                                                             alt="Review SS"
-                                                                            style={{ width: "24px", height: "24px", objectFit: "cover", borderRadius: "4px" }}
+                                                                            size={24}
                                                                         />
                                                                         <span style={{ fontSize: "11px", fontWeight: 600, color: "#4338ca" }}>
                                                                             ⭐ Review SS
@@ -286,12 +285,12 @@ export default function MediatorPendingVerification() {
                                                                             boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
                                                                             transition: "transform 0.15s ease",
                                                                         }}
-                                                                        title="Click to zoom Invoice SS"
+                                                                        title="Click to view Invoice Proof"
                                                                     >
-                                                                        <img
-                                                                            src={u.postDeliveryDetails.invoiceScreenshot}
+                                                                        <ProofThumbnail
+                                                                            url={u.postDeliveryDetails.invoiceScreenshot}
                                                                             alt="Invoice SS"
-                                                                            style={{ width: "24px", height: "24px", objectFit: "cover", borderRadius: "4px" }}
+                                                                            size={24}
                                                                         />
                                                                         <span style={{ fontSize: "11px", fontWeight: 600, color: "#1d4ed8" }}>
                                                                             🧾 Invoice
@@ -313,12 +312,12 @@ export default function MediatorPendingVerification() {
                                                                             boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
                                                                             transition: "transform 0.15s ease",
                                                                         }}
-                                                                        title="Click to zoom Feedback SS"
+                                                                        title="Click to view Feedback Proof"
                                                                     >
-                                                                        <img
-                                                                            src={u.postDeliveryDetails.sellerFeedbackScreenShot}
+                                                                        <ProofThumbnail
+                                                                            url={u.postDeliveryDetails.sellerFeedbackScreenShot}
                                                                             alt="Feedback SS"
-                                                                            style={{ width: "24px", height: "24px", objectFit: "cover", borderRadius: "4px" }}
+                                                                            size={24}
                                                                         />
                                                                         <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--slate-700)" }}>
                                                                             💬 Feedback
@@ -368,36 +367,13 @@ export default function MediatorPendingVerification() {
                 </div>
             )}
 
-            {/* PROOF PREVIEW MODAL */}
+            {/* PROOF PREVIEW MODAL (Supports Image & PDF) */}
             {selectedProof && (
-                <div
-                    onClick={() => setSelectedProof(null)}
-                    className="image-modal-overlay"
-                >
-                    <div
-                        onClick={(e) => e.stopPropagation()}
-                        className="image-modal-content"
-                        style={{ maxWidth: "680px" }}
-                    >
-                        <div className="image-modal-header">
-                            <span style={{ fontWeight: 700, fontSize: "14px", color: "var(--slate-700)" }}>
-                                {selectedProof.title}
-                            </span>
-                            <button
-                                type="button"
-                                onClick={() => setSelectedProof(null)}
-                                className="image-modal-close-btn"
-                            >
-                                Close ✕
-                            </button>
-                        </div>
-                        <img
-                            src={selectedProof.url}
-                            alt={selectedProof.title}
-                            className="image-modal-img"
-                        />
-                    </div>
-                </div>
+                <ProofPreviewModal
+                    url={selectedProof.url}
+                    title={selectedProof.title}
+                    onClose={() => setSelectedProof(null)}
+                />
             )}
         </div>
     );

@@ -55,3 +55,11 @@ export const batchRejectOrdersByMediator = (items) => {
 export const returnMediatorOrderUnit = (unitId, reason, quantity = 1) => {
     return api.post(`/mediator/order/return/${unitId}`, { reason, quantity });
 };
+
+export const confirmMediatorSettlementPayment = (data) => {
+    return api.post("/mediator/order/confirm-settlement", data);
+};
+
+export const FetchAllSettledOrders = () => {
+    return api.get("/mediator/orders/settled");
+};

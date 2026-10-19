@@ -6,6 +6,8 @@ import {
     verifyBalanceTransaction,
     rejectBalanceTransaction,
 } from "../../services/balance";
+import ProofThumbnail from "../../component/common/ProofThumbnail";
+import ProofPreviewModal from "../../component/common/ProofPreviewModal";
 
 export default function MediatorBalance() {
     const navigate = useNavigate();
@@ -261,16 +263,10 @@ export default function MediatorBalance() {
                             >
                                 <div style={{ display: "flex", gap: "16px", alignItems: "center", flexWrap: "wrap" }}>
                                     <div style={{ cursor: "pointer" }} onClick={() => setModalImage(tx.paymentScreenshot)}>
-                                        <img
+                                        <ProofThumbnail
                                             src={tx.paymentScreenshot}
-                                            alt="Proof Screenshot"
-                                            style={{
-                                                width: "80px",
-                                                height: "80px",
-                                                objectFit: "cover",
-                                                borderRadius: "6px",
-                                                border: "1px solid #cbd5e1",
-                                            }}
+                                            size={70}
+                                            onClick={() => setModalImage(tx.paymentScreenshot)}
                                         />
                                         <div style={{ fontSize: "10px", color: "#0284c7", marginTop: "2px", textAlign: "center" }}>🔍 Zoom</div>
                                     </div>
@@ -450,12 +446,12 @@ export default function MediatorBalance() {
                     {/* Screenshot Upload */}
                     <div style={{ marginBottom: "20px" }}>
                         <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#334155", marginBottom: "6px" }}>
-                            Refund Payment Screenshot *
+                            Refund Payment Screenshot / PDF *
                         </label>
                         <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
                             <input
                                 type="file"
-                                accept="image/*"
+                                accept="image/*,application/pdf"
                                 id="med-balance-file"
                                 onChange={handleFileChange}
                                 style={{ display: "none" }}
@@ -473,11 +469,17 @@ export default function MediatorBalance() {
                                     fontSize: "13px",
                                 }}
                             >
-                                {paymentFile ? `✓ ${paymentFile.name}` : "📁 Choose Refund Screenshot"}
+                                {paymentFile ? `✓ ${paymentFile.name}` : "📁 Choose Refund Proof (Image / PDF)"}
                             </label>
 
                             {previewUrl && (
                                 <>
+                                    <ProofThumbnail
+                                        src={previewUrl}
+                                        fileName={paymentFile?.name}
+                                        size={50}
+                                        onClick={() => setModalImage(previewUrl)}
+                                    />
                                     <button
                                         type="button"
                                         onClick={() => setModalImage(previewUrl)}
@@ -605,22 +607,13 @@ export default function MediatorBalance() {
                                             </td>
                                             <td style={{ padding: "10px", textAlign: "center" }}>
                                                 {tx.paymentScreenshot && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setModalImage(tx.paymentScreenshot)}
-                                                        style={{
-                                                            padding: "4px 8px",
-                                                            fontSize: "11px",
-                                                            backgroundColor: "#e0f2fe",
-                                                            color: "#0369a1",
-                                                            border: "1px solid #bae6fd",
-                                                            borderRadius: "4px",
-                                                            cursor: "pointer",
-                                                            fontWeight: "600",
-                                                        }}
-                                                    >
-                                                        🔍 View Proof
-                                                    </button>
+                                                    <div style={{ display: "flex", justifyContent: "center" }}>
+                                                        <ProofThumbnail
+                                                            src={tx.paymentScreenshot}
+                                                            size={38}
+                                                            onClick={() => setModalImage(tx.paymentScreenshot)}
+                                                        />
+                                                    </div>
                                                 )}
                                             </td>
                                             <td style={{ padding: "10px", textAlign: "center" }}>
@@ -647,70 +640,13 @@ export default function MediatorBalance() {
                 )}
             </div>
 
-            {/* FULLSCREEN IMAGE MODAL PREVIEW */}
-            {modalImage && (
-                <div
-                    onClick={() => setModalImage(null)}
-                    style={{
-                        position: "fixed",
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundColor: "rgba(0,0,0,0.8)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        zIndex: 9999,
-                        padding: "20px",
-                        cursor: "zoom-out",
-                    }}
-                >
-                    <div
-                        onClick={(e) => e.stopPropagation()}
-                        style={{
-                            position: "relative",
-                            maxWidth: "90vw",
-                            maxHeight: "90vh",
-                            backgroundColor: "#fff",
-                            borderRadius: "10px",
-                            padding: "16px",
-                            boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                        }}
-                    >
-                        <div style={{ width: "100%", display: "flex", justifyContent: "flex-end", marginBottom: "8px" }}>
-                            <button
-                                onClick={() => setModalImage(null)}
-                                style={{
-                                    border: "none",
-                                    backgroundColor: "#ef4444",
-                                    color: "#fff",
-                                    padding: "6px 14px",
-                                    borderRadius: "6px",
-                                    cursor: "pointer",
-                                    fontWeight: "bold",
-                                    fontSize: "13px",
-                                }}
-                            >
-                                Close ✕
-                            </button>
-                        </div>
-                        <img
-                            src={modalImage}
-                            alt="Screenshot Enlarged"
-                            style={{
-                                maxWidth: "85vw",
-                                maxHeight: "75vh",
-                                objectFit: "contain",
-                                borderRadius: "6px",
-                            }}
-                        />
-                    </div>
-                </div>
-            )}
+            {/* PROOF PREVIEW MODAL */}
+            <ProofPreviewModal
+                isOpen={!!modalImage}
+                onClose={() => setModalImage(null)}
+                fileUrl={modalImage}
+                title="Refund Payment Proof"
+            />
         </div>
     );
 }

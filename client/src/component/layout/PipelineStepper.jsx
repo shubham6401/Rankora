@@ -13,6 +13,7 @@ export default function PipelineStepper({ role = "executive" }) {
         { num: 5, title: "Pending Refund", path: "/executive-pending_refund-order", icon: "🔄" },
         { num: 6, title: "Verify Deliveries", path: "/executive-verify-orders", icon: "🔍" },
         { num: 7, title: "Completed", path: "/executive-completed-order", icon: "✅" },
+        { num: 8, title: "Settled Orders", path: "/executive-settled-orders", icon: "💰" },
     ];
 
     const mediatorSteps = [
@@ -21,6 +22,7 @@ export default function PipelineStepper({ role = "executive" }) {
         { num: 3, title: "Pending Refund", path: "/mediator-refund_pending-orders", icon: "🔄" },
         { num: 4, title: "Pending Verification", path: "/mediator-pending-verification", icon: "⏳" },
         { num: 5, title: "Completed", path: "/mediator-completed-orders", icon: "✅" },
+        { num: 6, title: "Settled Orders", path: "/mediator-settled-orders", icon: "💰" },
     ];
 
     const steps = role === "mediator" ? mediatorSteps : executiveSteps;

@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { mediatorOrderSubmit, getOrder } from "../../services/orders";
 import { useParams, useNavigate } from "react-router-dom";
+import ProofThumbnail from "../../component/common/ProofThumbnail";
+import ProofPreviewModal from "../../component/common/ProofPreviewModal";
 import "../../styles/orderForm.css";
 
 export default function OrderSubmission() {
@@ -13,6 +15,8 @@ export default function OrderSubmission() {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
     const [copied, setCopied] = useState(false);
+    const [previewModalUrl, setPreviewModalUrl] = useState(null);
+    const [newFilePreview, setNewFilePreview] = useState(null);
 
     // Price state (single price option)
     const [purchasePrice, setPurchasePrice] = useState("");
@@ -42,8 +46,14 @@ export default function OrderSubmission() {
 
             // Locked orderReceivedOn date from order.createdAt
             const orderDateStr = ord.createdAt ? new Date(ord.createdAt).toISOString().split("T")[0] : new Date().toISOString().split("T")[0];
+            const formattedArrival = unit.expectedArrivalDate
+                ? new Date(unit.expectedArrivalDate).toISOString().split("T")[0]
+                : "";
 
             setFormData({
+                orderId: unit.orderId || "",
+                reviewerName: unit.reviewerName || "",
+                expectedArrivalDate: formattedArrival,
                 address: initialAddress,
                 addressType: isExecProvided ? "executive_provided" : "yourself",
                 orderReceivedOn: orderDateStr,
@@ -211,28 +221,148 @@ export default function OrderSubmission() {
                             className="form-input-text"
                             placeholder="e.g. 402-1234567-8901234 (Amazon / Flipkart)"
                             required
-                            defaultValue={currentUnit.orderId || ""}
+                            value={formData.orderId !== undefined ? formData.orderId : (currentUnit.orderId || "")}
                             onChange={(e) => setFormData({ ...formData, orderId: e.target.value })}
                         />
                     </div>
 
                     {/* Order Confirmation Screenshot */}
-                    <div className="form-field">
-                        <label className="form-field-label">
-                            Order Confirmation Screenshot <span className="form-field-req">*</span>
-                        </label>
-                        <input
-                            type="file"
-                            accept="image/*"
-                            className="form-file-input"
-                            required={!currentUnit.orderedScreenshot}
-                            onChange={(e) => setFormData({ ...formData, orderedScreenshot: e.target.files[0] })}
-                        />
-                        {currentUnit.orderedScreenshot && (
-                            <div style={{ marginTop: "6px", fontSize: "12px", color: "var(--slate-500)" }}>
-                                Current screenshot already uploaded. Choose a new file to replace it.
+                    <div className="form-field" style={{ background: "#f8fafc", padding: "16px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
+                            <div>
+                                <label className="form-field-label" style={{ marginBottom: "2px" }}>
+                                    Order Confirmation Screenshot / PDF Receipt {!currentUnit.orderedScreenshot && !newFilePreview && <span className="form-field-req">*</span>}
+                                </label>
+                                <span style={{ fontSize: "11px", color: "var(--slate-500)" }}>
+                                    (Accepts JPG, PNG, WEBP, or PDF)
+                                </span>
+                            </div>
+                            {currentUnit.orderedScreenshot && !newFilePreview && (
+                                <span className="status-badge" style={{ background: "#ecfdf5", color: "#059669", borderColor: "#a7f3d0", fontSize: "11px" }}>
+                                    ✓ Current Proof Active
+                                </span>
+                            )}
+                            {newFilePreview && (
+                                <span className="status-badge" style={{ background: "#eff6ff", color: "#2563eb", borderColor: "#bfdbfe", fontSize: "11px" }}>
+                                    ★ New File Selected
+                                </span>
+                            )}
+                        </div>
+
+                        {/* Display Previously Submitted Order Screenshot */}
+                        {currentUnit.orderedScreenshot && !newFilePreview && (
+                            <div
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                    background: "#ffffff",
+                                    padding: "10px 14px",
+                                    borderRadius: "8px",
+                                    border: "1px solid #cbd5e1",
+                                    marginBottom: "12px",
+                                }}
+                            >
+                                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                    <ProofThumbnail
+                                        url={currentUnit.orderedScreenshot}
+                                        alt="Current Order Proof"
+                                        size={44}
+                                        onClick={() => setPreviewModalUrl(currentUnit.orderedScreenshot)}
+                                    />
+                                    <div>
+                                        <div style={{ fontSize: "12.5px", fontWeight: 700, color: "#1e293b" }}>
+                                            Previously Submitted Order Proof
+                                        </div>
+                                        <div style={{ fontSize: "11px", color: "#64748b" }}>
+                                            Keep this proof, or choose a new file below to replace it.
+                                        </div>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setPreviewModalUrl(currentUnit.orderedScreenshot)}
+                                    className="table-btn table-btn-outline"
+                                    style={{ fontSize: "11.5px", padding: "4px 10px" }}
+                                >
+                                    🔍 View / Zoom
+                                </button>
                             </div>
                         )}
+
+                        {/* Display Newly Selected File Preview */}
+                        {newFilePreview && (
+                            <div
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                    background: "#eff6ff",
+                                    padding: "10px 14px",
+                                    borderRadius: "8px",
+                                    border: "1px solid #93c5fd",
+                                    marginBottom: "12px",
+                                }}
+                            >
+                                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                    <ProofThumbnail
+                                        url={newFilePreview.file}
+                                        alt="New File Preview"
+                                        size={44}
+                                        onClick={() => setPreviewModalUrl(newFilePreview.url)}
+                                    />
+                                    <div>
+                                        <div style={{ fontSize: "12.5px", fontWeight: 700, color: "#1d4ed8" }}>
+                                            ✓ New Replacement Attached
+                                        </div>
+                                        <div style={{ fontSize: "11px", color: "#64748b", wordBreak: "break-all" }}>
+                                            {newFilePreview.file.name}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style={{ display: "flex", gap: "6px" }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPreviewModalUrl(newFilePreview.url)}
+                                        className="table-btn table-btn-outline"
+                                        style={{ fontSize: "11px", padding: "4px 8px" }}
+                                    >
+                                        🔍 Preview
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setFormData((prev) => {
+                                                const copy = { ...prev };
+                                                delete copy.orderedScreenshot;
+                                                return copy;
+                                            });
+                                            if (newFilePreview?.url) URL.revokeObjectURL(newFilePreview.url);
+                                            setNewFilePreview(null);
+                                        }}
+                                        className="table-btn table-btn-danger"
+                                        style={{ fontSize: "11px", padding: "4px 8px" }}
+                                    >
+                                        ✕ Clear
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        <input
+                            type="file"
+                            accept="image/*,application/pdf"
+                            className="form-file-input"
+                            required={!currentUnit.orderedScreenshot && !newFilePreview}
+                            onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                setFormData({ ...formData, orderedScreenshot: file });
+                                const url = URL.createObjectURL(file);
+                                setNewFilePreview({ file, url });
+                            }}
+                            style={{ background: "#ffffff" }}
+                        />
                     </div>
 
                     {/* Actual Purchase Price (Single Option) */}
@@ -284,7 +414,7 @@ export default function OrderSubmission() {
                                 type="date"
                                 className="form-input-text"
                                 required
-                                defaultValue={currentUnit.expectedArrivalDate || ""}
+                                value={formData.expectedArrivalDate !== undefined ? formData.expectedArrivalDate : ""}
                                 onChange={(e) => setFormData({ ...formData, expectedArrivalDate: e.target.value })}
                             />
                         </div>
@@ -316,7 +446,7 @@ export default function OrderSubmission() {
                             className="form-input-text"
                             placeholder="Public reviewer profile name"
                             required
-                            defaultValue={currentUnit.reviewerName || ""}
+                            value={formData.reviewerName !== undefined ? formData.reviewerName : (currentUnit.reviewerName || "")}
                             onChange={(e) => setFormData({ ...formData, reviewerName: e.target.value })}
                         />
                     </div>
@@ -409,6 +539,15 @@ export default function OrderSubmission() {
                     </div>
                 </form>
             </div>
+
+            {/* Modal: Fullscreen Proof Preview (Supports Image & PDF) */}
+            {previewModalUrl && (
+                <ProofPreviewModal
+                    url={previewModalUrl}
+                    title="Order Confirmation Proof Preview"
+                    onClose={() => setPreviewModalUrl(null)}
+                />
+            )}
         </div>
     );
 }

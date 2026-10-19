@@ -142,6 +142,40 @@ const orderUnitSchema = new mongoose.Schema({
         type: Date,
         default: null,
     },
+    settlementStatus: {
+        type: String,
+        enum: ["unsettled", "pending_confirmation", "settled", null],
+        default: "unsettled",
+    },
+    settlementAmount: {
+        type: Number,
+        default: 0,
+    },
+    settlementScreenshot: {
+        type: String,
+        default: null,
+    },
+    settlementMessage: {
+        type: String,
+        default: null,
+    },
+    settlementBatchId: {
+        type: String,
+        default: null,
+    },
+    settledAt: {
+        type: Date,
+        default: null,
+    },
+    settledBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null,
+    },
+    mediatorConfirmedAt: {
+        type: Date,
+        default: null,
+    },
     submittedForVerificationAt: {
         type: Date,
         default: null,
@@ -203,6 +237,10 @@ const orderSummarySchema = new mongoose.Schema({
         default: 0,
     },
     completed: {
+        type: Number,
+        default: 0,
+    },
+    settled: {
         type: Number,
         default: 0,
     },
@@ -287,6 +325,7 @@ orderSchema.methods.recalculateSummary = function () {
         pendingRefund: 0,
         pendingVerification: 0,
         completed: 0,
+        settled: 0,
     };
 
     for (const unit of this.orderUnits) {
@@ -296,7 +335,10 @@ orderSchema.methods.recalculateSummary = function () {
         else if (unit.status === "in_progress") summary.inProgress++;
         else if (unit.status === "pending_refund") summary.pendingRefund++;
         else if (unit.status === "pending_verification") summary.pendingVerification++;
-        else if (unit.status === "completed") summary.completed++;
+        else if (unit.status === "completed") {
+            summary.completed++;
+            if (unit.settlementStatus === "settled") summary.settled++;
+        }
     }
 
     this.summary = summary;

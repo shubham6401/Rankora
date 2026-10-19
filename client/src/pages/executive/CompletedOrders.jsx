@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import OrderCard from "../../component/executive/OrderCard";
 import OrderFilters from "../../component/executive/OrderFilters";
 import PipelineStepper from "../../component/layout/PipelineStepper";
+import SettlementModal from "../../component/executive/SettlementModal";
 import "../../styles/ordersTable.css";
 
 export default function CompletedOrders() {
@@ -12,6 +13,8 @@ export default function CompletedOrders() {
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState("breakdown"); // "breakdown" | "table"
     const [selectedMediatorFilter, setSelectedMediatorFilter] = useState("all");
+    const [activeSettlementMediator, setActiveSettlementMediator] = useState(null);
+    const [successToast, setSuccessToast] = useState("");
 
     const [appliedFilters, setAppliedFilters] = useState({
         date: "",
@@ -42,6 +45,11 @@ export default function CompletedOrders() {
     let totalCompletedValue = 0;
     let totalWarehouseCompleted = 0;
     let totalEmptyCompleted = 0;
+    let totalUnsettledUnits = 0;
+    let totalPendingConfirmationUnits = 0;
+    let totalPendingConfirmationAmount = 0;
+    let totalSettledUnits = 0;
+    let totalSettledAmount = 0;
 
     orders.forEach((order) => {
         const price = parseFloat(order.price) || 0;
@@ -51,6 +59,20 @@ export default function CompletedOrders() {
                 totalCompletedValue += price;
                 if (unit.unitType === "warehouse") totalWarehouseCompleted++;
                 if (unit.unitType === "empty") totalEmptyCompleted++;
+
+                const isSettled = unit.settlementStatus === "settled";
+                const isPendingConfirmation = unit.settlementStatus === "pending_confirmation";
+                const unitSettlementPayout = parseFloat(unit.settlementAmount) || 0;
+
+                if (isSettled) {
+                    totalSettledUnits++;
+                    totalSettledAmount += unitSettlementPayout;
+                } else if (isPendingConfirmation) {
+                    totalPendingConfirmationUnits++;
+                    totalPendingConfirmationAmount += unitSettlementPayout;
+                } else {
+                    totalUnsettledUnits++;
+                }
 
                 const mId = unit.mediatorId?._id?.toString() || unit.mediatorId?.toString();
                 if (mId) {
@@ -62,12 +84,36 @@ export default function CompletedOrders() {
                             teamCode: unit.mediatorId?.teamCode || order.teamCode || "N/A",
                             completedUnits: 0,
                             totalValue: 0,
+                            unsettledUnits: [],
+                            pendingConfirmationUnits: [],
+                            pendingConfirmationValue: 0,
+                            settledUnits: [],
+                            settledValue: 0,
                             ordersMap: {},
                         };
                     }
                     mediatorBreakdownMap[mId].completedUnits++;
                     mediatorBreakdownMap[mId].totalValue += price;
                     mediatorBreakdownMap[mId].ordersMap[order._id] = order;
+
+                    const unitWithOrderInfo = {
+                        ...unit,
+                        productName: order.productName,
+                        brand: order.brand,
+                        orderPlatform: order.orderPlatform,
+                        price: unit.purchasePrice || price,
+                        orderId: unit.orderId || order.orderId || "N/A",
+                    };
+
+                    if (isSettled) {
+                        mediatorBreakdownMap[mId].settledUnits.push(unitWithOrderInfo);
+                        mediatorBreakdownMap[mId].settledValue += unitSettlementPayout;
+                    } else if (isPendingConfirmation) {
+                        mediatorBreakdownMap[mId].pendingConfirmationUnits.push(unitWithOrderInfo);
+                        mediatorBreakdownMap[mId].pendingConfirmationValue += unitSettlementPayout;
+                    } else {
+                        mediatorBreakdownMap[mId].unsettledUnits.push(unitWithOrderInfo);
+                    }
                 }
             }
         });
@@ -79,9 +125,22 @@ export default function CompletedOrders() {
             ordersCount: Object.keys(m.ordersMap).length,
             orderList: Object.values(m.ordersMap),
         }))
-        .sort((a, b) => b.completedUnits - a.completedUnits);
+        .sort((a, b) => b.unsettledUnits.length - a.unsettledUnits.length || b.pendingConfirmationUnits.length - a.pendingConfirmationUnits.length || b.completedUnits - a.completedUnits);
+
+    const displayedMediatorBreakdown = mediatorBreakdownList.filter((m) => {
+        if (selectedMediatorFilter !== "all" && m.id !== selectedMediatorFilter) {
+            return false;
+        }
+        return true;
+    });
 
     const filteredOrders = orders.filter((order) => {
+        // Exclude orders with no unsettled completed units (fully settled orders belong in Stage 8: Settled Orders)
+        const hasUnsettledUnit = (order.orderUnits || []).some(
+            (u) => u.status === "completed" && u.settlementStatus !== "settled"
+        );
+        if (!hasUnsettledUnit) return false;
+
         // Filter by mediator if selected
         if (selectedMediatorFilter !== "all") {
             const hasMediatorUnit = (order.orderUnits || []).some((u) => {
@@ -119,12 +178,12 @@ export default function CompletedOrders() {
             {/* Header */}
             <div className="table-page-header">
                 <div className="table-header-info">
-                    <span className="table-page-badge" style={{ background: "#f0fdf4", color: "#166534", borderColor: "#bbf7d0" }}>
+                    <span className="table-page-badge">
                         Stage 7 of Executive Pipeline
                     </span>
                     <h1 className="table-page-title">Completed Orders</h1>
                     <p className="table-page-subtitle">
-                        Archived orders with verified deliveries, review submissions, and settled refunds. View overall orders or mediator-wise breakdown.
+                        Settle mediator payouts for verified completed deliveries.
                     </p>
                 </div>
                 <div className="table-header-actions">
@@ -145,9 +204,15 @@ export default function CompletedOrders() {
                     <button
                         type="button"
                         className="nav-btn nav-btn-primary"
-                        onClick={() => navigate("/executive-pending-order")}
+                        onClick={() => navigate("/executive-settled-orders")}
+                        style={{
+                            backgroundColor: "#059669",
+                            borderColor: "#059669",
+                            color: "#ffffff",
+                            fontWeight: 700,
+                        }}
                     >
-                        Pending Orders →
+                        💰 Settled Orders ({totalSettledUnits}) →
                     </button>
                 </div>
             </div>
@@ -155,8 +220,8 @@ export default function CompletedOrders() {
             {/* Metrics */}
             <div className="table-metrics-bar">
                 <div className="metric-card">
-                    <span className="metric-label">Completed Orders</span>
-                    <span className="metric-value metric-value-primary">{orders.length}</span>
+                    <span className="metric-label">Orders to Settle</span>
+                    <span className="metric-value metric-value-primary">{filteredOrders.length}</span>
                 </div>
                 <div className="metric-card">
                     <span className="metric-label">Completed Units</span>
@@ -165,16 +230,30 @@ export default function CompletedOrders() {
                     </span>
                 </div>
                 <div className="metric-card">
-                    <span className="metric-label">Specifications</span>
-                    <div style={{ display: "flex", gap: "6px", marginTop: "4px", flexWrap: "wrap" }}>
-                        <span className="unit-spec-chip warehouse">🏢 {totalWarehouseCompleted} WH</span>
-                        <span className="unit-spec-chip empty">📦 {totalEmptyCompleted} Empty</span>
-                    </div>
+                    <span className="metric-label">Awaiting Settlement</span>
+                    <span className="metric-value metric-value-amber">
+                        {totalUnsettledUnits} Units
+                    </span>
+                    <span style={{ fontSize: "10.5px", color: "var(--slate-500)", marginTop: "2px" }}>
+                        Executive payout needed
+                    </span>
                 </div>
                 <div className="metric-card">
-                    <span className="metric-label">Completed Value</span>
+                    <span className="metric-label">Awaiting Confirmation</span>
+                    <span className="metric-value" style={{ color: "#d97706" }}>
+                        {totalPendingConfirmationUnits} Units
+                    </span>
+                    <span style={{ fontSize: "10.5px", color: "var(--slate-500)", marginTop: "2px" }}>
+                        ₹{totalPendingConfirmationAmount.toLocaleString()} pending mediator
+                    </span>
+                </div>
+                <div className="metric-card">
+                    <span className="metric-label">Settled Payouts</span>
                     <span className="metric-value metric-value-green">
-                        ₹{totalCompletedValue.toLocaleString()}
+                        ₹{totalSettledAmount.toLocaleString()} ({totalSettledUnits} u)
+                    </span>
+                    <span style={{ fontSize: "10.5px", color: "var(--slate-500)", marginTop: "2px" }}>
+                        Confirmed by mediators
                     </span>
                 </div>
                 <div className="metric-card">
@@ -183,7 +262,7 @@ export default function CompletedOrders() {
                 </div>
             </div>
 
-            {/* View Mode Switcher */}
+            {/* View Mode Switcher and Mediator Filter Toolbar */}
             <div
                 style={{
                     display: "flex",
@@ -192,20 +271,20 @@ export default function CompletedOrders() {
                     flexWrap: "wrap",
                     gap: "12px",
                     marginBottom: "16px",
-                    padding: "10px 14px",
+                    padding: "12px 16px",
                     background: "#ffffff",
                     borderRadius: "10px",
                     border: "1px solid #e2e8f0",
                 }}
             >
-                <div style={{ display: "flex", gap: "8px" }}>
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                     <button
                         type="button"
                         onClick={() => setViewMode("breakdown")}
                         className={`status-pill-btn ${viewMode === "breakdown" ? "active active-completed" : ""}`}
                         style={{ display: "flex", alignItems: "center", gap: "6px" }}
                     >
-                        <span>👥</span> Mediator-Wise Breakdown ({mediatorBreakdownList.length})
+                        <span>👥</span> Mediator Breakdown ({displayedMediatorBreakdown.length})
                     </button>
                     <button
                         type="button"
@@ -213,19 +292,38 @@ export default function CompletedOrders() {
                         className={`status-pill-btn ${viewMode === "table" ? "active active-assigned" : ""}`}
                         style={{ display: "flex", alignItems: "center", gap: "6px" }}
                     >
-                        <span>📋</span> Orders List Table ({orders.length})
+                        <span>📋</span> Orders List Table ({filteredOrders.length})
                     </button>
                 </div>
 
-                {selectedMediatorFilter !== "all" && (
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12.5px" }}>
-                        <span>
-                            Filtered to Mediator:{" "}
-                            <b>
-                                {mediatorBreakdownMap[selectedMediatorFilter]?.name} (
-                                {mediatorBreakdownMap[selectedMediatorFilter]?.mediatorCode})
-                            </b>
-                        </span>
+                {/* Mediator Filter Dropdown */}
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                    <label style={{ fontSize: "12.5px", fontWeight: 700, color: "#475569" }}>
+                        Filter by Mediator:
+                    </label>
+                    <select
+                        value={selectedMediatorFilter}
+                        onChange={(e) => setSelectedMediatorFilter(e.target.value)}
+                        style={{
+                            padding: "6px 12px",
+                            border: "1px solid #cbd5e1",
+                            borderRadius: "6px",
+                            fontSize: "12.5px",
+                            fontWeight: 600,
+                            color: "#0f172a",
+                            backgroundColor: "#f8fafc",
+                            cursor: "pointer",
+                        }}
+                    >
+                        <option value="all">All Mediators ({mediatorBreakdownList.length})</option>
+                        {mediatorBreakdownList.map((m) => (
+                            <option key={m.id} value={m.id}>
+                                {m.name} ({m.mediatorCode}) — {m.unsettledUnits.length} to settle{m.pendingConfirmationUnits.length > 0 ? `, ${m.pendingConfirmationUnits.length} awaiting confirmation` : ""}
+                            </option>
+                        ))}
+                    </select>
+
+                    {selectedMediatorFilter !== "all" && (
                         <button
                             type="button"
                             onClick={() => setSelectedMediatorFilter("all")}
@@ -233,29 +331,39 @@ export default function CompletedOrders() {
                                 border: "none",
                                 background: "#fee2e2",
                                 color: "#b91c1c",
-                                padding: "3px 8px",
+                                padding: "4px 10px",
                                 borderRadius: "4px",
                                 cursor: "pointer",
-                                fontSize: "11px",
+                                fontSize: "11.5px",
                                 fontWeight: 700,
                             }}
                         >
-                            Clear ✕
+                            Clear Filter ✕
                         </button>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
 
             {/* MEDIATOR-WISE BREAKDOWN VIEW */}
             {viewMode === "breakdown" && (
                 <div>
-                    {mediatorBreakdownList.length === 0 ? (
+                    {displayedMediatorBreakdown.length === 0 ? (
                         <div className="empty-state-card">
                             <div className="empty-state-icon">👥</div>
-                            <h3 className="empty-state-title">No Mediator Completed Deliveries</h3>
+                            <h3 className="empty-state-title">No Mediator Deliveries Matching Filter</h3>
                             <p className="empty-state-text">
-                                When mediators complete deliveries and the executive verifies them, the mediator-wise breakdown will appear here.
+                                No completed deliveries found for the selected mediator filter.
                             </p>
+                            {selectedMediatorFilter !== "all" && (
+                                <button
+                                    type="button"
+                                    className="nav-btn nav-btn-default"
+                                    onClick={() => setSelectedMediatorFilter("all")}
+                                    style={{ marginTop: "12px" }}
+                                >
+                                    Reset Mediator Filter
+                                </button>
+                            )}
                         </div>
                     ) : (
                         <div
@@ -265,7 +373,7 @@ export default function CompletedOrders() {
                                 gap: "16px",
                             }}
                         >
-                            {mediatorBreakdownList.map((m) => (
+                            {displayedMediatorBreakdown.map((m) => (
                                 <div
                                     key={m.id}
                                     style={{
@@ -392,18 +500,87 @@ export default function CompletedOrders() {
                                         </div>
                                     </div>
 
-                                    {/* Action button to filter */}
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setSelectedMediatorFilter(m.id);
-                                            setViewMode("table");
-                                        }}
-                                        className="table-btn table-btn-outline"
-                                        style={{ width: "100%", justifyContent: "center", padding: "8px", fontWeight: 600 }}
-                                    >
-                                        Inspect {m.name}'s Completed Orders &rarr;
-                                    </button>
+                                    {/* Action buttons */}
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                                        {m.unsettledUnits.length > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setActiveSettlementMediator({
+                                                        mediator: m,
+                                                        units: m.unsettledUnits,
+                                                    })
+                                                }
+                                                className="table-btn table-btn-primary"
+                                                style={{
+                                                    width: "100%",
+                                                    justifyContent: "center",
+                                                    padding: "8px",
+                                                    fontWeight: 700,
+                                                    backgroundColor: "#059669",
+                                                    borderColor: "#059669",
+                                                    color: "#ffffff",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: "6px",
+                                                }}
+                                            >
+                                                💳 Settle Payout ({m.unsettledUnits.length} Units)
+                                            </button>
+                                        )}
+
+                                        {m.pendingConfirmationUnits.length > 0 && (
+                                            <div
+                                                style={{
+                                                    padding: "8px 10px",
+                                                    backgroundColor: "#fffbeb",
+                                                    border: "1px solid #fde68a",
+                                                    borderRadius: "6px",
+                                                    color: "#92400e",
+                                                    fontSize: "12px",
+                                                    fontWeight: 600,
+                                                    textAlign: "center",
+                                                    display: "flex",
+                                                    flexDirection: "column",
+                                                    gap: "2px",
+                                                }}
+                                            >
+                                                <span>⏳ {m.pendingConfirmationUnits.length} Units Awaiting Mediator Confirmation</span>
+                                                <span style={{ fontSize: "11px", color: "#b45309" }}>
+                                                    Paid: ₹{m.pendingConfirmationValue.toLocaleString()} (Pending Acceptance)
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        {m.unsettledUnits.length === 0 && m.pendingConfirmationUnits.length === 0 && (
+                                            <div
+                                                style={{
+                                                    padding: "6px 10px",
+                                                    backgroundColor: "#ecfdf5",
+                                                    border: "1px solid #a7f3d0",
+                                                    borderRadius: "6px",
+                                                    color: "#047857",
+                                                    fontSize: "12px",
+                                                    fontWeight: 700,
+                                                    textAlign: "center",
+                                                }}
+                                            >
+                                                ✓ All Units Settled & Confirmed
+                                            </div>
+                                        )}
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setSelectedMediatorFilter(m.id);
+                                                setViewMode("table");
+                                            }}
+                                            className="table-btn table-btn-outline"
+                                            style={{ width: "100%", justifyContent: "center", padding: "6px 8px", fontSize: "12px", fontWeight: 600 }}
+                                        >
+                                            Inspect {m.name}'s Completed Orders &rarr;
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -469,6 +646,42 @@ export default function CompletedOrders() {
                             </button>
                         </div>
                     )}
+                </div>
+            )}
+
+            {/* Settlement Payout Modal */}
+            {activeSettlementMediator && (
+                <SettlementModal
+                    mediator={activeSettlementMediator.mediator}
+                    units={activeSettlementMediator.units}
+                    onClose={() => setActiveSettlementMediator(null)}
+                    onSuccess={(res) => {
+                        fetchOrders();
+                        setSuccessToast(res.message || "Payout settled successfully!");
+                        setTimeout(() => setSuccessToast(""), 4000);
+                    }}
+                />
+            )}
+
+            {/* Success Toast */}
+            {successToast && (
+                <div
+                    style={{
+                        position: "fixed",
+                        bottom: "24px",
+                        right: "24px",
+                        backgroundColor: "#059669",
+                        color: "#ffffff",
+                        padding: "12px 20px",
+                        borderRadius: "8px",
+                        boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.2)",
+                        fontWeight: 600,
+                        fontSize: "13.5px",
+                        zIndex: 99999,
+                        animation: "fadeIn 0.2s ease-out",
+                    }}
+                >
+                    ✓ {successToast}
                 </div>
             )}
         </div>

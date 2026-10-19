@@ -236,6 +236,7 @@
 .status-card-refund:hover { border-color: #8b5cf6; }
 .status-card-verify:hover { border-color: #6366f1; }
 .status-card-completed:hover { border-color: #10b981; }
+.status-card-settled:hover { border-color: #059669; }
 
 .summary-card-top {
     display: flex;

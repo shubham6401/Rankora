@@ -143,10 +143,10 @@ export default function ExecutiveVerifyOrders() {
                         Stage 6 of Executive Pipeline
                     </span>
                     <h1 className="table-page-title">
-                        🔍 Verify Deliveries Queue
+                        Verify Deliveries
                     </h1>
                     <p className="table-page-subtitle">
-                        Order-wise delivery verification queue. Click <b>Inspect & Verify Details</b> on any order to inspect submitted review screenshots, invoices, and seller feedback proofs without clutter.
+                        Review submitted delivery and review proofs.
                     </p>
                 </div>
                 <div className="table-header-actions">

@@ -106,6 +106,17 @@ export default function MediatorOrderSummary() {
             className: "status-card-completed",
             barColor: "#10b981",
         },
+        {
+            title: "Settled Orders",
+            subtitle: "Stage 6",
+            icon: "💰",
+            units: summary.settledUnits || 0,
+            ordersCount: summary.settledOrders || 0,
+            path: "/mediator-settled-orders",
+            actionLabel: "View Settled",
+            className: "status-card-settled",
+            barColor: "#059669",
+        },
     ];
 
     return (
@@ -117,7 +128,7 @@ export default function MediatorOrderSummary() {
                         📊 Mediator Summary
                     </h2>
                     <p className="summary-subtitle">
-                        Assigned orders pipeline, unit counts, and earnings
+                        Order pipeline, unit counts, and settled payouts
                     </p>
                 </div>
 
@@ -133,8 +144,8 @@ export default function MediatorOrderSummary() {
                         </div>
                     </div>
                     <div className="summary-chip summary-chip-green">
-                        <div className="summary-chip-label">Handled Value</div>
-                        <div className="summary-chip-val">₹{(summary.totalValue || 0).toLocaleString()}</div>
+                        <div className="summary-chip-label">Settled Payout</div>
+                        <div className="summary-chip-val">₹{(summary.settledPayout || 0).toLocaleString()}</div>
                     </div>
                     <div className="summary-chip">
                         <div className="summary-chip-label">Completed</div>

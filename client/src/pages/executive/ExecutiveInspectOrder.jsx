@@ -5,6 +5,8 @@ import {
     verifyExecutiveOrderUnit,
     rejectExecutiveOrderUnitVerification,
 } from "../../services/executive/order";
+import { isPdfUrl } from "../../component/common/ProofThumbnail";
+import ProofPreviewModal from "../../component/common/ProofPreviewModal";
 import "../../styles/ordersTable.css";
 import "../../styles/displayOrder.css";
 
@@ -18,6 +20,30 @@ export default function ExecutiveInspectOrder() {
     const [activeUnitTab, setActiveUnitTab] = useState("all");
     const [previewImage, setPreviewImage] = useState(null);
     const [verifyingUnitId, setVerifyingUnitId] = useState(null);
+
+    const renderDossierPreview = (url, label) => {
+        if (!url) return <div className="proof-dossier-empty">No proof provided</div>;
+        const isPdf = isPdfUrl(url);
+        return (
+            <div
+                style={{ cursor: "pointer", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}
+                onClick={() => setPreviewImage({ url, title: label })}
+            >
+                {isPdf ? (
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "6px", padding: "12px" }}>
+                        <span style={{ fontSize: "36px" }}>📄</span>
+                        <span style={{ fontSize: "11.5px", fontWeight: 700, color: "#dc2626" }}>PDF Document</span>
+                        <div className="proof-dossier-zoom-pill">🔍 View PDF</div>
+                    </div>
+                ) : (
+                    <>
+                        <img src={url} alt={label} className="proof-dossier-img" />
+                        <div className="proof-dossier-zoom-pill">🔍 Zoom</div>
+                    </>
+                )}
+            </div>
+        );
+    };
 
     const [revisionModal, setRevisionModal] = useState({
         isOpen: false,
@@ -61,7 +87,7 @@ export default function ExecutiveInspectOrder() {
                 setOrder((prev) => {
                     if (!prev) return prev;
                     const updatedUnits = (prev.orderUnits || []).map((u) =>
-                        u._id === unitId ? { ...u, status: "completed", completedAt: new Date() } : u
+                        u._id === unitId ? { ...u, status: "completed", completedAt: new Date(), settlementStatus: "unsettled" } : u
                     );
                     return { ...prev, orderUnits: updatedUnits };
                 });
@@ -261,18 +287,25 @@ export default function ExecutiveInspectOrder() {
                     <p className="empty-state-text">
                         There are no more units awaiting delivery verification on this order.
                     </p>
-                    <div style={{ display: "flex", gap: "10px", justifyContent: "center", marginTop: "16px" }}>
+                    <div style={{ display: "flex", gap: "10px", justifyContent: "center", marginTop: "16px", flexWrap: "wrap" }}>
                         <button
                             onClick={() => navigate("/executive-verify-orders")}
-                            className="table-btn table-btn-primary"
+                            className="table-btn table-btn-default"
                         >
-                            ← Return to Verification Queue
+                            ← Verification Queue
+                        </button>
+                        <button
+                            onClick={() => navigate("/executive-completed-order")}
+                            className="table-btn table-btn-primary"
+                            style={{ backgroundColor: "#059669", borderColor: "#059669", color: "#ffffff", fontWeight: 700 }}
+                        >
+                            💰 Settle Mediator Payouts →
                         </button>
                         <button
                             onClick={() => navigate(`/order/${order._id}`)}
                             className="table-btn table-btn-outline"
                         >
-                            📄 View Full Order Details
+                            📄 Order Details
                         </button>
                     </div>
                 </div>
@@ -438,21 +471,7 @@ export default function ExecutiveInspectOrder() {
                                                         )}
                                                     </div>
                                                     <div className="proof-dossier-body">
-                                                        {unit.orderedScreenshot ? (
-                                                            <div
-                                                                style={{ cursor: "pointer", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}
-                                                                onClick={() => setPreviewImage(unit.orderedScreenshot)}
-                                                            >
-                                                                <img
-                                                                    src={unit.orderedScreenshot}
-                                                                    alt="Ordered Screenshot"
-                                                                    className="proof-dossier-img"
-                                                                />
-                                                                <div className="proof-dossier-zoom-pill">🔍 Zoom</div>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="proof-dossier-empty">No screenshot provided</div>
-                                                        )}
+                                                        {renderDossierPreview(unit.orderedScreenshot, `Unit #${uIdx + 1} Ordered Screenshot`)}
                                                     </div>
                                                 </div>
 
@@ -467,21 +486,7 @@ export default function ExecutiveInspectOrder() {
                                                         )}
                                                     </div>
                                                     <div className="proof-dossier-body">
-                                                        {unit.postDeliveryDetails?.productReviewScreenshot ? (
-                                                            <div
-                                                                style={{ cursor: "pointer", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}
-                                                                onClick={() => setPreviewImage(unit.postDeliveryDetails.productReviewScreenshot)}
-                                                            >
-                                                                <img
-                                                                    src={unit.postDeliveryDetails.productReviewScreenshot}
-                                                                    alt="Product Review Screenshot"
-                                                                    className="proof-dossier-img"
-                                                                />
-                                                                <div className="proof-dossier-zoom-pill">🔍 Zoom</div>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="proof-dossier-empty">No screenshot provided</div>
-                                                        )}
+                                                        {renderDossierPreview(unit.postDeliveryDetails?.productReviewScreenshot, `Unit #${uIdx + 1} Review Proof`)}
                                                     </div>
                                                 </div>
 
@@ -496,21 +501,7 @@ export default function ExecutiveInspectOrder() {
                                                         )}
                                                     </div>
                                                     <div className="proof-dossier-body">
-                                                        {unit.postDeliveryDetails?.invoiceScreenshot ? (
-                                                            <div
-                                                                style={{ cursor: "pointer", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}
-                                                                onClick={() => setPreviewImage(unit.postDeliveryDetails.invoiceScreenshot)}
-                                                            >
-                                                                <img
-                                                                    src={unit.postDeliveryDetails.invoiceScreenshot}
-                                                                    alt="Invoice Screenshot"
-                                                                    className="proof-dossier-img"
-                                                                />
-                                                                <div className="proof-dossier-zoom-pill">🔍 Zoom</div>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="proof-dossier-empty">No screenshot provided</div>
-                                                        )}
+                                                        {renderDossierPreview(unit.postDeliveryDetails?.invoiceScreenshot, `Unit #${uIdx + 1} Invoice Proof`)}
                                                     </div>
                                                 </div>
 
@@ -525,21 +516,7 @@ export default function ExecutiveInspectOrder() {
                                                         )}
                                                     </div>
                                                     <div className="proof-dossier-body">
-                                                        {unit.postDeliveryDetails?.sellerFeedbackScreenShot ? (
-                                                            <div
-                                                                style={{ cursor: "pointer", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}
-                                                                onClick={() => setPreviewImage(unit.postDeliveryDetails.sellerFeedbackScreenShot)}
-                                                            >
-                                                                <img
-                                                                    src={unit.postDeliveryDetails.sellerFeedbackScreenShot}
-                                                                    alt="Seller Feedback Screenshot"
-                                                                    className="proof-dossier-img"
-                                                                />
-                                                                <div className="proof-dossier-zoom-pill">🔍 Zoom</div>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="proof-dossier-empty">No screenshot provided</div>
-                                                        )}
+                                                        {renderDossierPreview(unit.postDeliveryDetails?.sellerFeedbackScreenShot, `Unit #${uIdx + 1} Seller Feedback Proof`)}
                                                     </div>
                                                 </div>
                                             </div>
@@ -577,19 +554,13 @@ export default function ExecutiveInspectOrder() {
                 </div>
             )}
 
-            {/* Modal: Fullscreen Image Preview */}
+            {/* Modal: Fullscreen Proof Preview (Supports Image & PDF) */}
             {previewImage && (
-                <div className="image-modal-overlay" onClick={() => setPreviewImage(null)}>
-                    <div className="image-modal-content" onClick={(e) => e.stopPropagation()}>
-                        <div className="image-modal-header">
-                            <span style={{ fontWeight: 700, fontSize: "14px" }}>Proof Screenshot Preview</span>
-                            <button className="image-modal-close-btn" onClick={() => setPreviewImage(null)}>
-                                ✕
-                            </button>
-                        </div>
-                        <img src={previewImage} alt="Fullscreen Proof Preview" className="image-modal-img" />
-                    </div>
-                </div>
+                <ProofPreviewModal
+                    url={previewImage.url || previewImage}
+                    title={previewImage.title || "Proof Document Preview"}
+                    onClose={() => setPreviewImage(null)}
+                />
             )}
 
             {/* Modal: Executive Request Revision */}

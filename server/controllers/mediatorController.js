@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const Order = require("../models/order");
 
 // ==========================================
@@ -428,11 +429,10 @@ const getCompletedOrders = async (req, res, next) => {
 
         const mappedOrders = orders.map((order) => {
             const orderObj = order.toObject();
-            orderObj.orderUnits = orderObj.orderUnits.filter(
-                (unit) =>
-                    unit.mediatorId?._id?.toString() === mediatorId &&
-                    unit.status === "completed"
-            );
+            orderObj.orderUnits = orderObj.orderUnits.filter((unit) => {
+                const uMedId = (unit.mediatorId?._id || unit.mediatorId)?.toString();
+                return uMedId === mediatorId.toString() && unit.status === "completed";
+            });
             orderObj.status = "completed";
             orderObj.assignedTo = req.user;
             return orderObj;
@@ -689,6 +689,9 @@ const getMediatorSummary = async (req, res, next) => {
         let pendingRefundUnits = 0;
         let pendingVerificationUnits = 0;
         let completedUnits = 0;
+        let settledUnits = 0;
+        let settledPayout = 0;
+        let awaitingConfirmationUnits = 0;
 
         let newAssignedOrders = 0;
         let pendingPaymentOrders = 0;
@@ -696,6 +699,7 @@ const getMediatorSummary = async (req, res, next) => {
         let pendingRefundOrders = 0;
         let pendingVerificationOrders = 0;
         let completedOrders = 0;
+        let settledOrders = 0;
 
         const mappedOrders = orders.map((order) => {
             const orderObj = order.toObject();
@@ -715,6 +719,7 @@ const getMediatorSummary = async (req, res, next) => {
             let hasPendingRefund = false;
             let hasPendingVerification = false;
             let hasCompleted = false;
+            let hasSettled = false;
 
             myUnits.forEach((unit) => {
                 totalUnits++;
@@ -741,6 +746,14 @@ const getMediatorSummary = async (req, res, next) => {
                     completedUnits++;
                     completedValue += price;
                     hasCompleted = true;
+
+                    if (unit.settlementStatus === "settled") {
+                        settledUnits++;
+                        settledPayout += parseFloat(unit.settlementAmount || 0);
+                        hasSettled = true;
+                    } else if (unit.settlementStatus === "pending_confirmation") {
+                        awaitingConfirmationUnits++;
+                    }
                 }
             });
 
@@ -750,6 +763,7 @@ const getMediatorSummary = async (req, res, next) => {
             if (hasPendingRefund) pendingRefundOrders++;
             if (hasPendingVerification) pendingVerificationOrders++;
             if (hasCompleted) completedOrders++;
+            if (hasSettled) settledOrders++;
 
             orderObj.orderUnits = myUnits;
             orderObj.myUnitsCount = myUnits.length;
@@ -777,6 +791,10 @@ const getMediatorSummary = async (req, res, next) => {
                 pendingVerificationOrders,
                 completedUnits,
                 completedOrders,
+                settledUnits,
+                settledOrders,
+                settledPayout,
+                awaitingConfirmationUnits,
             },
             orders: mappedOrders,
         });
@@ -972,6 +990,175 @@ const returnOrderUnit = async (req, res, next) => {
     }
 };
 
+// ==========================================
+// GET SETTLED ORDERS FOR MEDIATOR
+// ==========================================
+const getSettledOrders = async (req, res, next) => {
+    try {
+        const mediatorId = req.user.id;
+
+        const orders = await Order.find({
+            orderUnits: {
+                $elemMatch: {
+                    mediatorId: mediatorId,
+                    status: "completed",
+                    settlementStatus: "settled",
+                },
+            },
+        })
+            .populate("brandUserId", "name brand role")
+            .populate("createdBy", "name")
+            .populate("orderUnits.mediatorId", "name mediatorCode teamCode")
+            .populate("orderUnits.settledBy", "name")
+            .sort({ "orderUnits.settledAt": -1, createdAt: -1 });
+
+        const mappedOrders = orders.map((order) => {
+            const orderObj = order.toObject();
+            orderObj.orderUnits = orderObj.orderUnits.filter((unit) => {
+                const uMedId = (unit.mediatorId?._id || unit.mediatorId)?.toString();
+                return (
+                    uMedId === mediatorId.toString() &&
+                    unit.status === "completed" &&
+                    unit.settlementStatus === "settled"
+                );
+            });
+            return orderObj;
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Settled orders fetched successfully",
+            orders: sanitizeForMediator(mappedOrders),
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ==========================================
+// CONFIRM SETTLEMENT PAYMENT (BY MEDIATOR)
+// ==========================================
+const confirmSettlementPayment = async (req, res, next) => {
+    try {
+        const mediatorId = req.user.id;
+        const medIdStr = mediatorId.toString();
+        let { unitId, orderId, unitIds, settlementBatchId } = req.body;
+
+        let targetUnitIds = [];
+        if (unitIds && Array.isArray(unitIds)) {
+            targetUnitIds = unitIds.map((id) => id.toString());
+        } else if (unitId) {
+            targetUnitIds = [unitId.toString()];
+        }
+
+        if (targetUnitIds.length === 0 && !orderId && !settlementBatchId) {
+            return res.status(400).json({
+                success: false,
+                message: "Unit ID, Batch ID, or Order ID is required to confirm settlement",
+            });
+        }
+
+        const orConditions = [];
+        if (settlementBatchId) {
+            orConditions.push({ "orderUnits.settlementBatchId": settlementBatchId });
+        }
+        if (targetUnitIds.length > 0) {
+            const objectIds = targetUnitIds
+                .filter((id) => mongoose.Types.ObjectId.isValid(id))
+                .map((id) => new mongoose.Types.ObjectId(id));
+            orConditions.push({ "orderUnits._id": { $in: [...objectIds, ...targetUnitIds] } });
+        }
+        if (orderId && mongoose.Types.ObjectId.isValid(orderId)) {
+            orConditions.push({ _id: new mongoose.Types.ObjectId(orderId) });
+        }
+
+        let orders = [];
+        if (orConditions.length > 0) {
+            const medObjId = mongoose.Types.ObjectId.isValid(mediatorId)
+                ? new mongoose.Types.ObjectId(mediatorId)
+                : mediatorId;
+
+            orders = await Order.find({
+                $and: [
+                    { $or: orConditions },
+                    {
+                        $or: [
+                            { "orderUnits.mediatorId": mediatorId },
+                            { "orderUnits.mediatorId": medObjId },
+                        ],
+                    },
+                ],
+            });
+        }
+
+        if (!orders || orders.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Matching orders not found",
+            });
+        }
+
+        let confirmedCount = 0;
+        let totalConfirmedAmount = 0;
+        const now = new Date();
+
+        for (const order of orders) {
+            let modified = false;
+            for (const u of order.orderUnits) {
+                const uIdStr = u._id ? u._id.toString() : "";
+                const matchesUnit = targetUnitIds.length > 0 ? targetUnitIds.includes(uIdStr) : true;
+                const matchesBatch = settlementBatchId ? u.settlementBatchId === settlementBatchId : true;
+                const uMedId = (u.mediatorId?._id || u.mediatorId)?.toString();
+                const matchesMediator = !uMedId || uMedId === medIdStr;
+
+                if (matchesUnit && matchesBatch && matchesMediator && u.settlementStatus === "pending_confirmation") {
+                    u.settlementStatus = "settled";
+                    u.mediatorConfirmedAt = now;
+                    confirmedCount++;
+                    totalConfirmedAmount += parseFloat(u.settlementAmount || 0);
+                    modified = true;
+                }
+            }
+            if (modified) {
+                order.recalculateSummary();
+                await order.save();
+            }
+        }
+
+        if (confirmedCount === 0) {
+            // Check if units were already settled
+            const alreadySettled = orders.some((ord) =>
+                ord.orderUnits.some((u) => {
+                    const uIdStr = u._id ? u._id.toString() : "";
+                    const matchesUnit = targetUnitIds.length > 0 ? targetUnitIds.includes(uIdStr) : true;
+                    return matchesUnit && u.settlementStatus === "settled";
+                })
+            );
+            if (alreadySettled) {
+                return res.status(200).json({
+                    success: true,
+                    message: "Payout is already confirmed and settled.",
+                    alreadySettled: true,
+                });
+            }
+
+            return res.status(400).json({
+                success: false,
+                message: "No order units awaiting confirmation were found.",
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: `Confirmed payout of ₹${totalConfirmedAmount.toLocaleString()} for ${confirmedCount} unit(s). Moved to Settled Orders!`,
+            confirmedCount,
+            totalConfirmedAmount,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
 module.exports = {
     getNewOrders,
     acceptOrder,
@@ -987,5 +1174,7 @@ module.exports = {
     submitRefundDetails,
     getPendingVerificationOrders,
     getCompletedOrders,
+    getSettledOrders,
     getMediatorSummary,
+    confirmSettlementPayment,
 };

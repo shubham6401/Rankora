@@ -139,6 +139,23 @@ export default function MediatorDashboard() {
                                 <span>→</span>
                             </div>
                         </div>
+
+                        <div
+                            className="action-card"
+                            onClick={() => navigate("/mediator-settled-orders")}
+                        >
+                            <div className="action-card-top">
+                                <div className="action-card-icon">💰</div>
+                                <div>
+                                    <span style={{ fontSize: "11px", fontWeight: "700", color: "#059669" }}>Stage 6</span>
+                                    <h3 className="action-card-title">Settled Orders</h3>
+                                </div>
+                            </div>
+                            <div className="action-card-footer">
+                                <span>Archive</span>
+                                <span>→</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

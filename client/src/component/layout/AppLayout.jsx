@@ -148,6 +148,7 @@ export default function AppLayout({ children }) {
                 { title: "Pending Refund", path: "/executive-pending_refund-order", icon: "🔄" },
                 { title: "Verify Deliveries", path: "/executive-verify-orders", icon: "🔍" },
                 { title: "Completed", path: "/executive-completed-order", icon: "✅" },
+                { title: "Settled Orders", path: "/executive-settled-orders", icon: "💰" },
             ],
         },
         {
@@ -177,6 +178,7 @@ export default function AppLayout({ children }) {
                 { title: "Pending Refund", path: "/mediator-refund_pending-orders", icon: "🔄" },
                 { title: "Pending Verification", path: "/mediator-pending-verification", icon: "⏳" },
                 { title: "Completed", path: "/mediator-completed-orders", icon: "✅" },
+                { title: "Settled Orders", path: "/mediator-settled-orders", icon: "💰" },
             ],
         },
         {

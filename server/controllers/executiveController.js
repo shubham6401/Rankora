@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const Order = require("../models/order");
 const User = require("../models/user");
 const Address = require("../models/address");
@@ -363,10 +364,19 @@ const getPendingRefundOrders = async (req, res, next) => {
 // ==========================================
 const getCompletedOrders = async (req, res, next) => {
     try {
-        const teamCode = req.user.teamCode;
-        const query = {
-            "summary.completed": { $gt: 0 },
-        };
+        const teamCode = (req.user?.role === "admin" || req.user?.isSuperAdmin) ? null : req.user.teamCode;
+        // Default: Only return orders that have completed units awaiting settlement
+        // (Settled units move to Stage 8: getSettledOrders)
+        const query = req.query.includeSettled === "true"
+            ? { "summary.completed": { $gt: 0 } }
+            : {
+                orderUnits: {
+                    $elemMatch: {
+                        status: "completed",
+                        settlementStatus: { $ne: "settled" },
+                    },
+                },
+            };
         if (teamCode) query.teamCode = teamCode;
 
         const orders = await Order.find(query)
@@ -379,6 +389,162 @@ const getCompletedOrders = async (req, res, next) => {
             success: true,
             message: "Order fetched successfully",
             orders,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ==========================================
+// GET SETTLED ORDERS (FOR EXECUTIVE)
+// ==========================================
+const getSettledOrders = async (req, res, next) => {
+    try {
+        const teamCode = (req.user?.role === "admin" || req.user?.isSuperAdmin) ? null : req.user.teamCode;
+        const query = {
+            "orderUnits.settlementStatus": "settled",
+        };
+        if (teamCode) query.teamCode = teamCode;
+
+        const orders = await Order.find(query)
+            .populate("brandUserId", "name brand role")
+            .populate("createdBy", "name")
+            .populate("orderUnits.mediatorId", "name mediatorCode teamCode")
+            .populate("orderUnits.settledBy", "name")
+            .sort({ "orderUnits.settledAt": -1, createdAt: -1 });
+
+        return res.status(200).json({
+            success: true,
+            message: "Settled orders fetched successfully",
+            orders,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ==========================================
+// SETTLE EXECUTIVE PAYOUT (SINGLE OR BATCH)
+// ==========================================
+const settleExecutivePayout = async (req, res, next) => {
+    try {
+        const screenshotPath = req.file?.path || req.body.settlementScreenshot;
+        if (!screenshotPath) {
+            return res.status(400).json({
+                success: false,
+                message: "Settlement payment proof (image or PDF) is required",
+            });
+        }
+
+        let unitIds = [];
+        if (req.body.unitIds) {
+            try {
+                unitIds = typeof req.body.unitIds === "string" ? JSON.parse(req.body.unitIds) : req.body.unitIds;
+            } catch (e) {
+                unitIds = [req.body.unitIds];
+            }
+        } else if (req.body.orderUnitIds) {
+            try {
+                unitIds = typeof req.body.orderUnitIds === "string" ? JSON.parse(req.body.orderUnitIds) : req.body.orderUnitIds;
+            } catch (e) {
+                unitIds = [req.body.orderUnitIds];
+            }
+        } else if (req.body.unitId) {
+            unitIds = [req.body.unitId];
+        }
+
+        if (!Array.isArray(unitIds) || unitIds.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Please specify at least one completed unit ID to settle",
+            });
+        }
+
+        const objectIds = unitIds
+            .filter((id) => mongoose.Types.ObjectId.isValid(id))
+            .map((id) => new mongoose.Types.ObjectId(id));
+        const stringUnitIds = unitIds.map((id) => id.toString());
+
+        // Find orders containing any of these unit IDs (query with both ObjectIds and strings)
+        let orders = await Order.find({
+            "orderUnits._id": { $in: objectIds },
+        });
+
+        if (!orders || orders.length === 0) {
+            orders = await Order.find({
+                "orderUnits._id": { $in: stringUnitIds },
+            });
+        }
+
+        if (!orders || orders.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "No matching orders found for the specified unit IDs",
+            });
+        }
+
+        const now = new Date();
+        const settlementBatchId = `batch_${now.getTime()}_${Math.random().toString(36).substring(2, 7)}`;
+        const utrNote = req.body.utr || req.body.message || req.body.settlementMessage || null;
+        const amountPerOrder = parseFloat(req.body.amountPerOrder ?? req.body.amountPerUnit ?? 0);
+        let unitAmounts = {};
+        if (req.body.unitAmounts) {
+            try {
+                unitAmounts = typeof req.body.unitAmounts === "string" ? JSON.parse(req.body.unitAmounts) : req.body.unitAmounts;
+            } catch (e) {
+                unitAmounts = {};
+            }
+        }
+
+        let totalSettled = 0;
+        let totalSettlementPayout = 0;
+
+        for (const order of orders) {
+            let modified = false;
+            for (const unit of order.orderUnits) {
+                const uIdStr = unit._id ? unit._id.toString() : "";
+                if (stringUnitIds.includes(uIdStr)) {
+                    if (unit.status !== "completed" || unit.settlementStatus === "settled" || unit.settlementStatus === "pending_confirmation") {
+                        continue;
+                    }
+                    const unitSpecificAmount = unitAmounts[uIdStr] !== undefined
+                        ? parseFloat(unitAmounts[uIdStr])
+                        : amountPerOrder;
+                    const finalUnitAmount = !isNaN(unitSpecificAmount) && unitSpecificAmount >= 0 ? unitSpecificAmount : 0;
+
+                    unit.settlementStatus = "pending_confirmation";
+                    unit.settlementAmount = finalUnitAmount;
+                    unit.settlementScreenshot = screenshotPath;
+                    unit.settlementMessage = utrNote;
+                    unit.settlementBatchId = settlementBatchId;
+                    unit.settledAt = now;
+                    unit.settledBy = req.user._id;
+
+                    totalSettled++;
+                    totalSettlementPayout += finalUnitAmount;
+                    modified = true;
+                }
+            }
+            if (modified) {
+                order.recalculateSummary();
+                await order.save();
+            }
+        }
+
+        if (totalSettled === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "No eligible completed units found to settle (selected units may already be settled or awaiting confirmation).",
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: `Payout of ₹${totalSettlementPayout} submitted for ${totalSettled} unit(s). Awaiting confirmation by the mediator.`,
+            totalSettled,
+            totalSettlementPayout,
+            settlementScreenshot: screenshotPath,
+            settledAt: now,
         });
     } catch (err) {
         next(err);
@@ -442,6 +608,15 @@ const verifyOrderUnit = async (req, res, next) => {
             });
         }
 
+        if (unit.status === "completed") {
+            return res.status(200).json({
+                success: true,
+                message: "Unit is already verified and completed",
+                order,
+                unit,
+            });
+        }
+
         if (unit.status !== "pending_verification") {
             return res.status(400).json({
                 success: false,
@@ -452,6 +627,9 @@ const verifyOrderUnit = async (req, res, next) => {
         unit.status = "completed";
         unit.completedAt = new Date();
         unit.verificationRejectionReason = null;
+        if (!unit.settlementStatus) {
+            unit.settlementStatus = "unsettled";
+        }
 
         order.recalculateSummary();
         await order.save();
@@ -1243,4 +1421,6 @@ module.exports = {
     getExecutiveBrandSummary,
     getExecutiveBrandDetails,
     getExecutiveMasterAnalytics,
+    getSettledOrders,
+    settleExecutivePayout,
 };

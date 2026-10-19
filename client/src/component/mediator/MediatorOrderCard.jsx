@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { AcceptOrderByMediator } from "../../services/mediator/orders";
+import ProofThumbnail from "../common/ProofThumbnail";
+import ProofPreviewModal from "../common/ProofPreviewModal";
 import "../../styles/ordersTable.css";
 
 export default function MediatorOrderCard({ order }) {
@@ -78,12 +80,11 @@ export default function MediatorOrderCard({ order }) {
                 <td>
                     {paymentScreenshot ? (
                         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            <img
-                                src={paymentScreenshot}
-                                alt="Payment SS"
+                            <ProofThumbnail
+                                url={paymentScreenshot}
+                                alt="Payment Proof"
+                                size={32}
                                 onClick={() => setModalImg(paymentScreenshot)}
-                                className="proof-thumb"
-                                title="Click to view full payment screenshot"
                             />
                             <button
                                 type="button"
@@ -166,37 +167,13 @@ export default function MediatorOrderCard({ order }) {
                 </td>
             </tr>
 
-            {/* FULL PAYMENT PROOF MODAL */}
+            {/* FULL PAYMENT PROOF MODAL (Supports Image & PDF) */}
             {modalImg && (
-                <div
-                    onClick={() => setModalImg(null)}
-                    className="image-modal-overlay"
-                >
-                    <div
-                        onClick={(e) => e.stopPropagation()}
-                        className="image-modal-content"
-                    >
-                        <div className="image-modal-header">
-                            <div>
-                                <h3 style={{ margin: 0, color: "var(--slate-900)", fontSize: "16px", fontWeight: 800 }}>Payment Screenshot Verification</h3>
-                                <p style={{ margin: "2px 0 0 0", color: "var(--slate-500)", fontSize: "12px" }}>
-                                    {order.productName} (₹{order.price})
-                                </p>
-                            </div>
-                            <button
-                                onClick={() => setModalImg(null)}
-                                className="image-modal-close-btn"
-                            >
-                                Close ✕
-                            </button>
-                        </div>
-                        <img
-                            src={modalImg}
-                            alt="Full Payment SS"
-                            className="image-modal-img"
-                        />
-                    </div>
-                </div>
+                <ProofPreviewModal
+                    url={modalImg}
+                    title={`Payment Proof: ${order.productName} (₹${order.price})`}
+                    onClose={() => setModalImg(null)}
+                />
             )}
         </>
     );

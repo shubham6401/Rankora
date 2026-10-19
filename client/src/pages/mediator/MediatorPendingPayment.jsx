@@ -4,6 +4,8 @@ import {
     fetchMediatorPendingPaymentOrders,
     submitMediatorPaymentProof,
 } from "../../services/mediator/orders";
+import ProofThumbnail from "../../component/common/ProofThumbnail";
+import ProofPreviewModal from "../../component/common/ProofPreviewModal";
 import "../../styles/ordersTable.css";
 
 export default function MediatorPendingPayment() {
@@ -162,10 +164,10 @@ export default function MediatorPendingPayment() {
                         ↩️ Rejections & Return Refunds
                     </span>
                     <h1 className="table-page-title">
-                        Return Refunds for Rejected Orders
+                        Return Refunds
                     </h1>
                     <p className="table-page-subtitle">
-                        When you reject offers that had advance payments, upload the refund transaction screenshot here so the Executive can verify and accept the returned payment.
+                        Refund transaction proofs for returned advance payments.
                     </p>
                 </div>
                 <div className="table-header-actions">
@@ -233,8 +235,8 @@ export default function MediatorPendingPayment() {
                     </h2>
                     <p className="empty-state-text">
                         {activeTab === "pending"
-                            ? "All advance payments and rejected orders are fully settled with the Executive."
-                            : "Once the Executive verifies and accepts your refund proofs, they will appear here in your verified history."}
+                            ? "All advance payments are settled."
+                            : "No verified refund records."}
                     </p>
                     {activeTab === "pending" && (
                         <button
@@ -573,11 +575,11 @@ export default function MediatorPendingPayment() {
                                                 Click to select or drag & drop screenshot
                                             </div>
                                             <div style={{ fontSize: "11px", color: "var(--slate-400)", marginTop: "4px" }}>
-                                                PNG, JPG, WEBP formats accepted
+                                                PNG, JPG, WEBP, or PDF formats accepted
                                             </div>
                                             <input
                                                 type="file"
-                                                accept="image/*"
+                                                accept="image/*,application/pdf"
                                                 required
                                                 onChange={handleFileChange}
                                                 style={{ display: "none" }}
@@ -597,19 +599,11 @@ export default function MediatorPendingPayment() {
                                             }}
                                         >
                                             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                                <img
-                                                    src={uploadPreview}
-                                                    alt="Preview"
+                                                <ProofThumbnail
+                                                    url={uploadFile || uploadPreview}
+                                                    alt="Upload Preview"
+                                                    size={56}
                                                     onClick={() => setModalImage(uploadPreview)}
-                                                    style={{
-                                                        width: "56px",
-                                                        height: "56px",
-                                                        objectFit: "cover",
-                                                        borderRadius: "6px",
-                                                        border: "1px solid #86efac",
-                                                        cursor: "pointer",
-                                                    }}
-                                                    title="Click to zoom preview"
                                                 />
                                                 <div>
                                                     <div style={{ fontSize: "13px", fontWeight: 700, color: "#166534" }}>
@@ -683,34 +677,13 @@ export default function MediatorPendingPayment() {
                 </div>
             )}
 
-            {/* FULL IMAGE ZOOM MODAL */}
+            {/* FULL IMAGE / PDF ZOOM MODAL */}
             {modalImage && (
-                <div
-                    onClick={() => setModalImage(null)}
-                    className="image-modal-overlay"
-                >
-                    <div
-                        onClick={(e) => e.stopPropagation()}
-                        className="image-modal-content"
-                    >
-                        <div className="image-modal-header">
-                            <span style={{ fontWeight: 700, fontSize: "14px", color: "var(--slate-700)" }}>
-                                Payment Screenshot
-                            </span>
-                            <button
-                                onClick={() => setModalImage(null)}
-                                className="image-modal-close-btn"
-                            >
-                                Close ✕
-                            </button>
-                        </div>
-                        <img
-                            src={modalImage}
-                            alt="Proof"
-                            className="image-modal-img"
-                        />
-                    </div>
-                </div>
+                <ProofPreviewModal
+                    url={modalImage}
+                    title="Payment Proof Preview"
+                    onClose={() => setModalImage(null)}
+                />
             )}
         </div>
     );

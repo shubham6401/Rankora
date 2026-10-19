@@ -27,6 +27,8 @@ const {
     getExecutiveBrandSummary,
     getExecutiveBrandDetails,
     getExecutiveMasterAnalytics,
+    getSettledOrders,
+    settleExecutivePayout,
 } = require("../controllers/executiveController");
 
 // All executive routes require token verification
@@ -42,6 +44,7 @@ router.get("/orders/in_progress", getInProgressOrders);
 router.get("/orders/pending_refund", getPendingRefundOrders);
 router.get("/orders/pending_verification", getPendingVerificationOrders);
 router.get("/orders/completed", getCompletedOrders);
+router.get("/orders/settled", getSettledOrders);
 
 router.post("/order/add", addOrder);
 router.post("/order/assign/:orderId", assignOrder);
@@ -53,6 +56,16 @@ router.post(
     "/order/submit-payment/:mediatorId",
     upload.single("paymentScreenshot"),
     submitExecutivePayment
+);
+router.post(
+    "/order/settle-payout",
+    upload.single("settlementScreenshot"),
+    settleExecutivePayout
+);
+router.post(
+    "/order/settle-orders",
+    upload.single("settlementScreenshot"),
+    settleExecutivePayout
 );
 
 router.get("/mediators", getMediators);

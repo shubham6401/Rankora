@@ -33,7 +33,6 @@ export default function MediatorRefundPendingOrders() {
                 <div className="empty-state-card">
                     <div className="empty-state-icon">⏳</div>
                     <h2 className="empty-state-title">Loading Refund-Pending Orders...</h2>
-                    <p className="empty-state-text">Fetching orders placed and awaiting post-delivery refund submission.</p>
                 </div>
             </div>
         );
@@ -49,17 +48,15 @@ export default function MediatorRefundPendingOrders() {
             {/* Visual Pipeline Stepper */}
             <PipelineStepper role="mediator" />
 
-            {/* TOP HEADER */}
+            {/* Header */}
             <div className="table-page-header">
                 <div className="table-header-info">
-                    <span className="table-page-badge" style={{ background: "#faf5ff", color: "#7c3aed", borderColor: "#e9d8fd" }}>
+                    <span className="table-page-badge">
                         Stage 3 of Mediator Pipeline
                     </span>
-                    <h1 className="table-page-title">
-                        📦 Stage 3: Orders with Refund Pending
-                    </h1>
+                    <h1 className="table-page-title">Pending Refund</h1>
                     <p className="table-page-subtitle">
-                        Placed orders awaiting delivery and review proof submissions for refund reimbursement.
+                        Submit delivery and review proofs.
                     </p>
                 </div>
                 <div className="table-header-actions">
@@ -96,13 +93,13 @@ export default function MediatorRefundPendingOrders() {
                     <div className="empty-state-icon">📬</div>
                     <h2 className="empty-state-title">No Orders with Pending Refund</h2>
                     <p className="empty-state-text">
-                        Orders submitted with placement details will appear here once placed, awaiting your review and delivery screenshots.
+                        No orders awaiting review and delivery proofs.
                     </p>
                     <button
                         onClick={() => navigate("/mediator-pending-orders")}
                         className="table-btn table-btn-primary"
                     >
-                        View In-Progress Orders
+                        View In-Progress Orders →
                     </button>
                 </div>
             ) : (

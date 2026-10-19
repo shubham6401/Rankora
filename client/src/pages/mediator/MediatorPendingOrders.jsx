@@ -10,6 +10,28 @@ export default function MediatorPendingOrders() {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [returnTarget, setReturnTarget] = useState(null);
+    const [copiedAddressId, setCopiedAddressId] = useState(null);
+
+    const handleCopyAddress = (e, text, id) => {
+        e.stopPropagation();
+        if (!text) return;
+        navigator.clipboard.writeText(text);
+        setCopiedAddressId(id);
+        setTimeout(() => {
+            setCopiedAddressId(null);
+        }, 2000);
+    };
+
+    const getUnitAddressInfo = (unit) => {
+        const isExec = unit.addressType === "executive_provided" || (unit.deliveryAddress && unit.deliveryAddress.trim().toLowerCase() !== "yourself");
+        const fullText = isExec ? (unit.deliveryAddress || unit.address || "") : (unit.address || "Yourself");
+        const isYourself = !isExec && (!fullText || fullText.trim().toLowerCase() === "yourself");
+        return {
+            isYourself,
+            isExec,
+            text: isYourself ? "Yourself" : fullText,
+        };
+    };
 
     useEffect(() => {
         handleFetchAllPendingOrders();
@@ -33,7 +55,6 @@ export default function MediatorPendingOrders() {
                 <div className="empty-state-card">
                     <div className="empty-state-icon">⏳</div>
                     <h2 className="empty-state-title">Loading In-Progress Orders...</h2>
-                    <p className="empty-state-text">Fetching orders currently active and accepted by you.</p>
                 </div>
             </div>
         );
@@ -49,15 +70,13 @@ export default function MediatorPendingOrders() {
             {/* Visual Pipeline Stepper */}
             <PipelineStepper role="mediator" />
 
-            {/* TOP HEADER */}
+            {/* Header */}
             <div className="table-page-header">
                 <div className="table-header-info">
                     <span className="table-page-badge">Stage 2 of Mediator Pipeline</span>
-                    <h1 className="table-page-title">
-                        ⚡ Stage 2: In-Progress Orders
-                    </h1>
+                    <h1 className="table-page-title">In-Progress Orders</h1>
                     <p className="table-page-subtitle">
-                        Active orders you have accepted. Review product specs, place orders on platforms, and submit order placement proofs.
+                        Active orders awaiting placement details.
                     </p>
                 </div>
                 <div className="table-header-actions">
@@ -71,7 +90,7 @@ export default function MediatorPendingOrders() {
                         onClick={() => navigate("/mediator-neworders")}
                         className="nav-btn nav-btn-primary"
                     >
-                        + View New Offers
+                        + New Offers
                     </button>
                 </div>
             </div>
@@ -92,15 +111,15 @@ export default function MediatorPendingOrders() {
             {orders.length === 0 ? (
                 <div className="empty-state-card">
                     <div className="empty-state-icon">📦</div>
-                    <h2 className="empty-state-title">No In-Progress Orders Found</h2>
+                    <h2 className="empty-state-title">No In-Progress Orders</h2>
                     <p className="empty-state-text">
-                        Accept new orders from the New Assigned Orders panel to start placing and managing them here.
+                        No active orders currently in progress.
                     </p>
                     <button
                         onClick={() => navigate("/mediator-neworders")}
                         className="table-btn table-btn-primary"
                     >
-                        Check New Orders
+                        View New Offers →
                     </button>
                 </div>
             ) : (
@@ -112,6 +131,7 @@ export default function MediatorPendingOrders() {
                                     <th>Product</th>
                                     <th>Brand</th>
                                     <th>Platform</th>
+                                    <th>Address</th>
                                     <th>Price</th>
                                     <th>Executive</th>
                                     <th>Created On</th>
@@ -150,6 +170,55 @@ export default function MediatorPendingOrders() {
                                             </td>
                                             <td>{order.brand}</td>
                                             <td>{order.orderPlatform}</td>
+                                            <td className="address-compact-cell">
+                                                {inProgressUnits.length === 0 ? (
+                                                    <span style={{ color: "var(--slate-400)", fontStyle: "italic", fontSize: "11.5px" }}>-</span>
+                                                ) : (
+                                                    <div className="address-multi-unit-list">
+                                                        {inProgressUnits.map((u, uIdx) => {
+                                                            const addr = getUnitAddressInfo(u);
+                                                            const uniqueId = `${order._id}-${u._id || uIdx}`;
+                                                            const isCopied = copiedAddressId === uniqueId;
+
+                                                            if (addr.isYourself) {
+                                                                return (
+                                                                    <div key={uniqueId} className="address-compact-chip yourself" title="Ship to your own address">
+                                                                        <span>🏠</span>
+                                                                        <span className="address-compact-text">Yourself</span>
+                                                                        {inProgressUnits.length > 1 && (
+                                                                            <span style={{ fontSize: "10px", opacity: 0.75 }}>#{uIdx + 1}</span>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            }
+
+                                                            return (
+                                                                <div
+                                                                    key={uniqueId}
+                                                                    className="address-compact-chip executive"
+                                                                    title={addr.text}
+                                                                >
+                                                                    <span>📍</span>
+                                                                    <span className="address-compact-text">
+                                                                        {addr.text}
+                                                                    </span>
+                                                                    <button
+                                                                        type="button"
+                                                                        className="address-copy-btn"
+                                                                        onClick={(e) => handleCopyAddress(e, addr.text, uniqueId)}
+                                                                        title="Copy full address"
+                                                                    >
+                                                                        📋
+                                                                    </button>
+                                                                    {isCopied && (
+                                                                        <span className="address-copied-toast">Copied!</span>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </td>
                                             <td className="price-pill">₹{order.price}</td>
                                             <td>{order.executiveName || "Executive"}</td>
                                             <td>{new Date(order.createdAt).toLocaleDateString()}</td>

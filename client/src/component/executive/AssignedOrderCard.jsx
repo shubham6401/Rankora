@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import ProofThumbnail from "../common/ProofThumbnail";
+import ProofPreviewModal from "../common/ProofPreviewModal";
 import "../../styles/ordersTable.css";
 
 export default function AssignedOrderCard({ order, status }) {
@@ -112,12 +114,11 @@ export default function AssignedOrderCard({ order, status }) {
                             <div key={idx} style={{ margin: "4px 0" }}>
                                 {mediator.paymentScreenshot ? (
                                     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                                        <img
-                                            src={mediator.paymentScreenshot}
-                                            alt="Payment SS"
-                                            className="proof-thumb"
+                                        <ProofThumbnail
+                                            url={mediator.paymentScreenshot}
+                                            alt="Payment Proof"
+                                            size={32}
                                             onClick={() => setModalImg(mediator.paymentScreenshot)}
-                                            title="Click to view payment proof"
                                         />
                                         <button
                                             type="button"
@@ -151,25 +152,13 @@ export default function AssignedOrderCard({ order, status }) {
                 </td>
             </tr>
 
-            {/* Lightbox Modal */}
+            {/* Lightbox Modal (Supports Image & PDF) */}
             {modalImg && (
-                <div className="image-modal-overlay" onClick={() => setModalImg(null)}>
-                    <div className="image-modal-content" onClick={(e) => e.stopPropagation()}>
-                        <div className="image-modal-header">
-                            <span style={{ fontWeight: "700", fontSize: "14px" }}>
-                                Payment Proof Verification Screenshot
-                            </span>
-                            <button
-                                type="button"
-                                className="image-modal-close-btn"
-                                onClick={() => setModalImg(null)}
-                            >
-                                Close ✕
-                            </button>
-                        </div>
-                        <img src={modalImg} alt="Payment SS" className="image-modal-img" />
-                    </div>
-                </div>
+                <ProofPreviewModal
+                    url={modalImg}
+                    title="Payment Proof Verification Screenshot"
+                    onClose={() => setModalImg(null)}
+                />
             )}
         </>
     );

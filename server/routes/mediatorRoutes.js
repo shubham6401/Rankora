@@ -17,7 +17,9 @@ const {
     submitRefundDetails,
     getPendingVerificationOrders,
     getCompletedOrders,
+    getSettledOrders,
     getMediatorSummary,
+    confirmSettlementPayment,
 } = require("../controllers/mediatorController");
 
 // All mediator routes require token verification
@@ -62,5 +64,8 @@ router.post(
 
 router.get("/orders/pending_verification", getPendingVerificationOrders);
 router.get("/orders/completed", getCompletedOrders);
+router.get("/orders/settled", getSettledOrders);
+router.post("/order/confirm-settlement", confirmSettlementPayment);
+router.post("/orders/confirm-settlement", confirmSettlementPayment);
 
 module.exports = router;

@@ -4,6 +4,8 @@ import {
     fetchExecutiveMediatorSentOrders,
     acceptExecutiveMediatorPayment,
 } from "../../services/executive/order";
+import ProofThumbnail from "../../component/common/ProofThumbnail";
+import ProofPreviewModal from "../../component/common/ProofPreviewModal";
 import "../../styles/ordersTable.css";
 
 export default function MediatorSentOrders() {
@@ -264,16 +266,21 @@ export default function MediatorSentOrders() {
 
                                                 <div style={{ display: "flex", gap: "18px", flexWrap: "wrap", alignItems: "flex-start" }}>
                                                     {refundProofUrl ? (
-                                                        <div style={{ cursor: "pointer", display: "inline-block" }} onClick={() => setPreviewImage(refundProofUrl)}>
-                                                            <img
-                                                                src={refundProofUrl}
+                                                        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "6px" }}>
+                                                            <ProofThumbnail
+                                                                url={refundProofUrl}
                                                                 alt="Mediator Refund Proof"
-                                                                className="proof-thumb"
-                                                                style={{ width: "120px", height: "100px" }}
+                                                                size={90}
+                                                                onClick={() => setPreviewImage(refundProofUrl)}
                                                             />
-                                                            <div style={{ fontSize: "11px", color: "var(--primary-600)", marginTop: "4px" }}>
-                                                                🔍 Click to zoom
-                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setPreviewImage(refundProofUrl)}
+                                                                className="table-btn table-btn-outline"
+                                                                style={{ fontSize: "11px", padding: "2px 8px" }}
+                                                            >
+                                                                🔍 View Proof
+                                                            </button>
                                                         </div>
                                                     ) : (
                                                         <div style={{ color: "var(--slate-400)", fontSize: "13px", fontStyle: "italic" }}>
@@ -336,25 +343,13 @@ export default function MediatorSentOrders() {
                 </div>
             )}
 
-            {/* Modal Lightbox */}
+            {/* Modal Lightbox (Image & PDF supported) */}
             {previewImage && (
-                <div className="image-modal-overlay" onClick={() => setPreviewImage(null)}>
-                    <div className="image-modal-content" onClick={(e) => e.stopPropagation()}>
-                        <div className="image-modal-header">
-                            <span style={{ fontWeight: "700", fontSize: "14px" }}>
-                                Mediator Refund Payment Proof
-                            </span>
-                            <button
-                                type="button"
-                                className="image-modal-close-btn"
-                                onClick={() => setPreviewImage(null)}
-                            >
-                                Close ✕
-                            </button>
-                        </div>
-                        <img src={previewImage} alt="Mediator Refund Proof Enlarged" className="image-modal-img" />
-                    </div>
-                </div>
+                <ProofPreviewModal
+                    url={previewImage}
+                    title="Mediator Refund Payment Proof"
+                    onClose={() => setPreviewImage(null)}
+                />
             )}
         </div>
     );

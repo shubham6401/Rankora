@@ -12,6 +12,7 @@ import MediatorDashboard from "../pages/mediator/MediatorDashboard";
 import MediatorPendingOrders from "../pages/mediator/MediatorPendingOrders";
 import MediatorRefundPendingOrders from "../pages/mediator/MediatorRefundPendingOrders";
 import MediatorCompletedOrders from "../pages/mediator/MediatorCompletedOrders";
+import MediatorSettledOrders from "../pages/mediator/MediatorSettledOrders";
 import MediatorEarnings from "../pages/mediator/MediatorEarnings";
 import MediatorPendingPayment from "../pages/mediator/MediatorPendingPayment";
 import MediatorPendingVerification from "../pages/mediator/MediatorPendingVerification";
@@ -34,6 +35,7 @@ import Pending_refundOrders from "../pages/executive/Pending_refundOrders";
 import ExecutiveVerifyOrders from "../pages/executive/ExecutiveVerifyOrders";
 import ExecutiveInspectOrder from "../pages/executive/ExecutiveInspectOrder";
 import CompletedOrders from "../pages/executive/CompletedOrders";
+import SettledOrders from "../pages/executive/SettledOrders";
 import AllMediator from "../pages/executive/AllMediators";
 import ExecutiveBalance from "../pages/executive/ExecutiveBalance";
 
@@ -84,6 +86,7 @@ export default function AppRoutes() {
             <Route path="/mediator-refund-pending-orders" element={<ProtectedLayout><MediatorRefundPendingOrders /></ProtectedLayout>} />
             <Route path="/mediator-pending-verification" element={<ProtectedLayout><MediatorPendingVerification /></ProtectedLayout>} />
             <Route path="/mediator-completed-orders" element={<ProtectedLayout><MediatorCompletedOrders /></ProtectedLayout>} />
+            <Route path="/mediator-settled-orders" element={<ProtectedLayout><MediatorSettledOrders /></ProtectedLayout>} />
             <Route path="/mediator-earnings" element={<ProtectedLayout><MediatorEarnings /></ProtectedLayout>} />
             <Route path="/mediator-pending-payment" element={<ProtectedLayout><MediatorPendingPayment /></ProtectedLayout>} />
             <Route path="/mediator-pending_payment-orders" element={<ProtectedLayout><MediatorPendingPayment /></ProtectedLayout>} />
@@ -111,6 +114,7 @@ export default function AppRoutes() {
             <Route path="/executive-verify-orders" element={<ProtectedLayout><ExecutiveVerifyOrders /></ProtectedLayout>} />
             <Route path="/executive-verify-order/:id" element={<ProtectedLayout><ExecutiveInspectOrder /></ProtectedLayout>} />
             <Route path="/executive-completed-order" element={<ProtectedLayout><CompletedOrders /></ProtectedLayout>} />
+            <Route path="/executive-settled-orders" element={<ProtectedLayout><SettledOrders /></ProtectedLayout>} />
             <Route path="/executive-balance" element={<ProtectedLayout><ExecutiveBalance /></ProtectedLayout>} />
             <Route path="/executive-mediators" element={<ProtectedLayout><AllMediator /></ProtectedLayout>} />
             <Route path="/executive-brands" element={<ProtectedLayout><ExecutiveBrands /></ProtectedLayout>} />
