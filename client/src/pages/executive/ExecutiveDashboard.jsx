@@ -255,6 +255,22 @@ export default function ExecutiveDashboard() {
                                 <span>→</span>
                             </div>
                         </div>
+
+                        <div
+                            className="action-card"
+                            onClick={() => navigate("/executive-mediator-earnings")}
+                        >
+                            <div className="action-card-top">
+                                <div className="action-card-icon">📊</div>
+                                <div>
+                                    <h3 className="action-card-title">Mediator Earnings</h3>
+                                </div>
+                            </div>
+                            <div className="action-card-footer">
+                                <span>Breakdown</span>
+                                <span>→</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

@@ -29,6 +29,7 @@ const {
     getExecutiveMasterAnalytics,
     getSettledOrders,
     settleExecutivePayout,
+    getExecutiveMediatorEarnings,
 } = require("../controllers/executiveController");
 
 // All executive routes require token verification
@@ -82,5 +83,9 @@ router.get("/brands/:brandUserId/details", getExecutiveBrandDetails);
 
 // Master Analytics
 router.get("/analytics", getExecutiveMasterAnalytics);
+
+// Mediator Earnings & Remaining Balances Oversight
+router.get("/mediators-earnings", getExecutiveMediatorEarnings);
+router.get("/earnings", getExecutiveMediatorEarnings);
 
 module.exports = router;

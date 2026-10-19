@@ -3,33 +3,87 @@ import { fetchMediatorSummary } from "../../services/mediator/orders";
 import { fetchMyBalanceTransactions } from "../../services/balance";
 import "../../styles/earningTable.css";
 
-export default function EarningTable() {
-    const [loading, setLoading] = useState(true);
+export default function EarningTable({
+    mediatorData = null,
+    readOnly = false,
+    title = "Mediator Financial Breakdown & Earnings",
+}) {
+    const [loading, setLoading] = useState(!mediatorData);
     const [isEditing, setIsEditing] = useState(false);
 
     // Live counts & values from DB
-    const [liveStats, setLiveStats] = useState({
-        completedUnits: 0,
-        inProgressUnits: 0,
-        pendingRefundUnits: 0,
-        pendingPaymentUnits: 0,
-        totalAssignedUnits: 0,
-        totalOrderValue: 0,
-        completedValue: 0,
-        inProgressValue: 0,
-        pendingRefundValue: 0,
-        rejectedValue: 0,
-        balanceReceived: 0,
-        balanceReturned: 0,
-        netBalance: 0,
+    const [liveStats, setLiveStats] = useState(() => {
+        if (mediatorData) {
+            return {
+                completedUnits: mediatorData.completedUnits || 0,
+                inProgressUnits: mediatorData.inProgressUnits || 0,
+                pendingRefundUnits: mediatorData.pendingRefundUnits || 0,
+                pendingPaymentUnits: mediatorData.pendingPaymentUnits || 0,
+                totalAssignedUnits: mediatorData.totalAssignedUnits || 0,
+                totalOrderValue: mediatorData.totalOrderValue || 0,
+                completedValue: mediatorData.completedValue || 0,
+                inProgressValue: mediatorData.inProgressValue || 0,
+                pendingRefundValue: mediatorData.pendingRefundValue || 0,
+                rejectedValue: mediatorData.rejectedValue || 0,
+                balanceReceived: mediatorData.balanceReceived || 0,
+                balanceReturned: mediatorData.balanceReturned || 0,
+                netBalance: mediatorData.netBalance || 0,
+                settledPayout: mediatorData.settledPayout || 0,
+            };
+        }
+        return {
+            completedUnits: 0,
+            inProgressUnits: 0,
+            pendingRefundUnits: 0,
+            pendingPaymentUnits: 0,
+            totalAssignedUnits: 0,
+            totalOrderValue: 0,
+            completedValue: 0,
+            inProgressValue: 0,
+            pendingRefundValue: 0,
+            rejectedValue: 0,
+            balanceReceived: 0,
+            balanceReturned: 0,
+            netBalance: 0,
+            settledPayout: 0,
+        };
     });
 
     // Financial Table State
     const [tableData, setTableData] = useState(() => {
-        const saved = localStorage.getItem("mediator_earning_table_v2");
+        if (mediatorData) {
+            const inProgVal = mediatorData.inProgressValue || 0;
+            const pendRefVal = mediatorData.pendingRefundValue || 0;
+            const completedVal = mediatorData.completedValue || 0;
+            const rejVal = mediatorData.rejectedValue || 0;
+            const balRec = mediatorData.balanceReceived || 0;
+            const balRet = mediatorData.balanceReturned || 0;
+
+            const executedOrderForm = inProgVal + pendRefVal + completedVal;
+            const autoReceived = executedOrderForm + rejVal + balRec;
+            const autoReturned = rejVal + balRet;
+
+            return {
+                totalAmountReceived: autoReceived,
+                cancelledReturnOrders: rejVal,
+                totalAmountReturned: autoReturned,
+                orderForm: executedOrderForm,
+                refundForm: completedVal,
+                refundFormExtra: 0,
+                perOrderAmount: 20,
+                settledEarningAmount: mediatorData.settledPayout || 0,
+                finalAmountToReturn: null,
+                useManualOverrides: false,
+            };
+        }
+
+        const saved = localStorage.getItem("mediator_earning_table_v3");
         if (saved) {
             try {
-                return JSON.parse(saved);
+                const parsed = JSON.parse(saved);
+                if (parsed && parsed.useManualOverrides) {
+                    return parsed;
+                }
             } catch {
                 // fallback
             }
@@ -42,15 +96,43 @@ export default function EarningTable() {
             refundForm: null,
             refundFormExtra: 0,
             perOrderAmount: 20,
-            totalBillingAmount: 0,
-            remainingBalance: null,
+            settledEarningAmount: null,
+            finalAmountToReturn: null,
             useManualOverrides: false,
         };
     });
 
     useEffect(() => {
-        fetchLiveFinancialData();
-    }, []);
+        if (mediatorData) {
+            setLiveStats(mediatorData);
+            setLoading(false);
+            const inProgVal = mediatorData.inProgressValue || 0;
+            const pendRefVal = mediatorData.pendingRefundValue || 0;
+            const completedVal = mediatorData.completedValue || 0;
+            const rejVal = mediatorData.rejectedValue || 0;
+            const balRec = mediatorData.balanceReceived || 0;
+            const balRet = mediatorData.balanceReturned || 0;
+
+            const executedOrderForm = inProgVal + pendRefVal + completedVal;
+            const autoReceived = executedOrderForm + rejVal + balRec;
+            const autoReturned = rejVal + balRet;
+
+            setTableData({
+                totalAmountReceived: autoReceived,
+                cancelledReturnOrders: rejVal,
+                totalAmountReturned: autoReturned,
+                orderForm: executedOrderForm,
+                refundForm: completedVal,
+                refundFormExtra: 0,
+                perOrderAmount: 20,
+                settledEarningAmount: mediatorData.settledPayout || 0,
+                finalAmountToReturn: null,
+                useManualOverrides: false,
+            });
+        } else {
+            fetchLiveFinancialData();
+        }
+    }, [mediatorData]);
 
     const fetchLiveFinancialData = async () => {
         try {
@@ -80,15 +162,32 @@ export default function EarningTable() {
                 const price = parseFloat(ord.price) || 0;
                 const units = ord.orderUnits || [];
                 units.forEach((u) => {
-                    if (u.status === "in_progress") inProgVal += price;
-                    else if (u.status === "pending_refund") pendRefVal += price;
-                    else if (u.status === "pending_payment") rejVal += price;
+                    const isCancelledOrReturned =
+                        u.status === "pending_payment" ||
+                        u.status === "unassigned" ||
+                        Boolean(u.refundedByMediatorId) ||
+                        Boolean(u.returnReason) ||
+                        Boolean(u.rejectedAt);
+
+                    if (isCancelledOrReturned && u.status !== "completed") {
+                        rejVal += price;
+                    } else if (u.status === "in_progress") {
+                        inProgVal += price;
+                    } else if (u.status === "pending_refund") {
+                        pendRefVal += price;
+                    }
                 });
             });
+
+            // Ensure cancelledValue from summary is fully respected
+            if (summary.cancelledValue !== undefined && summary.cancelledValue > 0) {
+                rejVal = Math.max(rejVal, summary.cancelledValue);
+            }
 
             const balanceReceived = balanceSummary.totalReceivedVerified || 0;
             const balanceReturned = balanceSummary.totalSentVerified || 0;
             const netBalance = balanceSummary.netBalance || 0;
+            const settledPayout = summary.settledPayout || 0;
 
             const executedOrderForm = inProgVal + pendRefVal + completedVal;
             const autoReceived = executedOrderForm + rejVal + balanceReceived;
@@ -108,6 +207,7 @@ export default function EarningTable() {
                 balanceReceived,
                 balanceReturned,
                 netBalance,
+                settledPayout,
             };
 
             setLiveStats(stats);
@@ -123,7 +223,7 @@ export default function EarningTable() {
                     totalAmountReturned: autoReturned,
                     orderForm: executedOrderForm,
                     refundForm: completedVal,
-                    remainingBalance: netBalance,
+                    settledEarningAmount: settledPayout,
                 };
             });
         } catch (err) {
@@ -140,7 +240,7 @@ export default function EarningTable() {
             useManualOverrides: true,
         };
         setTableData(updated);
-        localStorage.setItem("mediator_earning_table_v2", JSON.stringify(updated));
+        localStorage.setItem("mediator_earning_table_v3", JSON.stringify(updated));
     };
 
     const resetToLiveData = () => {
@@ -156,55 +256,82 @@ export default function EarningTable() {
             refundForm: liveStats.completedValue,
             refundFormExtra: 0,
             perOrderAmount: tableData.perOrderAmount || 20,
-            totalBillingAmount: 0,
-            remainingBalance: liveStats.netBalance,
+            settledEarningAmount: liveStats.settledPayout || 0,
+            finalAmountToReturn: null,
             useManualOverrides: false,
         };
 
         setTableData(updated);
-        localStorage.setItem("mediator_earning_table_v2", JSON.stringify(updated));
+        localStorage.setItem("mediator_earning_table_v3", JSON.stringify(updated));
         setIsEditing(false);
     };
 
-    const totalAmountReceived =
-        tableData.totalAmountReceived !== null
-            ? Number(tableData.totalAmountReceived)
-            : (liveStats.inProgressValue + liveStats.pendingRefundValue + liveStats.completedValue + liveStats.rejectedValue + liveStats.balanceReceived);
-
+    // Row 1: Total Amount Received (Amount given by executive)
     const cancelledReturnOrders =
-        tableData.cancelledReturnOrders !== null ? Number(tableData.cancelledReturnOrders) : liveStats.rejectedValue;
+        tableData.useManualOverrides && tableData.cancelledReturnOrders !== null
+            ? Number(tableData.cancelledReturnOrders)
+            : liveStats.rejectedValue;
 
     const totalAmountReturned =
-        tableData.totalAmountReturned !== null
+        tableData.useManualOverrides && tableData.totalAmountReturned !== null
             ? Number(tableData.totalAmountReturned)
-            : (liveStats.rejectedValue + liveStats.balanceReturned);
-
-    const left1 = Number((totalAmountReceived - cancelledReturnOrders - totalAmountReturned).toFixed(2));
+            : Number((liveStats.rejectedValue + liveStats.balanceReturned).toFixed(2));
 
     const orderForm =
-        tableData.orderForm !== null
+        tableData.useManualOverrides && tableData.orderForm !== null
             ? Number(tableData.orderForm)
-            : (liveStats.inProgressValue + liveStats.pendingRefundValue + liveStats.completedValue);
+            : Number((liveStats.inProgressValue + liveStats.pendingRefundValue + liveStats.completedValue).toFixed(2));
 
+    const totalAmountReceived =
+        tableData.useManualOverrides && tableData.totalAmountReceived !== null
+            ? Number(tableData.totalAmountReceived)
+            : Number((orderForm + liveStats.rejectedValue + liveStats.balanceReceived).toFixed(2));
+
+    // Row 4: Left 1 (Amount left with mediator: Received - Total Returned)
+    const left1 = Number((totalAmountReceived - totalAmountReturned).toFixed(2));
+
+    // Row 6: Amount Not Used (Unspent advance: Left 1 - Ordered Form)
     const amountNotUsed = Number((left1 - orderForm).toFixed(2));
 
-    const refundForm = tableData.refundForm !== null ? Number(tableData.refundForm) : liveStats.completedValue;
+    // Row 7: Refund Form (Total amount whose refund form is filled)
+    const refundForm =
+        tableData.useManualOverrides && tableData.refundForm !== null
+            ? Number(tableData.refundForm)
+            : liveStats.completedValue;
 
+    // Row 8: Amount Not Recovered (Awaiting brand refund: Ordered Form - Refund Form)
     const amountNotRecovered = Number((orderForm - refundForm).toFixed(2));
 
+    // Row 9: Refund Form Extra Adjustments
     const refundFormExtra = Number(tableData.refundFormExtra) || 0;
+
+    // Row 10: Per Order Commission Amount
     const perOrderAmount = Number(tableData.perOrderAmount) || 20;
 
+    // Row 11: Commission Earning
     const completedUnitsCount = liveStats.completedUnits;
     const dynamicEarning = completedUnitsCount * perOrderAmount;
 
-    const totalBillingAmount = Number(tableData.totalBillingAmount) || 0;
-    const remainingBalance =
-        tableData.remainingBalance !== null ? Number(tableData.remainingBalance) : liveStats.netBalance;
+    // Row 12: Settled Earning Amount (Commission payouts settled by executive)
+    const settledEarningAmount =
+        tableData.useManualOverrides && tableData.settledEarningAmount !== null
+            ? Number(tableData.settledEarningAmount)
+            : Number((liveStats.settledPayout || 0).toFixed(2));
 
-    const exactEarning = Number(
-        (dynamicEarning + remainingBalance + refundFormExtra).toFixed(2)
+    // Row 13: Remaining Earning Amount (Awaiting executive payout: Commission - Settled)
+    const remainingEarningAmount = Number(Math.max(0, dynamicEarning - settledEarningAmount).toFixed(2));
+
+    // Row 14: Final Amount to Return to Executive (Money whose refund form is not filled: Ordered Form - Refund Form + Unspent Advance)
+    const calculatedFinalReturn = Number(
+        (amountNotRecovered + (amountNotUsed > 0 ? amountNotUsed : 0) + refundFormExtra).toFixed(2)
     );
+    const finalAmountToReturn =
+        tableData.useManualOverrides && tableData.finalAmountToReturn !== null
+            ? Number(tableData.finalAmountToReturn)
+            : calculatedFinalReturn;
+
+    // Row 15: Exact Net Earning (Commission Earning + Extra Adjustments)
+    const exactEarning = Number((dynamicEarning + refundFormExtra).toFixed(2));
 
     const formatCurrency = (val) => {
         if (val === null || val === undefined || isNaN(val)) return "₹0.00";
@@ -227,46 +354,53 @@ export default function EarningTable() {
                     </span>
                 </div>
 
-                <div className="earning-controls">
-                    <button
-                        type="button"
-                        onClick={() => setIsEditing(!isEditing)}
-                        className={`earning-btn ${isEditing ? "earning-btn-active" : ""}`}
-                    >
-                        {isEditing ? "Done Editing ✓" : "✎ Edit Custom Values"}
-                    </button>
+                {!readOnly && (
+                    <div className="earning-controls">
+                        <button
+                            type="button"
+                            onClick={() => setIsEditing(!isEditing)}
+                            className={`earning-btn ${isEditing ? "earning-btn-active" : ""}`}
+                        >
+                            {isEditing ? "Done Editing ✓" : "✎ Edit Custom Values"}
+                        </button>
 
-                    <button
-                        type="button"
-                        onClick={resetToLiveData}
-                        title="Recalculate and reset table strictly from database orders & balances"
-                        className="earning-btn"
-                    >
-                        ↻ Reset to Live Database
-                    </button>
-                </div>
+                        <button
+                            type="button"
+                            onClick={resetToLiveData}
+                            title="Recalculate and reset table strictly from database orders & balances"
+                            className="earning-btn"
+                        >
+                            ↻ Reset to Live Database
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* HIGH LEVEL FINANCIAL METRIC CHIPS */}
             <div className="earning-metrics-row">
                 <div className="earning-metric-card em-card-blue">
-                    <div className="earning-metric-title">Order Form (Executed)</div>
+                    <div className="earning-metric-title">Ordered Form</div>
                     <div className="earning-metric-num">{formatCurrency(orderForm)}</div>
                 </div>
 
                 <div className="earning-metric-card em-card-green">
-                    <div className="earning-metric-title">Refund Form (Completed)</div>
+                    <div className="earning-metric-title">Refund Form</div>
                     <div className="earning-metric-num">{formatCurrency(refundForm)}</div>
                 </div>
 
                 <div className="earning-metric-card em-card-amber">
-                    <div className="earning-metric-title">Pending Recovery</div>
+                    <div className="earning-metric-title">Amount Not Recovered</div>
                     <div className="earning-metric-num">{formatCurrency(amountNotRecovered)}</div>
                 </div>
 
+                <div className="earning-metric-card em-card-purple">
+                    <div className="earning-metric-title">Final Return to Executive</div>
+                    <div className="earning-metric-num">{formatCurrency(finalAmountToReturn)}</div>
+                </div>
+
                 <div className="earning-metric-card em-card-emerald">
-                    <div className="earning-metric-title">Exact Net Earning</div>
-                    <div className="earning-metric-num">{formatCurrency(exactEarning)}</div>
+                    <div className="earning-metric-title">Remaining Earning</div>
+                    <div className="earning-metric-num">{formatCurrency(remainingEarningAmount)}</div>
                 </div>
             </div>
 
@@ -276,7 +410,7 @@ export default function EarningTable() {
                     <thead>
                         <tr>
                             <th colSpan="2" className="spreadsheet-header-th">
-                                📊 Mediator Financial Breakdown & Earnings
+                                📊 {title || "Mediator Financial Breakdown & Earnings"}
                             </th>
                         </tr>
                     </thead>
@@ -286,6 +420,7 @@ export default function EarningTable() {
                         <tr className="spreadsheet-row">
                             <td className="cell-label bg-sky">
                                 Total Amount Received
+                                <div className="cell-subtext">(Amount given by Executive)</div>
                             </td>
                             <td className="cell-val bg-mint">
                                 {isEditing ? (
@@ -306,6 +441,7 @@ export default function EarningTable() {
                         <tr className="spreadsheet-row">
                             <td className="cell-label bg-sky">
                                 Cancelled / Return Orders
+                                <div className="cell-subtext">(Amount mediator returned to Executive)</div>
                             </td>
                             <td className="cell-val bg-mint">
                                 {isEditing ? (
@@ -326,6 +462,7 @@ export default function EarningTable() {
                         <tr className="spreadsheet-row">
                             <td className="cell-label bg-sky">
                                 Total Amount Returned
+                                <div className="cell-subtext">(Total amount returned to Executive)</div>
                             </td>
                             <td className="cell-val bg-mint">
                                 {isEditing ? (
@@ -345,17 +482,19 @@ export default function EarningTable() {
                         {/* Row 4: Left 1 */}
                         <tr className="spreadsheet-row">
                             <td className="cell-label bg-lavender cell-bold">
-                                Left 1 <span style={{ fontSize: "11px", fontWeight: "normal", color: "#475569" }}>(Received - Return - Cancelled)</span>
+                                Left 1
+                                <div className="cell-subtext" style={{ color: "#334155" }}>(Amount left with Mediator: Received − Total Returned)</div>
                             </td>
                             <td className="cell-val bg-mint cell-bold">
                                 {formatCurrency(left1)}
                             </td>
                         </tr>
 
-                        {/* Row 5: Order Form */}
+                        {/* Row 5: Ordered Form */}
                         <tr className="spreadsheet-row">
                             <td className="cell-label bg-sky">
-                                Order Form <span style={{ fontSize: "11px", fontWeight: "normal", color: "#475569" }}>(Total Value Ordered)</span>
+                                Ordered Form
+                                <div className="cell-subtext">(Amount used to order: Order Form filled before Refund Form)</div>
                             </td>
                             <td className="cell-val bg-mint">
                                 {isEditing ? (
@@ -375,7 +514,8 @@ export default function EarningTable() {
                         {/* Row 6: Amount Not Used */}
                         <tr className="spreadsheet-row">
                             <td className="cell-label bg-lavender cell-bold">
-                                Amount Not Used <span style={{ fontSize: "11px", fontWeight: "normal", color: "#475569" }}>(Left 1 - Order Form)</span>
+                                Amount Not Used
+                                <div className="cell-subtext" style={{ color: "#334155" }}>(Unspent Advance: Left 1 − Ordered Form)</div>
                             </td>
                             <td className="cell-val bg-mint cell-bold">
                                 {formatCurrency(amountNotUsed)}
@@ -385,7 +525,8 @@ export default function EarningTable() {
                         {/* Row 7: Refund Form */}
                         <tr className="spreadsheet-row">
                             <td className="cell-label bg-sky">
-                                Refund Form <span style={{ fontSize: "11px", fontWeight: "normal", color: "#475569" }}>(Completed Refunds)</span>
+                                Refund Form
+                                <div className="cell-subtext">(Total amount whose refund form is filled)</div>
                             </td>
                             <td className="cell-val bg-mint">
                                 {isEditing ? (
@@ -402,20 +543,22 @@ export default function EarningTable() {
                             </td>
                         </tr>
 
-                        {/* Row 8: Amount not Recovered */}
+                        {/* Row 8: Amount Not Recovered */}
                         <tr className="spreadsheet-row">
                             <td className="cell-label bg-sky">
-                                Amount not Recovered <span style={{ fontSize: "11px", fontWeight: "normal", color: "#475569" }}>(Order Form - Refund Form)</span>
+                                Amount Not Recovered
+                                <div className="cell-subtext">(Awaiting Brand Refund: Ordered Form − Refund Form)</div>
                             </td>
                             <td className="cell-val bg-mint">
                                 {formatCurrency(amountNotRecovered)}
                             </td>
                         </tr>
 
-                        {/* Row 9: Refund Form (extra) */}
+                        {/* Row 9: Refund Form (Extra Adjustments) */}
                         <tr className="spreadsheet-row">
                             <td className="cell-label bg-sky">
-                                Refund Form (extra adjustments)
+                                Refund Form (Extra Adjustments)
+                                <div className="cell-subtext">(Manual adjustments & corrections)</div>
                             </td>
                             <td className="cell-val bg-cornflower">
                                 {isEditing ? (
@@ -432,7 +575,7 @@ export default function EarningTable() {
                             </td>
                         </tr>
 
-                        {/* Row 10: Per Order Amount */}
+                        {/* Row 10: Per Order Commission Amount */}
                         <tr className="spreadsheet-row">
                             <td className="cell-label bg-banana cell-bold">
                                 Per Order Commission Amount
@@ -451,60 +594,79 @@ export default function EarningTable() {
                             </td>
                         </tr>
 
-                        {/* Row 11: Earning */}
+                        {/* Row 11: Commission Earning */}
                         <tr className="spreadsheet-row">
                             <td className="cell-label bg-leaf cell-bold">
-                                Commission Earning <span style={{ fontSize: "11px", fontWeight: "normal" }}>({completedUnitsCount} completed × ₹{perOrderAmount})</span>
+                                Commission Earning
+                                <div className="cell-subtext">({completedUnitsCount} completed × ₹{perOrderAmount})</div>
                             </td>
                             <td className="cell-val bg-mint cell-bold" style={{ color: "#15803d" }}>
                                 {formatCurrency(dynamicEarning)}
                             </td>
                         </tr>
 
-                        {/* Row 12: Total Billing Amount */}
+                        {/* Row 12: Settled Earning Amount */}
                         <tr className="spreadsheet-row">
-                            <td className="cell-label bg-sky">
-                                Total Billing Amount
+                            <td className="cell-label bg-mint cell-bold">
+                                Settled Earning Amount
+                                <div className="cell-subtext">(Commission payouts settled by Executive)</div>
                             </td>
-                            <td className="cell-val bg-mint">
+                            <td className="cell-val bg-mint cell-bold" style={{ color: "#059669" }}>
                                 {isEditing ? (
                                     <input
                                         type="number"
                                         step="0.01"
-                                        value={tableData.totalBillingAmount}
-                                        onChange={(e) => handleChange("totalBillingAmount", e.target.value)}
+                                        value={tableData.settledEarningAmount ?? settledEarningAmount}
+                                        onChange={(e) => handleChange("settledEarningAmount", e.target.value)}
                                         className="spreadsheet-input"
                                     />
                                 ) : (
-                                    formatCurrency(totalBillingAmount)
+                                    formatCurrency(settledEarningAmount)
                                 )}
                             </td>
                         </tr>
 
-                        {/* Row 13: Remaining Balance */}
+                        {/* Row 13: Remaining Earning Amount */}
                         <tr className="spreadsheet-row">
                             <td className="cell-label bg-apricot cell-bold">
-                                Remaining Balance <span style={{ fontSize: "11px", fontWeight: "normal", color: "#475569" }}>(Balance Settlement Net)</span>
+                                Remaining Earning Amount
+                                <div className="cell-subtext">(Awaiting Executive Payout: Commission − Settled)</div>
                             </td>
-                            <td className="cell-val bg-mint cell-bold">
+                            <td className="cell-val bg-mint cell-bold" style={{ color: "#d97706" }}>
+                                {formatCurrency(remainingEarningAmount)}
+                            </td>
+                        </tr>
+
+                        {/* Row 14: Final Amount to Return to Executive */}
+                        <tr className="spreadsheet-row">
+                            <td className="cell-label bg-lavender cell-bold">
+                                Final Amount to Return to Executive
+                                <div className="cell-subtext" style={{ color: "#334155" }}>
+                                    (Money whose refund form is not filled: Ordered Form − Refund Form
+                                    {amountNotUsed > 0 ? ` + Unspent Advance: ${formatCurrency(amountNotUsed)}` : ""}
+                                    {refundFormExtra !== 0 ? ` + Extra: ${formatCurrency(refundFormExtra)}` : ""})
+                                </div>
+                            </td>
+                            <td className="cell-val bg-mint cell-bold" style={{ color: "#4338ca", fontSize: "15px" }}>
                                 {isEditing ? (
                                     <input
                                         type="number"
                                         step="0.01"
-                                        value={tableData.remainingBalance ?? remainingBalance}
-                                        onChange={(e) => handleChange("remainingBalance", e.target.value)}
+                                        value={tableData.finalAmountToReturn ?? finalAmountToReturn}
+                                        onChange={(e) => handleChange("finalAmountToReturn", e.target.value)}
                                         className="spreadsheet-input"
                                     />
                                 ) : (
-                                    formatCurrency(remainingBalance)
+                                    formatCurrency(finalAmountToReturn)
                                 )}
                             </td>
                         </tr>
 
-                        {/* Row 14: Exact Earning */}
+                        {/* Row 15: Exact Net Earning */}
                         <tr>
                             <td className="cell-label bg-neon cell-exact-total">
                                 Exact Net Earning
+                                <div className="cell-subtext" style={{ color: "#000000", fontWeight: "600" }}>(Total Commission + Extra Adjustments)</div>
                             </td>
                             <td className="cell-val bg-neon cell-exact-total">
                                 {formatCurrency(exactEarning)}

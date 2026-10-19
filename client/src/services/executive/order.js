@@ -112,3 +112,7 @@ export const fetchExecutiveBrandDetails = (brandUserId) => {
 export const fetchExecutiveAnalytics = (params) => {
     return api.get("/executive/analytics", { params });
 };
+
+export const fetchExecutiveMediatorEarnings = () => {
+    return api.get("/executive/mediators-earnings");
+};

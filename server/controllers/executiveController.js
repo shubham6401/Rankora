@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const Order = require("../models/order");
 const User = require("../models/user");
 const Address = require("../models/address");
+const BalanceTransaction = require("../models/balanceTransaction");
 
 // ==========================================
 // ADD NEW MASTER ORDER
@@ -1396,6 +1397,228 @@ const getExecutiveMasterAnalytics = async (req, res, next) => {
     }
 };
 
+// ==========================================
+// GET ALL MEDIATORS' EARNINGS & BALANCES (FOR EXECUTIVE)
+// ==========================================
+const getExecutiveMediatorEarnings = async (req, res, next) => {
+    try {
+        const teamCode = (req.user?.role === "admin" || req.user?.isSuperAdmin) ? null : req.user.teamCode;
+
+        // Find all mediators for this team
+        const medQuery = { role: "mediator" };
+        if (teamCode) medQuery.teamCode = teamCode;
+
+        const mediators = await User.find(medQuery).select("name mediatorCode teamCode email phone role createdAt").sort({ name: 1 });
+
+        // Find all orders for this team
+        const orderQuery = teamCode ? { teamCode } : {};
+        const orders = await Order.find(orderQuery)
+            .populate("brandUserId", "name brand role")
+            .populate("orderUnits.mediatorId", "name mediatorCode teamCode")
+            .populate("orderUnits.settledBy", "name")
+            .sort({ createdAt: -1 });
+
+        // Find all balance transactions for this team
+        const txQuery = teamCode ? { teamCode } : {};
+        const transactions = await BalanceTransaction.find(txQuery)
+            .populate("sender", "name mediatorCode role")
+            .populate("receiver", "name mediatorCode role")
+            .sort({ createdAt: -1 });
+
+        // Aggregate per mediator
+        const mediatorDataMap = {};
+        mediators.forEach((m) => {
+            const mId = m._id.toString();
+            mediatorDataMap[mId] = {
+                mediator: m,
+                totalUnitsAssigned: 0,
+                completedUnits: 0,
+                settledUnits: 0,
+                pendingConfirmationUnits: 0,
+                unsettledUnits: 0,
+                activeUnits: 0,
+                activeCapital: 0,
+                inProgressUnits: 0,
+                inProgressValue: 0,
+                pendingRefundUnits: 0,
+                pendingRefundValue: 0,
+                pendingPaymentUnits: 0,
+                rejectedValue: 0,
+                completedValue: 0,
+                totalOrderValue: 0,
+                totalSettledPayout: 0,
+                totalPendingConfirmationPayout: 0,
+                estimatedUnsettledPayout: 0,
+                totalCommissionEarned: 0,
+                totalBalanceSentToMediator: 0,
+                totalBalanceReceivedFromMediator: 0,
+                netRemainingBalance: 0,
+                pendingBalanceCount: 0,
+                completedUnitsList: [],
+            };
+        });
+
+        // Loop orders and units
+        orders.forEach((order) => {
+            const price = parseFloat(order.price) || 0;
+            (order.orderUnits || []).forEach((unit) => {
+                const uMedId = (unit.mediatorId?._id || unit.mediatorId)?.toString();
+                const uRefundMedId = (unit.refundedByMediatorId?._id || unit.refundedByMediatorId)?.toString();
+                const targetMedId = (uMedId && mediatorDataMap[uMedId]) ? uMedId : ((uRefundMedId && mediatorDataMap[uRefundMedId]) ? uRefundMedId : null);
+
+                if (targetMedId && mediatorDataMap[targetMedId]) {
+                    const data = mediatorDataMap[targetMedId];
+                    data.totalUnitsAssigned++;
+                    data.totalOrderValue += price;
+
+                    const isCancelledOrReturned =
+                        unit.status === "pending_payment" ||
+                        uRefundMedId === targetMedId ||
+                        Boolean(unit.returnReason) ||
+                        Boolean(unit.rejectedAt);
+
+                    if (isCancelledOrReturned && unit.status !== "completed") {
+                        data.pendingPaymentUnits++;
+                        data.rejectedValue += price;
+                    } else if (unit.status === "in_progress") {
+                        data.activeUnits++;
+                        data.activeCapital += price;
+                        data.inProgressUnits++;
+                        data.inProgressValue += price;
+                    } else if (unit.status === "pending_refund") {
+                        data.activeUnits++;
+                        data.activeCapital += price;
+                        data.pendingRefundUnits++;
+                        data.pendingRefundValue += price;
+                    } else if (unit.status === "pending_verification") {
+                        data.activeUnits++;
+                        data.activeCapital += price;
+                    } else if (unit.status === "completed") {
+                        data.completedUnits++;
+                        data.completedValue += price;
+                        const rate = parseFloat(unit.settlementAmount || 20);
+
+                        const item = {
+                            _id: unit._id,
+                            orderDocId: order._id,
+                            productName: order.productName,
+                            brand: order.brand,
+                            orderPlatform: order.orderPlatform,
+                            price: unit.purchasePrice || price,
+                            orderId: unit.orderId || "N/A",
+                            reviewerName: unit.reviewerName || "N/A",
+                            settlementStatus: unit.settlementStatus || "unsettled",
+                            settlementAmount: unit.settlementAmount || 20,
+                            settlementScreenshot: unit.settlementScreenshot || null,
+                            settlementMessage: unit.settlementMessage || null,
+                            settlementBatchId: unit.settlementBatchId || null,
+                            settledAt: unit.settledAt || null,
+                            completedAt: unit.completedAt || order.updatedAt,
+                        };
+                        data.completedUnitsList.push(item);
+
+                        if (unit.settlementStatus === "settled") {
+                            data.settledUnits++;
+                            data.totalSettledPayout += parseFloat(unit.settlementAmount || 0);
+                        } else if (unit.settlementStatus === "pending_confirmation") {
+                            data.pendingConfirmationUnits++;
+                            data.totalPendingConfirmationPayout += parseFloat(unit.settlementAmount || 0);
+                        } else {
+                            data.unsettledUnits++;
+                            data.estimatedUnsettledPayout += rate;
+                        }
+                    }
+                }
+            });
+        });
+
+        // Loop balance transactions
+        transactions.forEach((tx) => {
+            const senderId = (tx.sender?._id || tx.sender)?.toString();
+            const receiverId = (tx.receiver?._id || tx.receiver)?.toString();
+
+            // Executive sent to mediator
+            if (mediatorDataMap[receiverId]) {
+                if (tx.status === "verified") {
+                    mediatorDataMap[receiverId].totalBalanceSentToMediator += tx.amount;
+                } else if (tx.status === "pending") {
+                    mediatorDataMap[receiverId].pendingBalanceCount++;
+                }
+            }
+            // Mediator sent to executive
+            if (mediatorDataMap[senderId]) {
+                if (tx.status === "verified") {
+                    mediatorDataMap[senderId].totalBalanceReceivedFromMediator += tx.amount;
+                } else if (tx.status === "pending") {
+                    mediatorDataMap[senderId].pendingBalanceCount++;
+                }
+            }
+        });
+
+        // Finalize calculations per mediator & team totals
+        let teamTotalCompletedUnits = 0;
+        let teamTotalSettledPayouts = 0;
+        let teamTotalPendingPayouts = 0;
+        let teamTotalNetRemainingBalance = 0;
+        let teamTotalActiveCapital = 0;
+
+        const mediatorList = Object.values(mediatorDataMap).map((item) => {
+            item.netRemainingBalance = Number(
+                (item.totalBalanceSentToMediator - item.totalBalanceReceivedFromMediator).toFixed(2)
+            );
+            item.totalPendingPayout = Number(
+                (item.totalPendingConfirmationPayout + item.estimatedUnsettledPayout).toFixed(2)
+            );
+            item.totalCommissionEarned = Number(
+                (item.totalSettledPayout + item.totalPendingPayout).toFixed(2)
+            );
+            item.totalSettledPayout = Number(item.totalSettledPayout.toFixed(2));
+            item.activeCapital = Number(item.activeCapital.toFixed(2));
+
+            // Populate financialStats matching EarningTable fields
+            item.financialStats = {
+                completedUnits: item.completedUnits,
+                inProgressUnits: item.inProgressUnits,
+                pendingRefundUnits: item.pendingRefundUnits,
+                pendingPaymentUnits: item.pendingPaymentUnits,
+                totalAssignedUnits: item.totalUnitsAssigned,
+                totalOrderValue: item.totalOrderValue,
+                completedValue: item.completedValue,
+                inProgressValue: item.inProgressValue,
+                pendingRefundValue: item.pendingRefundValue,
+                rejectedValue: item.rejectedValue,
+                balanceReceived: item.totalBalanceSentToMediator,
+                balanceReturned: item.totalBalanceReceivedFromMediator,
+                netBalance: item.netRemainingBalance,
+                settledPayout: item.totalSettledPayout,
+            };
+
+            teamTotalCompletedUnits += item.completedUnits;
+            teamTotalSettledPayouts += item.totalSettledPayout;
+            teamTotalPendingPayouts += item.totalPendingPayout;
+            teamTotalNetRemainingBalance += item.netRemainingBalance;
+            teamTotalActiveCapital += item.activeCapital;
+
+            return item;
+        });
+
+        return res.status(200).json({
+            success: true,
+            teamSummary: {
+                totalMediators: mediators.length,
+                totalCompletedUnits: teamTotalCompletedUnits,
+                totalSettledPayouts: Number(teamTotalSettledPayouts.toFixed(2)),
+                totalPendingPayouts: Number(teamTotalPendingPayouts.toFixed(2)),
+                totalNetRemainingBalance: Number(teamTotalNetRemainingBalance.toFixed(2)),
+                totalActiveCapital: Number(teamTotalActiveCapital.toFixed(2)),
+            },
+            mediators: mediatorList,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
 module.exports = {
     addOrder,
     assignOrder,
@@ -1423,4 +1646,5 @@ module.exports = {
     getExecutiveMasterAnalytics,
     getSettledOrders,
     settleExecutivePayout,
+    getExecutiveMediatorEarnings,
 };

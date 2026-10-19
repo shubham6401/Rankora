@@ -63,3 +63,7 @@ export const confirmMediatorSettlementPayment = (data) => {
 export const FetchAllSettledOrders = () => {
     return api.get("/mediator/orders/settled");
 };
+
+export const fetchMediatorEarnings = () => {
+    return api.get("/mediator/earnings");
+};

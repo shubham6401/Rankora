@@ -38,6 +38,7 @@ import CompletedOrders from "../pages/executive/CompletedOrders";
 import SettledOrders from "../pages/executive/SettledOrders";
 import AllMediator from "../pages/executive/AllMediators";
 import ExecutiveBalance from "../pages/executive/ExecutiveBalance";
+import ExecutiveMediatorEarnings from "../pages/executive/ExecutiveMediatorEarnings";
 
 import BrandLogin from "../pages/brand/BrandLogin";
 import BrandSignup from "../pages/brand/BrandSignup";
@@ -121,6 +122,8 @@ export default function AppRoutes() {
             <Route path="/executive-brands/:brandUserId" element={<ProtectedLayout><ExecutiveBrandDetails /></ProtectedLayout>} />
             <Route path="/executive-analytics" element={<ProtectedLayout><ExecutiveAnalytics /></ProtectedLayout>} />
             <Route path="/executive-addresses" element={<ProtectedLayout><ExecutiveAddresses /></ProtectedLayout>} />
+            <Route path="/executive-mediator-earnings" element={<ProtectedLayout><ExecutiveMediatorEarnings /></ProtectedLayout>} />
+            <Route path="/executive-earnings" element={<ProtectedLayout><ExecutiveMediatorEarnings /></ProtectedLayout>} />
 
             {/* Admin Routes */}
             <Route path="/admin/login" element={<AdminLogin />} />

@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
 const Order = require("../models/order");
+const BalanceTransaction = require("../models/balanceTransaction");
+const User = require("../models/user");
 
 // ==========================================
 // HELPER: SANITIZE / REDACT UNIT SPECIFICATIONS FOR MEDIATORS
@@ -686,12 +688,17 @@ const getMediatorSummary = async (req, res, next) => {
         let newAssignedUnits = 0;
         let pendingPaymentUnits = 0;
         let inProgressUnits = 0;
+        let inProgressValue = 0;
         let pendingRefundUnits = 0;
+        let pendingRefundValue = 0;
         let pendingVerificationUnits = 0;
+        let pendingVerificationValue = 0;
         let completedUnits = 0;
         let settledUnits = 0;
         let settledPayout = 0;
         let awaitingConfirmationUnits = 0;
+        let cancelledUnits = 0;
+        let cancelledValue = 0;
 
         let newAssignedOrders = 0;
         let pendingPaymentOrders = 0;
@@ -700,6 +707,7 @@ const getMediatorSummary = async (req, res, next) => {
         let pendingVerificationOrders = 0;
         let completedOrders = 0;
         let settledOrders = 0;
+        let cancelledOrders = 0;
 
         const mappedOrders = orders.map((order) => {
             const orderObj = order.toObject();
@@ -720,27 +728,41 @@ const getMediatorSummary = async (req, res, next) => {
             let hasPendingVerification = false;
             let hasCompleted = false;
             let hasSettled = false;
+            let hasCancelled = false;
 
             myUnits.forEach((unit) => {
                 totalUnits++;
                 totalValue += price;
 
-                if (unit.status === "assigned") {
-                    newAssignedUnits++;
-                    hasNewAssigned = true;
-                } else if (unit.status === "pending_payment") {
-                    if (unit.mediatorPaymentStatus !== "verified") {
+                const uRefundMedId = (unit.refundedByMediatorId?._id || unit.refundedByMediatorId)?.toString();
+                const isCancelledOrReturned =
+                    unit.status === "pending_payment" ||
+                    uRefundMedId === mediatorId ||
+                    Boolean(unit.returnReason) ||
+                    Boolean(unit.rejectedAt);
+
+                if (isCancelledOrReturned && unit.status !== "completed") {
+                    cancelledUnits++;
+                    cancelledValue += price;
+                    hasCancelled = true;
+                    if (unit.status === "pending_payment" && unit.mediatorPaymentStatus !== "verified") {
                         pendingPaymentUnits++;
                         hasPendingPayment = true;
                     }
+                } else if (unit.status === "assigned") {
+                    newAssignedUnits++;
+                    hasNewAssigned = true;
                 } else if (unit.status === "in_progress") {
                     inProgressUnits++;
+                    inProgressValue += price;
                     hasInProgress = true;
                 } else if (unit.status === "pending_refund") {
                     pendingRefundUnits++;
+                    pendingRefundValue += price;
                     hasPendingRefund = true;
                 } else if (unit.status === "pending_verification") {
                     pendingVerificationUnits++;
+                    pendingVerificationValue += price;
                     hasPendingVerification = true;
                 } else if (unit.status === "completed") {
                     completedUnits++;
@@ -761,6 +783,7 @@ const getMediatorSummary = async (req, res, next) => {
             if (hasPendingPayment) pendingPaymentOrders++;
             if (hasInProgress) inProgressOrders++;
             if (hasPendingRefund) pendingRefundOrders++;
+            if (hasCancelled) cancelledOrders++;
             if (hasPendingVerification) pendingVerificationOrders++;
             if (hasCompleted) completedOrders++;
             if (hasSettled) settledOrders++;
@@ -795,6 +818,13 @@ const getMediatorSummary = async (req, res, next) => {
                 settledOrders,
                 settledPayout,
                 awaitingConfirmationUnits,
+                cancelledUnits,
+                cancelledOrders,
+                cancelledValue: Number(cancelledValue.toFixed(2)),
+                inProgressValue: Number(inProgressValue.toFixed(2)),
+                pendingRefundValue: Number(pendingRefundValue.toFixed(2)),
+                pendingVerificationValue: Number(pendingVerificationValue.toFixed(2)),
+                orderedFormValue: Number((inProgressValue + pendingRefundValue + pendingVerificationValue + completedValue).toFixed(2)),
             },
             orders: mappedOrders,
         });
@@ -1159,6 +1189,181 @@ const confirmSettlementPayment = async (req, res, next) => {
     }
 };
 
+// ==========================================
+// GET MEDIATOR EARNINGS & FINANCIAL STANDING
+// ==========================================
+const getMediatorEarnings = async (req, res, next) => {
+    try {
+        const mediatorId = req.user.id || req.user._id;
+        const medIdStr = mediatorId.toString();
+
+        const mediatorUser = await User.findById(mediatorId).select("name mediatorCode teamCode email phone role");
+
+        // Find all orders that have units assigned to this mediator or refunded by this mediator
+        const orders = await Order.find({
+            $or: [
+                { "orderUnits.mediatorId": mediatorId },
+                { "orderUnits.refundedByMediatorId": mediatorId },
+            ],
+        })
+            .populate("brandUserId", "name brand role")
+            .populate("orderUnits.settledBy", "name")
+            .sort({ createdAt: -1 });
+
+        let completedUnitsCount = 0;
+        let settledUnitsCount = 0;
+        let pendingConfirmationUnitsCount = 0;
+        let unsettledUnitsCount = 0;
+
+        let totalSettledAmount = 0;
+        let totalPendingConfirmationAmount = 0;
+        let estimatedUnsettledAmount = 0;
+
+        let inProgressCount = 0;
+        let inProgressValue = 0;
+        let pendingRefundCount = 0;
+        let pendingRefundValue = 0;
+        let pendingVerificationCount = 0;
+        let pendingVerificationValue = 0;
+        let cancelledCount = 0;
+        let cancelledValue = 0;
+
+        const payoutUnitsList = [];
+
+        orders.forEach((order) => {
+            const price = parseFloat(order.price) || 0;
+            (order.orderUnits || []).forEach((unit) => {
+                const uMedId = (unit.mediatorId?._id || unit.mediatorId)?.toString();
+                const uRefundMedId = (unit.refundedByMediatorId?._id || unit.refundedByMediatorId)?.toString();
+                const isMine = uMedId === medIdStr || uRefundMedId === medIdStr;
+                if (!isMine) return;
+
+                const isCancelledOrReturned =
+                    unit.status === "pending_payment" ||
+                    uRefundMedId === medIdStr ||
+                    Boolean(unit.returnReason) ||
+                    Boolean(unit.rejectedAt);
+
+                if (isCancelledOrReturned && unit.status !== "completed") {
+                    cancelledCount++;
+                    cancelledValue += price;
+                } else if (unit.status === "in_progress") {
+                    inProgressCount++;
+                    inProgressValue += price;
+                } else if (unit.status === "pending_refund") {
+                    pendingRefundCount++;
+                    pendingRefundValue += price;
+                } else if (unit.status === "pending_verification") {
+                    pendingVerificationCount++;
+                    pendingVerificationValue += price;
+                } else if (unit.status === "completed") {
+                    completedUnitsCount++;
+                    const rate = parseFloat(unit.settlementAmount || 20);
+
+                    const payoutItem = {
+                        _id: unit._id,
+                        orderDocId: order._id,
+                        productName: order.productName,
+                        brand: order.brand,
+                        orderPlatform: order.orderPlatform,
+                        productLink: order.productLink,
+                        price: unit.purchasePrice || price,
+                        orderId: unit.orderId || "N/A",
+                        reviewerName: unit.reviewerName || "N/A",
+                        settlementStatus: unit.settlementStatus || "unsettled",
+                        settlementAmount: unit.settlementAmount || 20,
+                        settlementScreenshot: unit.settlementScreenshot || null,
+                        settlementMessage: unit.settlementMessage || null,
+                        settlementBatchId: unit.settlementBatchId || null,
+                        settledAt: unit.settledAt || null,
+                        mediatorConfirmedAt: unit.mediatorConfirmedAt || null,
+                        completedAt: unit.completedAt || order.updatedAt,
+                    };
+
+                    if (unit.settlementStatus === "settled") {
+                        settledUnitsCount++;
+                        totalSettledAmount += parseFloat(unit.settlementAmount || 0);
+                    } else if (unit.settlementStatus === "pending_confirmation") {
+                        pendingConfirmationUnitsCount++;
+                        totalPendingConfirmationAmount += parseFloat(unit.settlementAmount || 0);
+                    } else {
+                        unsettledUnitsCount++;
+                        estimatedUnsettledAmount += rate;
+                    }
+
+                    payoutUnitsList.push(payoutItem);
+                }
+            });
+        });
+
+        // Balance Transactions (Advance & Adjustments between Executive and Mediator)
+        const balanceTransactions = await BalanceTransaction.find({
+            $or: [{ sender: mediatorId }, { receiver: mediatorId }],
+        })
+            .populate("sender", "name mediatorCode role")
+            .populate("receiver", "name mediatorCode role")
+            .sort({ createdAt: -1 });
+
+        let totalBalanceReceived = 0; // Received by mediator (from Executive)
+        let totalBalanceReturned = 0; // Sent by mediator (to Executive)
+        let pendingIncomingBalanceCount = 0;
+        let pendingOutgoingBalanceCount = 0;
+
+        balanceTransactions.forEach((tx) => {
+            const isSender = (tx.sender?._id || tx.sender)?.toString() === medIdStr;
+            const isReceiver = (tx.receiver?._id || tx.receiver)?.toString() === medIdStr;
+
+            if (isReceiver && tx.status === "verified") {
+                totalBalanceReceived += tx.amount;
+            }
+            if (isReceiver && tx.status === "pending") {
+                pendingIncomingBalanceCount++;
+            }
+            if (isSender && tx.status === "verified") {
+                totalBalanceReturned += tx.amount;
+            }
+            if (isSender && tx.status === "pending") {
+                pendingOutgoingBalanceCount++;
+            }
+        });
+
+        const netRemainingBalance = Number((totalBalanceReceived - totalBalanceReturned).toFixed(2));
+        const totalCommissionEarned = Number((totalSettledAmount + totalPendingConfirmationAmount + estimatedUnsettledAmount).toFixed(2));
+        const pendingPayoutAmount = Number((totalPendingConfirmationAmount + estimatedUnsettledAmount).toFixed(2));
+
+        return res.status(200).json({
+            success: true,
+            mediator: mediatorUser || { _id: mediatorId, name: req.user.name, teamCode: req.user.teamCode },
+            summary: {
+                completedUnitsCount,
+                settledUnitsCount,
+                pendingConfirmationUnitsCount,
+                unsettledUnitsCount,
+                totalCommissionEarned,
+                settledPayoutAmount: Number(totalSettledAmount.toFixed(2)),
+                pendingPayoutAmount,
+                totalBalanceReceived: Number(totalBalanceReceived.toFixed(2)),
+                totalBalanceReturned: Number(totalBalanceReturned.toFixed(2)),
+                netRemainingBalance,
+                pendingIncomingBalanceCount,
+                pendingOutgoingBalanceCount,
+                inProgressCount,
+                inProgressValue: Number(inProgressValue.toFixed(2)),
+                pendingRefundCount,
+                pendingRefundValue: Number(pendingRefundValue.toFixed(2)),
+                activeCapital: Number((inProgressValue + pendingRefundValue).toFixed(2)),
+                cancelledCount,
+                cancelledValue: Number(cancelledValue.toFixed(2)),
+                exactNetEarnings: Number((totalSettledAmount + netRemainingBalance).toFixed(2)),
+            },
+            payoutUnits: sanitizeForMediator(payoutUnitsList),
+            recentBalanceTransactions: balanceTransactions.slice(0, 10),
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
 module.exports = {
     getNewOrders,
     acceptOrder,
@@ -1177,4 +1382,5 @@ module.exports = {
     getSettledOrders,
     getMediatorSummary,
     confirmSettlementPayment,
+    getMediatorEarnings,
 };

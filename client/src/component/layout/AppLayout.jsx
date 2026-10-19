@@ -156,6 +156,7 @@ export default function AppLayout({ children }) {
             items: [
                 { title: "Verify Refunds", path: "/executive-mediator-sent-payment", icon: "📥" },
                 { title: "Balance Settlement", path: "/executive-balance", icon: "⚖️" },
+                { title: "Mediator Earnings", path: "/executive-mediator-earnings", icon: "📊" },
             ],
         },
         {
