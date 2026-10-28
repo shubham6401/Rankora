@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
     verifyExecutiveOrderUnit,
     rejectExecutiveOrderUnitVerification,
+    deleteExecutiveOrderBatch,
 } from "../services/executive/order";
 import ProofThumbnail from "./common/ProofThumbnail";
 import ProofPreviewModal from "./common/ProofPreviewModal";
@@ -266,14 +267,65 @@ export default function DisplayOrder({ order }) {
         setSearchReviewer("");
     };
 
+    const [isDeletingBatch, setIsDeletingBatch] = useState(false);
+
+    const handleDeleteOrderBatch = async () => {
+        const unitsCount = units.length;
+        const confirmMsg =
+            `Are you sure you want to permanently delete this order batch?\n\n` +
+            `Product: ${order.productName}\n` +
+            `Brand: ${order.brand}\n` +
+            `Total Units: ${unitsCount}\n` +
+            `Status Breakdown:\n` +
+            `• Completed: ${summary.completed}\n` +
+            `• In Progress: ${summary.inProgress}\n` +
+            `• Pending Refund: ${summary.pendingRefund}\n` +
+            `• Pending Verification: ${summary.pendingVerification}\n` +
+            `• Pending Payment: ${summary.pendingPayment}\n` +
+            `• Unassigned: ${summary.unassigned}\n\n` +
+            `WARNING: This will permanently delete the entire batch and all associated units. This action cannot be undone!`;
+
+        if (!window.confirm(confirmMsg)) return;
+
+        try {
+            setIsDeletingBatch(true);
+            const res = await deleteExecutiveOrderBatch(order._id);
+            if (res.data?.success) {
+                alert(`✓ Order batch "${order.productName}" deleted successfully!`);
+                navigate("/executive-pending-order", { replace: true });
+            }
+        } catch (err) {
+            console.error("Error deleting order batch:", err);
+            alert(err?.response?.data?.message || "Failed to delete order batch.");
+        } finally {
+            setIsDeletingBatch(false);
+        }
+    };
+
     return (
         <div className="display-order-page">
-            <button
-                onClick={() => navigate(-1)}
-                className="display-order-back-btn"
-            >
-                ← Go Back
-            </button>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", flexWrap: "wrap", gap: "10px" }}>
+                <button
+                    onClick={() => navigate(-1)}
+                    className="display-order-back-btn"
+                    style={{ margin: 0 }}
+                >
+                    ← Go Back
+                </button>
+
+                {isExecutive && (
+                    <button
+                        type="button"
+                        onClick={handleDeleteOrderBatch}
+                        className="table-btn table-btn-danger"
+                        disabled={isDeletingBatch}
+                        style={{ padding: "8px 16px", fontWeight: 700, fontSize: "13px", display: "flex", alignItems: "center", gap: "6px" }}
+                        title="Permanently delete this entire order batch"
+                    >
+                        {isDeletingBatch ? "Deleting Batch..." : "🗑️ Delete Order Batch"}
+                    </button>
+                )}
+            </div>
 
             {/* VERIFICATION CALLOUT FOR EXECUTIVES */}
             {isExecutive && summary.pendingVerification > 0 && (

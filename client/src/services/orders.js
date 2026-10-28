@@ -14,3 +14,7 @@ export const getOrders=(data)=>{
 export const getOrder=(id)=>{
     return api.get(`/order/${id}`);
 }
+
+export const deleteOrder=(id)=>{
+    return api.delete(`/executive/order/${id}`);
+}

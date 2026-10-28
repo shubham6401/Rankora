@@ -138,6 +138,7 @@ export default function AssignedOrders() {
                                         key={order._id}
                                         order={order}
                                         status="assigned"
+                                        onOrderUpdated={fetchOrders}
                                     />
                                 ))}
                             </tbody>

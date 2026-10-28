@@ -136,6 +136,7 @@ export default function In_progressOrders() {
                                         key={order._id}
                                         order={order}
                                         status="in_progress"
+                                        onOrderUpdated={fetchOrders}
                                     />
                                 ))}
                             </tbody>

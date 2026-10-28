@@ -136,6 +136,7 @@ export default function Pending_refundOrders() {
                                         key={order._id}
                                         order={order}
                                         status="pending_refund"
+                                        onOrderUpdated={fetchOrders}
                                     />
                                 ))}
                             </tbody>

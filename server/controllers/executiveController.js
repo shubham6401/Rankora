@@ -1619,6 +1619,57 @@ const getExecutiveMediatorEarnings = async (req, res, next) => {
     }
 };
 
+// ==========================================
+// DELETE ORDER BATCH (EXECUTIVE / ADMIN)
+// ==========================================
+const deleteOrderBatch = async (req, res, next) => {
+    try {
+        const orderId = req.params.orderId || req.params.id;
+
+        if (!orderId) {
+            return res.status(400).json({
+                success: false,
+                message: "Order ID is required",
+            });
+        }
+
+        const order = await Order.findById(orderId);
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: "Order batch not found",
+            });
+        }
+
+        // Authorization check: Executive must belong to the same team or be the creator or admin
+        const user = req.user;
+        const isAdmin = user?.role === "admin" || user?.isSuperAdmin;
+        const isOwner = order.createdBy?.toString() === user?.id?.toString();
+        const sameTeam = user?.teamCode && order.teamCode === user?.teamCode;
+
+        if (!isAdmin && !isOwner && !sameTeam) {
+            return res.status(403).json({
+                success: false,
+                message: "You are not authorized to delete this order batch",
+            });
+        }
+
+        const productName = order.productName;
+        const brand = order.brand;
+        const unitsCount = order.quantity || order.orderUnits?.length || 0;
+
+        await Order.findByIdAndDelete(orderId);
+
+        return res.status(200).json({
+            success: true,
+            message: `Order batch "${productName}" (${brand}, ${unitsCount} units) deleted successfully`,
+            deletedOrderId: orderId,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
 module.exports = {
     addOrder,
     assignOrder,
@@ -1647,4 +1698,5 @@ module.exports = {
     getSettledOrders,
     settleExecutivePayout,
     getExecutiveMediatorEarnings,
+    deleteOrderBatch,
 };

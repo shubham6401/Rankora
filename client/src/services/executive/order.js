@@ -116,3 +116,7 @@ export const fetchExecutiveAnalytics = (params) => {
 export const fetchExecutiveMediatorEarnings = () => {
     return api.get("/executive/mediators-earnings");
 };
+
+export const deleteExecutiveOrderBatch = (orderId) => {
+    return api.delete(`/executive/order/${orderId}`);
+};

@@ -30,6 +30,7 @@ const {
     getSettledOrders,
     settleExecutivePayout,
     getExecutiveMediatorEarnings,
+    deleteOrderBatch,
 } = require("../controllers/executiveController");
 
 // All executive routes require token verification
@@ -50,6 +51,8 @@ router.get("/orders/settled", getSettledOrders);
 router.post("/order/add", addOrder);
 router.post("/order/assign/:orderId", assignOrder);
 router.post("/order/unassign", unassignOrderUnit);
+router.delete("/order/:orderId", deleteOrderBatch);
+router.delete("/orders/:orderId", deleteOrderBatch);
 router.post("/order/verify-unit", verifyOrderUnit);
 router.post("/order/reject-unit-verification", rejectOrderUnitVerification);
 router.post("/order/accept-payment/:orderId", acceptMediatorPayment);

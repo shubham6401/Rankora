@@ -624,6 +624,7 @@ export default function CompletedOrders() {
                                                 key={order._id}
                                                 order={order}
                                                 status="completed"
+                                                onOrderUpdated={loadCompletedOrders}
                                             />
                                         ))}
                                     </tbody>

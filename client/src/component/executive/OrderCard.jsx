@@ -1,8 +1,39 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { deleteExecutiveOrderBatch } from "../../services/executive/order";
 import "../../styles/ordersTable.css";
 
-export default function OrderCard({ order, status }) {
+export default function OrderCard({ order, status, onOrderUpdated }) {
     const navigate = useNavigate();
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleDeleteBatch = async () => {
+        const totalU = order.quantity || (order.orderUnits ? order.orderUnits.length : 0);
+        const confirmMsg =
+            `⚠️ ARE YOU SURE YOU WANT TO DELETE THIS ORDER BATCH?\n\n` +
+            `Product: ${order.productName || "Unnamed"}\n` +
+            `Brand: ${order.brand || "Unknown"}\n` +
+            `Total Units: ${totalU}\n\n` +
+            `This will permanently delete the entire order batch and all associated units.\n` +
+            `This action CANNOT be undone. Proceed?`;
+
+        if (!window.confirm(confirmMsg)) return;
+
+        try {
+            setIsDeleting(true);
+            await deleteExecutiveOrderBatch(order._id);
+            alert("✓ Order batch deleted successfully.");
+            if (onOrderUpdated) {
+                onOrderUpdated();
+            } else {
+                window.location.reload();
+            }
+        } catch (err) {
+            console.error("Failed to delete order batch:", err);
+            alert(err?.response?.data?.message || "Failed to delete order batch");
+            setIsDeleting(false);
+        }
+    };
 
     const units = order.orderUnits || [];
     const targetStatus = status ? status.toLowerCase() : null;
@@ -97,13 +128,31 @@ export default function OrderCard({ order, status }) {
 
             {/* Actions */}
             <td>
-                <button
-                    type="button"
-                    className="table-btn table-btn-primary"
-                    onClick={() => navigate(`/order/${order._id}`)}
-                >
-                    View Details
-                </button>
+                <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                    <button
+                        type="button"
+                        className="table-btn table-btn-primary"
+                        onClick={() => navigate(`/order/${order._id}`)}
+                    >
+                        View Details
+                    </button>
+                    <button
+                        type="button"
+                        className="table-btn table-btn-danger"
+                        style={{
+                            background: "#fee2e2",
+                            color: "#dc2626",
+                            border: "1px solid #fca5a5",
+                            padding: "6px 10px",
+                            cursor: isDeleting ? "not-allowed" : "pointer"
+                        }}
+                        disabled={isDeleting}
+                        onClick={handleDeleteBatch}
+                        title="Permanently delete this entire order batch"
+                    >
+                        {isDeleting ? "..." : "🗑️"}
+                    </button>
+                </div>
             </td>
         </tr>
     );

@@ -1,16 +1,43 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import AssignMediatorModal from "./AssignMediatorModal";
+import { deleteExecutiveOrderBatch } from "../../services/executive/order";
 import "../../styles/ordersTable.css";
 
 export default function PendingOrderCard({ order, mediators, status, onOrderUpdated }) {
     const navigate = useNavigate();
     const [modalOpen, setModalOpen] = useState(false);
+    const [deleting, setDeleting] = useState(false);
 
     const unassignedUnits = order.summary?.unassigned || 0;
     const unassignedList = (order.orderUnits || []).filter((u) => u.status === "unassigned");
     const whCount = unassignedList.filter((u) => u.unitType === "warehouse").length;
     const emCount = unassignedList.filter((u) => u.unitType === "empty").length;
+
+    const handleDeleteBatch = async () => {
+        const confirmMsg = `Are you sure you want to permanently delete this order batch?\n\n` +
+            `Product: ${order.productName}\n` +
+            `Brand: ${order.brand}\n` +
+            `Total Units: ${order.quantity}\n` +
+            `Unassigned Units: ${unassignedUnits}\n\n` +
+            `This action will permanently delete the entire batch and cannot be undone.`;
+
+        if (!window.confirm(confirmMsg)) return;
+
+        try {
+            setDeleting(true);
+            const res = await deleteExecutiveOrderBatch(order._id);
+            if (res.data?.success) {
+                alert(`Order batch "${order.productName}" deleted successfully!`);
+                if (onOrderUpdated) onOrderUpdated();
+            }
+        } catch (err) {
+            console.error("Error deleting order batch:", err);
+            alert(err?.response?.data?.message || "Failed to delete order batch.");
+        } finally {
+            setDeleting(false);
+        }
+    };
 
     return (
         <>
@@ -48,7 +75,7 @@ export default function PendingOrderCard({ order, mediators, status, onOrderUpda
                 </td>
                 <td>{order.teamCode}</td>
                 <td>
-                    <div className="action-btn-group" style={{ display: "flex", gap: "8px" }}>
+                    <div className="action-btn-group" style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                         <button
                             type="button"
                             className="table-btn table-btn-outline"
@@ -65,6 +92,15 @@ export default function PendingOrderCard({ order, mediators, status, onOrderUpda
                             title="Assign available units to a mediator"
                         >
                             🤝 Assign
+                        </button>
+                        <button
+                            type="button"
+                            className="table-btn table-btn-danger"
+                            disabled={deleting}
+                            onClick={handleDeleteBatch}
+                            title="Permanently delete this order batch"
+                        >
+                            {deleting ? "..." : "🗑️ Delete"}
                         </button>
                     </div>
                 </td>

@@ -4,6 +4,7 @@ import { getOrder } from "../../services/orders";
 import {
     verifyExecutiveOrderUnit,
     rejectExecutiveOrderUnitVerification,
+    deleteExecutiveOrderBatch,
 } from "../../services/executive/order";
 import { isPdfUrl } from "../../component/common/ProofThumbnail";
 import ProofPreviewModal from "../../component/common/ProofPreviewModal";
@@ -196,6 +197,29 @@ export default function ExecutiveInspectOrder() {
         );
     }
 
+    const handleDeleteBatch = async () => {
+        if (!order) return;
+        const totalU = order.quantity || (order.orderUnits ? order.orderUnits.length : 0);
+        const confirmMsg =
+            `⚠️ ARE YOU SURE YOU WANT TO DELETE THIS ORDER BATCH?\n\n` +
+            `Product: ${order.productName || "Unnamed"}\n` +
+            `Brand: ${order.brandName || order.brand || "Unknown"}\n` +
+            `Total Units: ${totalU}\n\n` +
+            `This will permanently delete the entire order batch and all associated units.\n` +
+            `This action CANNOT be undone. Proceed?`;
+
+        if (!window.confirm(confirmMsg)) return;
+
+        try {
+            await deleteExecutiveOrderBatch(order._id);
+            alert("✓ Order batch deleted successfully.");
+            navigate("/executive-verify-orders");
+        } catch (err) {
+            console.error("Failed to delete order batch:", err);
+            alert(err?.response?.data?.message || "Failed to delete order batch");
+        }
+    };
+
     const allUnits = order.orderUnits || [];
     const pendingUnits = allUnits.filter((u) => u.status === "pending_verification");
     const completedUnits = allUnits.filter((u) => u.status === "completed");
@@ -221,15 +245,26 @@ export default function ExecutiveInspectOrder() {
                     </p>
                 </div>
 
-                <button
-                    type="button"
-                    onClick={() => navigate(`/order/${order._id}`)}
-                    className="table-btn table-btn-secondary"
-                    style={{ padding: "8px 14px", fontSize: "13px", fontWeight: 600 }}
-                    title="View complete master order specifications, all units across all stages, and finance history"
-                >
-                    📄 View Full Order Details →
-                </button>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                    <button
+                        type="button"
+                        onClick={() => navigate(`/order/${order._id}`)}
+                        className="table-btn table-btn-secondary"
+                        style={{ padding: "8px 14px", fontSize: "13px", fontWeight: 600 }}
+                        title="View complete master order specifications, all units across all stages, and finance history"
+                    >
+                        📄 View Full Order Details →
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleDeleteBatch}
+                        className="table-btn table-btn-danger"
+                        style={{ padding: "8px 14px", fontSize: "13px", fontWeight: 600, background: "#ef4444", color: "#fff", border: "1px solid #dc2626" }}
+                        title="Permanently delete this order batch"
+                    >
+                        🗑️ Delete Batch
+                    </button>
+                </div>
             </div>
 
             {/* Compact Order Summary Banner */}

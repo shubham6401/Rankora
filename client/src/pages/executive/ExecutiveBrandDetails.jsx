@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
-import { fetchExecutiveBrandDetails } from "../../services/executive/order";
+import { fetchExecutiveBrandDetails, deleteExecutiveOrderBatch } from "../../services/executive/order";
 import BrandProductBreakdownModal from "../../component/brand/BrandProductBreakdownModal";
 import "../../styles/brandDashboard.css";
 
@@ -32,6 +32,27 @@ export default function ExecutiveBrandDetails() {
             console.error("Failed to load brand details:", err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDeleteOrder = async (order) => {
+        const totalU = order.quantity || (order.orderUnits ? order.orderUnits.length : 0);
+        const confirmMsg =
+            `⚠️ ARE YOU SURE YOU WANT TO DELETE THIS ORDER BATCH?\n\n` +
+            `Product: ${order.productName || "Unnamed"}\n` +
+            `Total Units: ${totalU}\n\n` +
+            `This will permanently delete the entire order batch and all associated units.\n` +
+            `This action CANNOT be undone. Proceed?`;
+
+        if (!window.confirm(confirmMsg)) return;
+
+        try {
+            await deleteExecutiveOrderBatch(order._id);
+            alert("✓ Order batch deleted successfully.");
+            loadBrandOrders();
+        } catch (err) {
+            console.error("Failed to delete order batch:", err);
+            alert(err?.response?.data?.message || "Failed to delete order batch");
         }
     };
 
@@ -329,12 +350,22 @@ export default function ExecutiveBrandDetails() {
                                             </div>
                                         </td>
                                         <td>
-                                            <button
-                                                onClick={() => setSelectedOrderForBreakdown(order)}
-                                                className="breakdown-btn"
-                                            >
-                                                Inspect Units 🔍
-                                            </button>
+                                            <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                                                <button
+                                                    onClick={() => setSelectedOrderForBreakdown(order)}
+                                                    className="breakdown-btn"
+                                                >
+                                                    Inspect Units 🔍
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteOrder(order)}
+                                                    className="breakdown-btn"
+                                                    style={{ backgroundColor: "#ef4444", color: "#ffffff", borderColor: "#dc2626" }}
+                                                    title="Delete this order batch"
+                                                >
+                                                    🗑️
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 );
