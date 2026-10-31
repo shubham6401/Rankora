@@ -1211,7 +1211,14 @@ const getExecutiveBrandDetails = async (req, res, next) => {
         const brandUser = await User.findById(brandUserId).select("-password").lean();
         const query = {
             $and: [
-                teamCode ? { teamCode } : {},
+                teamCode
+                    ? {
+                          $or: [
+                              { teamCode: { $regex: new RegExp(`^${teamCode.trim()}$`, "i") } },
+                              { createdBy: req.user.id },
+                          ],
+                      }
+                    : {},
                 {
                     $or: [
                         { brandUserId },

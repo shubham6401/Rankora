@@ -3860,5 +3860,358 @@
     padding: 4px 0;
 }
 
+/* ==========================================================================
+   EXECUTIVE BRAND DETAILS - MASTER UNITS LEDGER & ENHANCED UI
+   ========================================================================== */
+
+/* Dual View Mode Segmented Switcher */
+.view-mode-switcher {
+    display: inline-flex;
+    background: #f1f5f9;
+    padding: 3px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    gap: 3px;
+}
+
+.view-mode-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 16px;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: inherit;
+    white-space: nowrap;
+}
+
+.view-mode-btn:hover {
+    color: #0f172a;
+}
+
+.view-mode-btn.active {
+    background: #ffffff;
+    color: #1e40af;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.view-mode-count-badge {
+    background: #e0e7ff;
+    color: #3730a3;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 999px;
+}
+
+/* Master Units Ledger Table */
+.master-ledger-table-container {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+}
+
+.master-ledger-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+    text-align: left;
+}
+
+.master-ledger-table th {
+    background: #f8fafc;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 13px 14px;
+    border-bottom: 1px solid #e2e8f0;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    white-space: nowrap;
+}
+
+.master-ledger-table td {
+    padding: 13px 14px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+    color: #334155;
+    background: #ffffff;
+    transition: background 0.12s ease;
+}
+
+.master-ledger-table tr:hover td {
+    background: #f8fafc;
+}
+
+.master-ledger-table tr:last-child td {
+    border-bottom: none;
+}
+
+/* Order ID Display Box */
+.order-id-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #0f172a;
+    transition: all 0.15s ease;
+}
+
+.order-id-chip:hover {
+    border-color: #3b82f6;
+    background: #eff6ff;
+}
+
+.order-id-copy-btn {
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font-size: 13px;
+    color: #64748b;
+    display: inline-flex;
+    align-items: center;
+    transition: color 0.15s ease;
+}
+
+.order-id-copy-btn:hover {
+    color: #2563eb;
+}
+
+.order-id-unplaced {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: #f1f5f9;
+    color: #94a3b8;
+    font-size: 11.5px;
+    font-weight: 600;
+    font-style: italic;
+    border: 1px dashed #cbd5e1;
+}
+
+/* Proof Screenshot Gallery Badges */
+.proof-badges-container {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.proof-pill-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border: 1px solid transparent;
+    text-decoration: none;
+    font-family: inherit;
+    white-space: nowrap;
+}
+
+.proof-pill-btn.has-proof {
+    background: #ecfdf5;
+    color: #065f46;
+    border-color: #a7f3d0;
+}
+
+.proof-pill-btn.has-proof:hover {
+    background: #d1fae5;
+    border-color: #6ee7b7;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(5, 150, 105, 0.15);
+}
+
+.proof-pill-btn.has-proof.advance {
+    background: #eff6ff;
+    color: #1e40af;
+    border-color: #bfdbfe;
+}
+
+.proof-pill-btn.has-proof.advance:hover {
+    background: #dbeafe;
+    border-color: #93c5fd;
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.15);
+}
+
+.proof-pill-btn.has-proof.settlement {
+    background: #faf5ff;
+    color: #6b21a8;
+    border-color: #e9d5ff;
+}
+
+.proof-pill-btn.has-proof.settlement:hover {
+    background: #f3e8ff;
+    border-color: #d8b4fe;
+    box-shadow: 0 2px 4px rgba(147, 51, 234, 0.15);
+}
+
+.proof-pill-btn.missing-proof {
+    background: #f8fafc;
+    color: #94a3b8;
+    border-color: #e2e8f0;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* Modern Status Pills */
+.status-badge-saas {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 700;
+    text-transform: capitalize;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+
+.status-badge-saas .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.status-badge-saas.completed {
+    background: #ecfdf5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+.status-badge-saas.completed .dot { background: #10b981; }
+
+.status-badge-saas.in_progress {
+    background: #fffbeb;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+.status-badge-saas.in_progress .dot { background: #f59e0b; }
+
+.status-badge-saas.pending_verification {
+    background: #eff6ff;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+}
+.status-badge-saas.pending_verification .dot { background: #3b82f6; }
+
+.status-badge-saas.pending_refund {
+    background: #faf5ff;
+    color: #6b21a8;
+    border: 1px solid #e9d5ff;
+}
+.status-badge-saas.pending_refund .dot { background: #a855f7; }
+
+.status-badge-saas.pending_payment {
+    background: #ecfeff;
+    color: #155e75;
+    border: 1px solid #a5f3fc;
+}
+.status-badge-saas.pending_payment .dot { background: #06b6d4; }
+
+.status-badge-saas.unassigned {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+}
+.status-badge-saas.unassigned .dot { background: #94a3b8; }
+
+.status-badge-saas.cancelled {
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+.status-badge-saas.cancelled .dot { background: #ef4444; }
+
+/* Filter Preset Ribbon */
+.filter-presets-ribbon {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.filter-preset-pill {
+    padding: 4px 11px;
+    border-radius: 999px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #475569;
+    font-size: 11.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: inherit;
+}
+
+.filter-preset-pill:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+    border-color: #94a3b8;
+}
+
+.filter-preset-pill.active {
+    background: #2563eb;
+    color: #ffffff;
+    border-color: #2563eb;
+    box-shadow: 0 1px 3px rgba(37, 99, 235, 0.3);
+}
+
+/* Quick Copy Toast */
+.copy-toast-bubble {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: #0f172a;
+    color: #ffffff;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 10001;
+    animation: slideUpFade 0.2s ease-out;
+}
+
+@keyframes slideUpFade {
+    from {
+        transform: translateY(12px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+
 
 
