@@ -251,7 +251,12 @@ const getPendingPaymentOrders = async (req, res, next) => {
         const query = {
             "orderUnits.status": "pending_payment",
         };
-        if (teamCode) query.teamCode = teamCode;
+        if (teamCode) {
+            query.$or = [
+                { teamCode: { $regex: new RegExp(`^${teamCode}$`, "i") } },
+                { createdBy: req.user.id },
+            ];
+        }
 
         const orders = await Order.find(query)
             .populate("brandUserId", "name brand role")
@@ -262,7 +267,7 @@ const getPendingPaymentOrders = async (req, res, next) => {
         const filteredOrders = orders
             .map((order) => {
                 const orderObj = order.toObject();
-                orderObj.orderUnits = orderObj.orderUnits.filter(
+                orderObj.orderUnits = (orderObj.orderUnits || []).filter(
                     (u) => u.status === "pending_payment" && !u.rejectedAt
                 );
                 return orderObj;
@@ -285,13 +290,24 @@ const getPendingPaymentOrders = async (req, res, next) => {
 const getAdvancePaymentHistory = async (req, res, next) => {
     try {
         const teamCode = req.user.teamCode;
+        // Use $elemMatch to match ANY unit that has paymentScreenshot or paymentSentAt
         const query = {
-            $or: [
-                { "orderUnits.paymentScreenshot": { $ne: null } },
-                { "orderUnits.paymentSentAt": { $ne: null } },
-            ],
+            orderUnits: {
+                $elemMatch: {
+                    $or: [
+                        { paymentScreenshot: { $type: "string", $ne: "" } },
+                        { paymentSentAt: { $type: "date" } },
+                    ],
+                },
+            },
         };
-        if (teamCode) query.teamCode = teamCode;
+
+        if (teamCode) {
+            query.$or = [
+                { teamCode: { $regex: new RegExp(`^${teamCode}$`, "i") } },
+                { createdBy: req.user.id },
+            ];
+        }
 
         const orders = await Order.find(query)
             .populate("brandUserId", "name brand role")
@@ -303,7 +319,7 @@ const getAdvancePaymentHistory = async (req, res, next) => {
             .map((order) => {
                 const orderObj = order.toObject();
                 orderObj.orderUnits = (orderObj.orderUnits || []).filter(
-                    (u) => u.paymentScreenshot != null || u.paymentSentAt != null
+                    (u) => Boolean(u.paymentScreenshot) || Boolean(u.paymentSentAt)
                 );
                 return orderObj;
             })
@@ -1026,7 +1042,9 @@ const getMediators = async (req, res, next) => {
     try {
         const teamCode = req.user.teamCode;
         const query = { role: "mediator" };
-        if (teamCode) query.teamCode = teamCode;
+        if (teamCode) {
+            query.teamCode = { $regex: new RegExp(`^${teamCode}$`, "i") };
+        }
 
         const mediators = await User.find(query).select("-password").sort({ createdAt: -1 });
 

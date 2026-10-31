@@ -254,6 +254,18 @@ export default function PendingPaymentOrders() {
         return Array.from(set).sort();
     }, [historyUnitsList]);
 
+    const isSameDay = (d1, d2) => {
+        if (!d1 || !d2) return false;
+        const a = new Date(d1);
+        const b = new Date(d2);
+        if (isNaN(a.getTime()) || isNaN(b.getTime())) return false;
+        return (
+            a.getFullYear() === b.getFullYear() &&
+            a.getMonth() === b.getMonth() &&
+            a.getDate() === b.getDate()
+        );
+    };
+
     // Filtered Batches
     const filteredBatches = useMemo(() => {
         return advanceBatches.filter((batch) => {
@@ -277,14 +289,16 @@ export default function PendingPaymentOrders() {
                 const d = batch.paidAt ? new Date(batch.paidAt) : null;
                 if (!d) return false;
                 const now = new Date();
-                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                const batchDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-                const diffDays = Math.floor((today - batchDay) / (1000 * 60 * 60 * 24));
-
-                if (historyQuickDate === "today" && diffDays !== 0) return false;
-                if (historyQuickDate === "yesterday" && diffDays !== 1) return false;
-                if (historyQuickDate === "last7" && (diffDays < 0 || diffDays > 7)) return false;
-                if (historyQuickDate === "thisMonth") {
+                if (historyQuickDate === "today") {
+                    if (!isSameDay(d, now)) return false;
+                } else if (historyQuickDate === "yesterday") {
+                    const yesterday = new Date(now);
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    if (!isSameDay(d, yesterday)) return false;
+                } else if (historyQuickDate === "last7") {
+                    const diffMs = now.getTime() - d.getTime();
+                    if (diffMs < -86400000 || diffMs > 7 * 86400000) return false;
+                } else if (historyQuickDate === "thisMonth") {
                     if (d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear()) return false;
                 }
             }
@@ -366,14 +380,16 @@ export default function PendingPaymentOrders() {
                 const d = paidDate ? new Date(paidDate) : null;
                 if (!d) return false;
                 const now = new Date();
-                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                const itemDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-                const diffDays = Math.floor((today - itemDay) / (1000 * 60 * 60 * 24));
-
-                if (historyQuickDate === "today" && diffDays !== 0) return false;
-                if (historyQuickDate === "yesterday" && diffDays !== 1) return false;
-                if (historyQuickDate === "last7" && (diffDays < 0 || diffDays > 7)) return false;
-                if (historyQuickDate === "thisMonth") {
+                if (historyQuickDate === "today") {
+                    if (!isSameDay(d, now)) return false;
+                } else if (historyQuickDate === "yesterday") {
+                    const yesterday = new Date(now);
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    if (!isSameDay(d, yesterday)) return false;
+                } else if (historyQuickDate === "last7") {
+                    const diffMs = now.getTime() - d.getTime();
+                    if (diffMs < -86400000 || diffMs > 7 * 86400000) return false;
+                } else if (historyQuickDate === "thisMonth") {
                     if (d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear()) return false;
                 }
             }
