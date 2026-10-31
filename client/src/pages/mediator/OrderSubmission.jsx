@@ -402,6 +402,34 @@ export default function OrderSubmission() {
                         <span style={{ fontSize: "12px", color: "var(--slate-500)", marginTop: "4px", display: "block" }}>
                             Enter the final invoice / purchase price paid for this unit.
                         </span>
+
+                        {order?.price && Number(purchasePrice) > Number(order.price) && (
+                            <div
+                                style={{
+                                    marginTop: "8px",
+                                    padding: "10px 14px",
+                                    background: "#fff1f2",
+                                    border: "1.5px solid #fecdd3",
+                                    borderRadius: "8px",
+                                    color: "#9f1239",
+                                    fontSize: "12.5px",
+                                    display: "flex",
+                                    alignItems: "flex-start",
+                                    gap: "8px",
+                                    lineHeight: 1.4,
+                                }}
+                            >
+                                <span style={{ fontSize: "16px" }}>⚠️</span>
+                                <div>
+                                    <b>Price Hike Detected:</b> Entered purchase price of <b>₹{Number(purchasePrice).toLocaleString()}</b> is{" "}
+                                    <b>+₹{(Number(purchasePrice) - Number(order.price)).toLocaleString()}</b> higher than the fixed base price of{" "}
+                                    <b>₹{Number(order.price).toLocaleString()}</b>.
+                                    <div style={{ fontSize: "11.5px", color: "#be123c", marginTop: "2px" }}>
+                                        This price increase will be displayed across Brand and Executive dashboards.
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Dates Section: Expected Arrival & Locked Order Received Date */}

@@ -38,6 +38,7 @@ export default function CompletedOrders() {
             setLoading(false);
         }
     };
+    const loadCompletedOrders = fetchOrders;
 
     // Mediator-wise breakdown aggregation
     const mediatorBreakdownMap = {};
@@ -624,7 +625,7 @@ export default function CompletedOrders() {
                                                 key={order._id}
                                                 order={order}
                                                 status="completed"
-                                                onOrderUpdated={loadCompletedOrders}
+                                                onOrderUpdated={fetchOrders}
                                             />
                                         ))}
                                     </tbody>

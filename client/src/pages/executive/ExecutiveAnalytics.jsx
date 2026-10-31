@@ -144,8 +144,13 @@ export default function ExecutiveAnalytics() {
             "Not Done": m.notDone !== undefined ? m.notDone : Math.max(0, (m.totalUnits || 0) - (m.completed || 0)),
             "In Progress": m.inProgress,
             "Pending Refund": m.pendingRefund,
+            "Pending Verification": m.pendingVerification || 0,
             "Pending Payment": m.pendingPayment,
-            "Unassigned": m.unassigned,
+            "Assigned": m.assigned || 0,
+            "Unassigned": m.unassigned || 0,
+            "Amount Left (₹)": m.amountLeft || 0,
+            "Total Value (₹)": m.amountTotal || 0,
+            "Completed Value (₹)": m.amountCompleted || 0,
             "Completion Rate": `${m.completionRate || 0}%`,
         }));
         const wsMediators = XLSX.utils.json_to_sheet(mediatorData);
@@ -558,6 +563,8 @@ export default function ExecutiveAnalytics() {
                                         <th style={{ padding: "8px 10px", color: "#059669", fontWeight: "700" }}>Done</th>
                                         <th style={{ padding: "8px 10px", color: "#e11d48", fontWeight: "700" }}>Not Done</th>
                                         <th style={{ padding: "8px 10px", color: "var(--slate-600)", fontWeight: "700" }}>Active</th>
+                                        <th style={{ padding: "8px 10px", color: "#d97706", fontWeight: "700" }}>Amount Left</th>
+                                        <th style={{ padding: "8px 10px", color: "var(--slate-600)", fontWeight: "700" }}>Rate</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -579,6 +586,12 @@ export default function ExecutiveAnalytics() {
                                                     </span>
                                                 </td>
                                                 <td style={{ padding: "10px", color: "#d97706", fontWeight: "700" }}>{m.inProgress}</td>
+                                                <td style={{ padding: "10px", color: "#b45309", fontWeight: "800", whiteSpace: "nowrap" }}>
+                                                    ₹{(m.amountLeft || 0).toLocaleString()}
+                                                </td>
+                                                <td style={{ padding: "10px", fontWeight: "700", color: (m.completionRate || 0) >= 80 ? "#059669" : "#2563eb" }}>
+                                                    {m.completionRate || 0}%
+                                                </td>
                                             </tr>
                                         );
                                     })}

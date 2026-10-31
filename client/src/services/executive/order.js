@@ -13,6 +13,10 @@ export const fetchAllExecutivePendingPaymentOrders=()=>{
     return api.get("/executive/orders/pending_payment");
 }
 
+export const fetchAdvancePaymentHistory=()=>{
+    return api.get("/executive/orders/advance_payment_history");
+}
+
 export const fetchAllExecutiveAssignedOrders=()=>{
     return api.get("/executive/orders/assigned");
 }

@@ -9,6 +9,7 @@ import {
     moveBrandOrderToAllCampaigns 
 } from "../../services/brand/orders";
 import Logout from "../../component/Logout";
+import PriceDisplay from "../../component/common/PriceDisplay";
 import "../../styles/brandDashboard.css";
 
 export default function BrandDashboard() {
@@ -384,6 +385,8 @@ export default function BrandDashboard() {
                         productName: order.productName,
                         orderPlatform: order.orderPlatform,
                         productLink: order.productLink,
+                        basePrice: order.price,
+                        purchasePrice: u.purchasePrice,
                         price: u.purchasePrice !== undefined && u.purchasePrice !== null ? u.purchasePrice : order.price,
                         marketplaceOrderId: u.orderId || null,
                         orderedAt: u.orderedAt || u.updatedAt || u.orderReceivedOn || u.createdAt || order.createdAt,
@@ -1397,9 +1400,11 @@ export default function BrandDashboard() {
 
                                         {/* Price */}
                                         <td>
-                                            <span className="simple-price-tag">
-                                                ₹{row.price}
-                                            </span>
+                                            <PriceDisplay
+                                                basePrice={row.basePrice || row.price}
+                                                actualPrice={row.purchasePrice}
+                                                layout="stack"
+                                            />
                                         </td>
 
                                         {/* Reviewer Name */}
@@ -1549,9 +1554,13 @@ export default function BrandDashboard() {
 
                                 <div className="detail-item-group">
                                     <span className="detail-label">Unit Price</span>
-                                    <span className="detail-val-price">
-                                        ₹{viewDetailsUnit.price}
-                                    </span>
+                                    <div style={{ marginTop: "4px" }}>
+                                        <PriceDisplay
+                                            basePrice={viewDetailsUnit.basePrice || viewDetailsUnit.price}
+                                            actualPrice={viewDetailsUnit.purchasePrice}
+                                            layout="stack"
+                                        />
+                                    </div>
                                 </div>
 
                                 <div className="detail-item-group">

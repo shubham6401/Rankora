@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ProofThumbnail from "../common/ProofThumbnail";
 import ProofPreviewModal from "../common/ProofPreviewModal";
+import PriceDisplay from "../common/PriceDisplay";
 import { deleteExecutiveOrderBatch } from "../../services/executive/order";
 import "../../styles/ordersTable.css";
 
@@ -86,7 +87,15 @@ export default function AssignedOrderCard({ order, status, onOrderUpdated }) {
                 </td>
                 <td>{order.brand}</td>
                 <td>{order.orderPlatform}</td>
-                <td className="price-pill">₹{order.price}</td>
+                <td>
+                    <PriceDisplay
+                        basePrice={order.price}
+                        actualPrice={
+                            (order.orderUnits || []).find((u) => u.purchasePrice && Number(u.purchasePrice) > Number(order.price))?.purchasePrice
+                        }
+                        layout="stack"
+                    />
+                </td>
                 <td>{order.executiveName || "-"}</td>
                 <td>{new Date(order.createdAt).toLocaleDateString()}</td>
                 <td>

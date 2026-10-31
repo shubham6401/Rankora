@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import AssignMediatorModal from "./AssignMediatorModal";
+import PriceDisplay from "../common/PriceDisplay";
 import { deleteExecutiveOrderBatch } from "../../services/executive/order";
 import "../../styles/ordersTable.css";
 
@@ -57,7 +58,9 @@ export default function PendingOrderCard({ order, mediators, status, onOrderUpda
                 </td>
                 <td>{order.brand}</td>
                 <td>{order.orderPlatform}</td>
-                <td className="price-pill">₹{order.price}</td>
+                <td>
+                    <PriceDisplay basePrice={order.price} />
+                </td>
                 <td>{order.executiveName || "-"}</td>
                 <td>{new Date(order.createdAt).toLocaleDateString()}</td>
                 <td>

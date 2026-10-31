@@ -8,6 +8,7 @@ const {
     getOrders,
     getPendingOrders,
     getPendingPaymentOrders,
+    getAdvancePaymentHistory,
     getAssignedOrders,
     getInProgressOrders,
     getPendingRefundOrders,
@@ -40,6 +41,7 @@ router.post("/orders", getOrders);
 router.get("/orders", getOrders);
 router.get("/orders/pending", getPendingOrders);
 router.get("/orders/pending_payment", getPendingPaymentOrders);
+router.get("/orders/advance_payment_history", getAdvancePaymentHistory);
 router.get("/orders/mediator_sent", getMediatorSentOrders);
 router.get("/orders/assigned", getAssignedOrders);
 router.get("/orders/in_progress", getInProgressOrders);

@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import * as XLSX from "xlsx";
+import PriceDisplay from "../common/PriceDisplay";
 import "../../styles/brandDashboard.css";
 
 export default function BrandProductBreakdownModal({ order, onClose }) {
@@ -114,7 +115,10 @@ export default function BrandProductBreakdownModal({ order, onClose }) {
                 "Unit #": `Unit ${unitIndex}`,
                 "Product Name": order.productName || "N/A",
                 "Platform": order.orderPlatform || "N/A",
-                "Unit Price (₹)": order.price || 0,
+                "Base Price (₹)": order.price || 0,
+                "Actual Purchase Price (₹)": u.purchasePrice !== undefined && u.purchasePrice !== null ? u.purchasePrice : (order.price || 0),
+                "Price Hike (₹)": (u.purchasePrice && u.purchasePrice > (order.price || 0)) ? (u.purchasePrice - order.price) : 0,
+                "Price Hike Status": (u.purchasePrice && u.purchasePrice > (order.price || 0)) ? `▲ Hiked (+₹${u.purchasePrice - order.price})` : "Normal",
                 "Status": formatStatus(u.status),
                 "Platform Order ID": u.orderId || "Not Placed Yet",
                 "Reviewer Name": u.reviewerName || "N/A",
@@ -400,6 +404,7 @@ export default function BrandProductBreakdownModal({ order, onClose }) {
                                         <tr>
                                             <th>Quantity #</th>
                                             <th>Status</th>
+                                            <th>Price</th>
                                             <th>Platform Order ID</th>
                                             <th>Reviewer Name</th>
                                             <th>Order / Activity Date</th>
@@ -426,6 +431,15 @@ export default function BrandProductBreakdownModal({ order, onClose }) {
                                                         <span className={`modal-status-pill ${statusClass}`}>
                                                             {formatStatus(unit.status)}
                                                         </span>
+                                                    </td>
+
+                                                    {/* Price with Hike Detection */}
+                                                    <td>
+                                                        <PriceDisplay
+                                                            basePrice={order.price}
+                                                            actualPrice={unit.purchasePrice}
+                                                            layout="stack"
+                                                        />
                                                     </td>
 
                                                     {/* Platform Order ID */}

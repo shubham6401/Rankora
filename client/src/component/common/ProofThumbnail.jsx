@@ -30,7 +30,10 @@ export default function ProofThumbnail({
     const raw = url || src;
     if (!raw) return null;
 
-    const targetUrl = typeof raw === "object" ? (raw.url || "") : raw;
+    const targetUrl =
+        typeof raw === "object"
+            ? (raw.url || (typeof window !== "undefined" && (raw instanceof File || raw instanceof Blob) ? URL.createObjectURL(raw) : ""))
+            : raw;
     const isPdf = isPdfUrl(raw, fileName);
 
     if (isPdf) {

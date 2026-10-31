@@ -3,6 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { fetchExecutiveBrandDetails, deleteExecutiveOrderBatch } from "../../services/executive/order";
 import BrandProductBreakdownModal from "../../component/brand/BrandProductBreakdownModal";
+import PriceDisplay from "../../component/common/PriceDisplay";
+import { exportCompleteBrandExcel } from "../../utils/brandExcelExport";
 import "../../styles/brandDashboard.css";
 
 export default function ExecutiveBrandDetails() {
@@ -90,25 +92,7 @@ export default function ExecutiveBrandDetails() {
 
     const exportToExcel = () => {
         if (!orders.length) return;
-
-        const data = orders.map((o) => ({
-            "Order ID": o._id,
-            "Product Name": o.productName,
-            "Platform": o.orderPlatform,
-            "Price (₹)": o.price,
-            "Total Units": o.quantity,
-            "Completed": o.summary?.completed || 0,
-            "In Progress": o.summary?.inProgress || 0,
-            "Pending Refund": o.summary?.pendingRefund || 0,
-            "Pending Payment": o.summary?.pendingPayment || 0,
-            "Unassigned": o.summary?.unassigned || 0,
-            "Created Date": new Date(o.createdAt).toLocaleDateString(),
-        }));
-
-        const ws = XLSX.utils.json_to_sheet(data);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Orders");
-        XLSX.writeFile(wb, `${brand?.brand || brand?.name || "Brand"}_Orders_${new Date().toISOString().split("T")[0]}.xlsx`);
+        exportCompleteBrandExcel(brand?.brand || brand?.name || "Brand", orders);
     };
 
     return (
@@ -312,7 +296,13 @@ export default function ExecutiveBrandDetails() {
                                             <span className="platform-tag">{order.orderPlatform}</span>
                                         </td>
                                         <td>
-                                            <span className="price-tag">₹{order.price}</span>
+                                            <PriceDisplay
+                                                basePrice={order.price}
+                                                actualPrice={
+                                                    (order.orderUnits || []).find((u) => u.purchasePrice && Number(u.purchasePrice) > Number(order.price))?.purchasePrice
+                                                }
+                                                layout="stack"
+                                            />
                                         </td>
                                         <td>
                                             <span className="quantity-badge">{q} units</span>

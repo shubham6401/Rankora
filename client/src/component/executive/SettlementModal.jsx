@@ -319,13 +319,14 @@ export default function SettlementModal({
                             }}
                         >
                             {units.map((unit, idx) => {
-                                const isChecked = selectedUnitIds.includes(unit._id);
+                                const uId = (unit._id || unit.id)?.toString();
+                                const isChecked = selectedUnitIds.includes(uId);
                                 const productPrice = unit.purchasePrice || unit.price || 0;
-                                const unitPayout = getUnitPayout(unit._id);
+                                const unitPayout = getUnitPayout(uId);
 
                                 return (
                                     <div
-                                        key={unit._id || idx}
+                                        key={uId || idx}
                                         style={{
                                             display: "flex",
                                             alignItems: "center",
@@ -338,7 +339,7 @@ export default function SettlementModal({
                                         }}
                                     >
                                         <div
-                                            onClick={() => toggleUnitSelection(unit._id)}
+                                            onClick={() => toggleUnitSelection(uId)}
                                             style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", flex: 1 }}
                                         >
                                             <input
@@ -369,8 +370,8 @@ export default function SettlementModal({
                                                         type="number"
                                                         min="0"
                                                         step="any"
-                                                        value={customAmounts[unit._id] !== undefined ? customAmounts[unit._id] : amountPerOrder}
-                                                        onChange={(e) => handleCustomAmountChange(unit._id, e.target.value)}
+                                                        value={customAmounts[uId] !== undefined ? customAmounts[uId] : amountPerOrder}
+                                                        onChange={(e) => handleCustomAmountChange(uId, e.target.value)}
                                                         style={{
                                                             width: "70px",
                                                             padding: "4px 6px",
@@ -488,7 +489,8 @@ export default function SettlementModal({
                             {paymentFile && filePreviewUrl && (
                                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                                     <ProofThumbnail
-                                        url={paymentFile}
+                                        url={filePreviewUrl}
+                                        fileName={paymentFile.name}
                                         alt="Selected Payment Proof"
                                         size={40}
                                         onClick={() => setPreviewModalUrl(filePreviewUrl)}

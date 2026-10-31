@@ -7,6 +7,7 @@ import {
 } from "../services/executive/order";
 import ProofThumbnail from "./common/ProofThumbnail";
 import ProofPreviewModal from "./common/ProofPreviewModal";
+import PriceDisplay from "./common/PriceDisplay";
 import "../styles/displayOrder.css";
 import "../styles/ordersTable.css";
 
@@ -372,7 +373,15 @@ export default function DisplayOrder({ order }) {
                             <span>•</span>
                             <span>Platform: <b>{order.orderPlatform}</b></span>
                             <span>•</span>
-                            <span>Price: <b style={{ color: "var(--primary-600)" }}>₹{order.price}</b></span>
+                            <span>
+                                Price:{" "}
+                                <PriceDisplay
+                                    basePrice={order.price}
+                                    actualPrice={
+                                        (order.orderUnits || []).find((u) => u.purchasePrice && Number(u.purchasePrice) > Number(order.price))?.purchasePrice
+                                    }
+                                />
+                            </span>
                         </div>
                         {isExecutive && (
                             <div className="unit-spec-summary-bar" style={{ marginTop: "10px" }}>
@@ -887,6 +896,17 @@ export default function DisplayOrder({ order }) {
                                                 </div>
                                             </div>
                                         )}
+                                        {/* Unit Price */}
+                                        <div>
+                                            <span className="unit-detail-label">Unit Price:</span>
+                                            <div className="unit-detail-val" style={{ marginTop: "2px" }}>
+                                                <PriceDisplay
+                                                    basePrice={order.price}
+                                                    actualPrice={unit.purchasePrice || unit.totalPurchasedAmount}
+                                                    layout="stack"
+                                                />
+                                            </div>
+                                        </div>
                                         <div>
                                             <span className="unit-detail-label">Order ID:</span>
                                             <div className="unit-detail-val">{unit.orderId || "Not submitted"}</div>

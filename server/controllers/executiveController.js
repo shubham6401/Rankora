@@ -280,6 +280,46 @@ const getPendingPaymentOrders = async (req, res, next) => {
 };
 
 // ==========================================
+// GET ALL ADVANCE PAYMENT HISTORY
+// ==========================================
+const getAdvancePaymentHistory = async (req, res, next) => {
+    try {
+        const teamCode = req.user.teamCode;
+        const query = {
+            $or: [
+                { "orderUnits.paymentScreenshot": { $ne: null } },
+                { "orderUnits.paymentSentAt": { $ne: null } },
+            ],
+        };
+        if (teamCode) query.teamCode = teamCode;
+
+        const orders = await Order.find(query)
+            .populate("brandUserId", "name brand role")
+            .populate("createdBy", "name")
+            .populate("orderUnits.mediatorId", "name mediatorCode teamCode")
+            .sort({ updatedAt: -1, createdAt: -1 });
+
+        const filteredOrders = orders
+            .map((order) => {
+                const orderObj = order.toObject();
+                orderObj.orderUnits = (orderObj.orderUnits || []).filter(
+                    (u) => u.paymentScreenshot != null || u.paymentSentAt != null
+                );
+                return orderObj;
+            })
+            .filter((o) => o.orderUnits.length > 0);
+
+        return res.status(200).json({
+            success: true,
+            message: "Advance payment history fetched successfully",
+            orders: filteredOrders,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ==========================================
 // GET ASSIGNED ORDERS
 // ==========================================
 const getAssignedOrders = async (req, res, next) => {
@@ -1250,6 +1290,7 @@ const getExecutiveMasterAnalytics = async (req, res, next) => {
         let totalInProgress = 0;
         let totalPendingRefund = 0;
         let totalPendingPayment = 0;
+        let totalPendingVerification = 0;
         let totalUnassigned = 0;
 
         filteredOrders.forEach((ord) => {
@@ -1264,6 +1305,7 @@ const getExecutiveMasterAnalytics = async (req, res, next) => {
                     inProgress: 0,
                     pendingRefund: 0,
                     pendingPayment: 0,
+                    pendingVerification: 0,
                     unassigned: 0,
                 };
             }
@@ -1302,6 +1344,7 @@ const getExecutiveMasterAnalytics = async (req, res, next) => {
                 const medId = u.mediatorId?._id ? u.mediatorId._id.toString() : (u.mediatorId ? u.mediatorId.toString() : "Unassigned");
                 const medName = u.mediatorId?.name || (medId === "Unassigned" ? "Unassigned" : "Mediator");
                 const medCode = u.mediatorId?.mediatorCode || "";
+                const unitPrice = parseFloat(u.purchasePrice !== undefined && u.purchasePrice !== null ? u.purchasePrice : (u.totalPurchasedAmount !== undefined && u.totalPurchasedAmount !== null ? u.totalPurchasedAmount : (ord.price || 0))) || 0;
 
                 if (!mediatorStats[medId]) {
                     mediatorStats[medId] = {
@@ -1313,37 +1356,51 @@ const getExecutiveMasterAnalytics = async (req, res, next) => {
                         inProgress: 0,
                         pendingRefund: 0,
                         pendingPayment: 0,
+                        pendingVerification: 0,
                         assigned: 0,
                         unassigned: 0,
+                        amountTotal: 0,
+                        amountCompleted: 0,
+                        amountLeft: 0,
                     };
                 }
                 mediatorStats[medId].totalUnits++;
+                mediatorStats[medId].amountTotal += unitPrice;
 
                 if (u.status === "completed") {
                     totalCompleted++;
                     brandStats[bKey].completed++;
                     mediatorStats[medId].completed++;
+                    mediatorStats[medId].amountCompleted += unitPrice;
                     dateStats[dateKey].completed++;
                 } else if (u.status === "in_progress") {
                     totalInProgress++;
                     brandStats[bKey].inProgress++;
                     mediatorStats[medId].inProgress++;
+                    mediatorStats[medId].amountLeft += unitPrice;
                     dateStats[dateKey].inProgress++;
                 } else if (u.status === "pending_refund") {
                     totalPendingRefund++;
                     brandStats[bKey].pendingRefund++;
                     mediatorStats[medId].pendingRefund++;
+                    mediatorStats[medId].amountLeft += unitPrice;
                     dateStats[dateKey].pendingRefund++;
                 } else if (u.status === "pending_payment") {
                     totalPendingPayment++;
                     brandStats[bKey].pendingPayment++;
                     mediatorStats[medId].pendingPayment++;
+                    mediatorStats[medId].amountLeft += unitPrice;
                     dateStats[dateKey].pendingPayment++;
                 } else if (u.status === "pending_verification") {
+                    totalPendingVerification++;
+                    brandStats[bKey].pendingVerification = (brandStats[bKey].pendingVerification || 0) + 1;
+                    mediatorStats[medId].pendingVerification = (mediatorStats[medId].pendingVerification || 0) + 1;
+                    mediatorStats[medId].amountLeft += unitPrice;
                     dateStats[dateKey].pendingVerification = (dateStats[dateKey].pendingVerification || 0) + 1;
                 } else if (u.status === "assigned") {
                     totalAssigned++;
                     mediatorStats[medId].assigned = (mediatorStats[medId].assigned || 0) + 1;
+                    mediatorStats[medId].amountLeft += unitPrice;
                     dateStats[dateKey].assigned++;
                 } else if (u.status === "unassigned") {
                     totalUnassigned++;
@@ -1364,6 +1421,9 @@ const getExecutiveMasterAnalytics = async (req, res, next) => {
         mediatorBreakdown.forEach((m) => {
             m.notDone = Math.max(0, (m.totalUnits || 0) - (m.completed || 0));
             m.completionRate = m.totalUnits > 0 ? Math.round((m.completed / m.totalUnits) * 100) : 0;
+            m.amountLeft = Math.round(m.amountLeft || 0);
+            m.amountTotal = Math.round(m.amountTotal || 0);
+            m.amountCompleted = Math.round(m.amountCompleted || 0);
         });
 
         const dateBreakdown = Object.values(dateStats).sort((a, b) => b.date.localeCompare(a.date));
@@ -1384,6 +1444,7 @@ const getExecutiveMasterAnalytics = async (req, res, next) => {
                 totalInProgress,
                 totalPendingRefund,
                 totalPendingPayment,
+                totalPendingVerification,
                 totalUnassigned,
                 completionRate: totalUnits > 0 ? Math.round((totalCompleted / totalUnits) * 100) : 0,
             },
@@ -1676,6 +1737,7 @@ module.exports = {
     getOrders,
     getPendingOrders,
     getPendingPaymentOrders,
+    getAdvancePaymentHistory,
     getAssignedOrders,
     getInProgressOrders,
     getPendingRefundOrders,
