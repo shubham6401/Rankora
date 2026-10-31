@@ -225,9 +225,33 @@ export default function ExecutiveBrandDetails() {
                 if (!p.includes(filterPlatform.toLowerCase())) return false;
             }
 
-            // 3. Status Filter
+            // 3. Status Filter (Enhanced & Robust)
             if (filterStatus !== "all") {
-                if (u.status !== filterStatus) return false;
+                const fs = filterStatus.toLowerCase().trim();
+                const uSt = (u.status || "unassigned").toLowerCase().trim();
+
+                if (fs === "in_progress") {
+                    // "In Progress" encompasses active processing (both assigned to mediator and order placed)
+                    if (uSt !== "in_progress" && uSt !== "assigned") return false;
+                } else if (fs === "assigned") {
+                    if (uSt !== "assigned") return false;
+                } else if (fs === "order_placed") {
+                    if (uSt !== "in_progress") return false;
+                } else if (fs === "pending_verification") {
+                    if (uSt !== "pending_verification") return false;
+                } else if (fs === "pending_refund") {
+                    if (uSt !== "pending_refund") return false;
+                } else if (fs === "pending_payment") {
+                    if (uSt !== "pending_payment") return false;
+                } else if (fs === "completed") {
+                    if (uSt !== "completed") return false;
+                } else if (fs === "unassigned") {
+                    if (uSt !== "unassigned") return false;
+                } else if (fs === "cancelled") {
+                    if (uSt !== "cancelled") return false;
+                } else {
+                    if (uSt !== fs) return false;
+                }
             }
 
             // 4. Unit Type Filter
@@ -293,10 +317,20 @@ export default function ExecutiveBrandDetails() {
 
     // KPI Metrics Totals across all units
     const totalUnitsCount = allUnitsWithOrder.length;
-    const totalCompleted = allUnitsWithOrder.filter((u) => u.unit.status === "completed").length;
-    const totalInProgress = allUnitsWithOrder.filter((u) => u.unit.status === "in_progress").length;
-    const totalPendingRefund = allUnitsWithOrder.filter((u) => u.unit.status === "pending_refund").length;
-    const totalPendingVerification = allUnitsWithOrder.filter((u) => u.unit.status === "pending_verification").length;
+    const totalCompleted = allUnitsWithOrder.filter((u) => (u.unit.status || "").toLowerCase() === "completed").length;
+    const totalInProgress = allUnitsWithOrder.filter((u) => {
+        const st = (u.unit.status || "").toLowerCase();
+        return st === "in_progress" || st === "assigned";
+    }).length;
+    const totalAssigned = allUnitsWithOrder.filter((u) => (u.unit.status || "").toLowerCase() === "assigned").length;
+    const totalOrderPlaced = allUnitsWithOrder.filter((u) => (u.unit.status || "").toLowerCase() === "in_progress").length;
+    const totalPendingRefund = allUnitsWithOrder.filter((u) => (u.unit.status || "").toLowerCase() === "pending_refund").length;
+    const totalPendingVerification = allUnitsWithOrder.filter((u) => (u.unit.status || "").toLowerCase() === "pending_verification").length;
+    const totalPendingPayment = allUnitsWithOrder.filter((u) => (u.unit.status || "").toLowerCase() === "pending_payment").length;
+    const totalUnassigned = allUnitsWithOrder.filter((u) => {
+        const st = (u.unit.status || "").toLowerCase();
+        return !st || st === "unassigned";
+    }).length;
     const totalWarehouse = allUnitsWithOrder.filter((u) => u.unit.unitType === "warehouse").length;
     const totalEmpty = allUnitsWithOrder.filter((u) => u.unit.unitType === "empty").length;
     const totalHikedUnits = allUnitsWithOrder.filter((u) => u.isHiked).length;
@@ -455,31 +489,59 @@ export default function ExecutiveBrandDetails() {
                 </div>
             </div>
 
-            {/* KPI Metrics Ribbon */}
+            {/* KPI Metrics Ribbon (Click any card to filter by status) */}
             <div className="brand-kpi-grid" style={{ marginBottom: "22px" }}>
-                <div className="brand-kpi-card kpi-campaigns">
+                <div
+                    className="brand-kpi-card kpi-campaigns"
+                    onClick={() => setFilterStatus("all")}
+                    style={{
+                        cursor: "pointer",
+                        border: filterStatus === "all" && !isFiltered ? "2px solid #2563eb" : undefined,
+                        boxShadow: filterStatus === "all" && !isFiltered ? "0 0 0 2px rgba(37,99,235,0.15)" : undefined,
+                    }}
+                    title="Click to view all units"
+                >
                     <div className="brand-kpi-top">
                         <span className="brand-kpi-label">Total Campaigns</span>
                         <div className="brand-kpi-icon">📦</div>
                     </div>
                     <div className="brand-kpi-val">{orders.length}</div>
                     <div className="brand-kpi-sub">
-                        <span>{totalUnitsCount} total units configured</span>
+                        <span>{totalUnitsCount} total units • Click for All</span>
                     </div>
                 </div>
 
-                <div className="brand-kpi-card kpi-inprogress">
+                <div
+                    className="brand-kpi-card kpi-inprogress"
+                    onClick={() => setFilterStatus(filterStatus === "in_progress" ? "all" : "in_progress")}
+                    style={{
+                        cursor: "pointer",
+                        border: filterStatus === "in_progress" ? "2px solid #d97706" : undefined,
+                        boxShadow: filterStatus === "in_progress" ? "0 0 0 2px rgba(217,119,6,0.15)" : undefined,
+                    }}
+                    title="Click to filter In Progress & Assigned units"
+                >
                     <div className="brand-kpi-top">
-                        <span className="brand-kpi-label">In Progress</span>
+                        <span className="brand-kpi-label">In Progress & Assigned</span>
                         <div className="brand-kpi-icon">🚀</div>
                     </div>
                     <div className="brand-kpi-val">{totalInProgress}</div>
                     <div className="brand-kpi-sub">
-                        <span>Under mediator execution</span>
+                        <span>{totalAssigned} assigned • {totalOrderPlaced} ordered</span>
                     </div>
                 </div>
 
-                <div className="brand-kpi-card" style={{ borderColor: "#bfdbfe" }}>
+                <div
+                    className="brand-kpi-card"
+                    onClick={() => setFilterStatus(filterStatus === "pending_verification" ? "all" : "pending_verification")}
+                    style={{
+                        cursor: "pointer",
+                        borderColor: filterStatus === "pending_verification" ? "#2563eb" : "#bfdbfe",
+                        borderWidth: filterStatus === "pending_verification" ? "2px" : "1px",
+                        boxShadow: filterStatus === "pending_verification" ? "0 0 0 2px rgba(37,99,235,0.15)" : undefined,
+                    }}
+                    title="Click to filter Pending Verification units"
+                >
                     <div className="brand-kpi-top">
                         <span className="brand-kpi-label" style={{ color: "#1e40af" }}>Pending Verification</span>
                         <div className="brand-kpi-icon" style={{ background: "#eff6ff", color: "#2563eb" }}>🔍</div>
@@ -490,7 +552,16 @@ export default function ExecutiveBrandDetails() {
                     </div>
                 </div>
 
-                <div className="brand-kpi-card kpi-refund">
+                <div
+                    className="brand-kpi-card kpi-refund"
+                    onClick={() => setFilterStatus(filterStatus === "pending_refund" ? "all" : "pending_refund")}
+                    style={{
+                        cursor: "pointer",
+                        border: filterStatus === "pending_refund" ? "2px solid #7c3aed" : undefined,
+                        boxShadow: filterStatus === "pending_refund" ? "0 0 0 2px rgba(124,58,237,0.15)" : undefined,
+                    }}
+                    title="Click to filter Pending Refund units"
+                >
                     <div className="brand-kpi-top">
                         <span className="brand-kpi-label">Pending Refund</span>
                         <div className="brand-kpi-icon">⏳</div>
@@ -501,7 +572,16 @@ export default function ExecutiveBrandDetails() {
                     </div>
                 </div>
 
-                <div className="brand-kpi-card kpi-completed">
+                <div
+                    className="brand-kpi-card kpi-completed"
+                    onClick={() => setFilterStatus(filterStatus === "completed" ? "all" : "completed")}
+                    style={{
+                        cursor: "pointer",
+                        border: filterStatus === "completed" ? "2px solid #059669" : undefined,
+                        boxShadow: filterStatus === "completed" ? "0 0 0 2px rgba(5,150,105,0.15)" : undefined,
+                    }}
+                    title="Click to filter Completed units"
+                >
                     <div className="brand-kpi-top">
                         <span className="brand-kpi-label">Completed Units</span>
                         <div className="brand-kpi-icon">✅</div>
@@ -515,7 +595,12 @@ export default function ExecutiveBrandDetails() {
                     </div>
                 </div>
 
-                <div className="brand-kpi-card" style={{ background: "#f8fafc" }}>
+                <div
+                    className="brand-kpi-card"
+                    style={{ background: "#f8fafc", cursor: "pointer" }}
+                    onClick={() => setFilterPriceHike(filterPriceHike === "hiked" ? "all" : "hiked")}
+                    title="Click to toggle Price Hiked units filter"
+                >
                     <div className="brand-kpi-top">
                         <span className="brand-kpi-label">Specs & Hike</span>
                         <div className="brand-kpi-icon" style={{ background: "#f1f5f9", color: "#475569" }}>⚙️</div>
@@ -528,8 +613,8 @@ export default function ExecutiveBrandDetails() {
                             📦 {totalEmpty} Empty
                         </span>
                     </div>
-                    <div className="brand-kpi-sub" style={{ color: totalHikedUnits > 0 ? "#b45309" : "#64748b" }}>
-                        <span>{totalHikedUnits > 0 ? `▲ ${totalHikedUnits} Price Hiked Units` : "No price hikes detected"}</span>
+                    <div className="brand-kpi-sub" style={{ color: totalHikedUnits > 0 ? "#b45309" : "#64748b", fontWeight: "700" }}>
+                        <span>{totalHikedUnits > 0 ? `▲ ${totalHikedUnits} Price Hiked (Click)` : "Normal Base Prices"}</span>
                     </div>
                 </div>
             </div>
@@ -585,20 +670,26 @@ export default function ExecutiveBrandDetails() {
                             <option value="meesho">Meesho</option>
                         </select>
 
-                        {/* Status Filter */}
+                        {/* Status Filter (Enhanced with live counts) */}
                         <select
                             value={filterStatus}
                             onChange={(e) => setFilterStatus(e.target.value)}
                             className="brand-select"
+                            style={{ minWidth: "190px", fontWeight: "700" }}
                         >
-                            <option value="all">⚡ All Statuses</option>
-                            <option value="completed">Completed</option>
-                            <option value="in_progress">In Progress</option>
-                            <option value="pending_verification">Pending Verification</option>
-                            <option value="pending_refund">Pending Refund</option>
-                            <option value="pending_payment">Pending Payment</option>
-                            <option value="unassigned">Unassigned</option>
-                            <option value="cancelled">Cancelled</option>
+                            <option value="all">⚡ All Statuses ({totalUnitsCount})</option>
+                            <option value="in_progress">🚀 In Progress & Assigned ({totalInProgress})</option>
+                            <option value="assigned">👤 Assigned to Mediator ({totalAssigned})</option>
+                            <option value="order_placed">🛒 Order Placed Only ({totalOrderPlaced})</option>
+                            <option value="pending_verification">🔍 Pending Verification ({totalPendingVerification})</option>
+                            <option value="pending_refund">⏳ Pending Refund ({totalPendingRefund})</option>
+                            <option value="completed">✅ Completed ({totalCompleted})</option>
+                            {totalPendingPayment > 0 && (
+                                <option value="pending_payment">💳 Pending Payment ({totalPendingPayment})</option>
+                            )}
+                            {totalUnassigned > 0 && (
+                                <option value="unassigned">📦 Unassigned ({totalUnassigned})</option>
+                            )}
                         </select>
 
                         {/* Unit Type Filter */}
@@ -665,6 +756,31 @@ export default function ExecutiveBrandDetails() {
                                 ✕ Reset Filters
                             </button>
                         )}
+                    </div>
+                </div>
+
+                {/* Middle Row: Quick Status Filter Pills for 1-Click Filtering */}
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", paddingTop: "8px", borderTop: "1px solid #f1f5f9" }}>
+                    <span style={{ fontSize: "12px", fontWeight: "700", color: "#64748b" }}>Quick Status:</span>
+                    <div className="filter-presets-ribbon">
+                        {[
+                            { key: "all", label: `All (${totalUnitsCount})` },
+                            { key: "in_progress", label: `In Progress (${totalInProgress})` },
+                            { key: "pending_verification", label: `Pending Verification (${totalPendingVerification})` },
+                            { key: "pending_refund", label: `Pending Refund (${totalPendingRefund})` },
+                            { key: "completed", label: `Completed (${totalCompleted})` },
+                            ...(totalPendingPayment > 0 ? [{ key: "pending_payment", label: `Pending Payment (${totalPendingPayment})` }] : []),
+                            ...(totalUnassigned > 0 ? [{ key: "unassigned", label: `Unassigned (${totalUnassigned})` }] : []),
+                        ].map((pill) => (
+                            <button
+                                key={pill.key}
+                                type="button"
+                                onClick={() => setFilterStatus(pill.key)}
+                                className={`filter-preset-pill ${filterStatus === pill.key ? "active" : ""}`}
+                            >
+                                {pill.label}
+                            </button>
+                        ))}
                     </div>
                 </div>
 
@@ -1174,7 +1290,12 @@ export default function ExecutiveBrandDetails() {
                                 const comp = order.summary?.completed || 0;
                                 const pct = q > 0 ? Math.round((comp / q) * 100) : 0;
                                 const isExpanded = !!expandedCampaigns[order._id];
-                                const units = order.orderUnits || [];
+                                const allCampaignUnits = order.orderUnits || [];
+                                // Units in this campaign matching active filters
+                                const campaignMatchingItems = filteredUnits.filter(
+                                    (item) => item.orderBatchId?.toString() === order._id?.toString()
+                                );
+                                const displayUnits = isFiltered ? campaignMatchingItems.map((item) => item.unit) : allCampaignUnits;
 
                                 return (
                                     <>
@@ -1185,14 +1306,14 @@ export default function ExecutiveBrandDetails() {
                                                         {order.productName}
                                                     </span>
                                                     <div style={{ display: "flex", gap: "6px", alignItems: "center", marginTop: "4px", flexWrap: "wrap" }}>
-                                                        {units.filter((u) => u.unitType === "warehouse").length > 0 && (
+                                                        {allCampaignUnits.filter((u) => u.unitType === "warehouse").length > 0 && (
                                                             <span className="unit-spec-chip warehouse" style={{ fontSize: "11px" }}>
-                                                                🏢 {units.filter((u) => u.unitType === "warehouse").length} WH
+                                                                🏢 {allCampaignUnits.filter((u) => u.unitType === "warehouse").length} WH
                                                             </span>
                                                         )}
-                                                        {units.filter((u) => u.unitType === "empty").length > 0 && (
+                                                        {allCampaignUnits.filter((u) => u.unitType === "empty").length > 0 && (
                                                             <span className="unit-spec-chip empty" style={{ fontSize: "11px" }}>
-                                                                📦 {units.filter((u) => u.unitType === "empty").length} Empty
+                                                                📦 {allCampaignUnits.filter((u) => u.unitType === "empty").length} Empty
                                                             </span>
                                                         )}
                                                         {order.productLink && (
@@ -1220,16 +1341,23 @@ export default function ExecutiveBrandDetails() {
                                                 <PriceDisplay
                                                     basePrice={order.price}
                                                     actualPrice={
-                                                        units.find((u) => u.purchasePrice && Number(u.purchasePrice) > Number(order.price))?.purchasePrice
+                                                        allCampaignUnits.find((u) => u.purchasePrice && Number(u.purchasePrice) > Number(order.price))?.purchasePrice
                                                     }
                                                     layout="stack"
                                                 />
                                             </td>
 
                                             <td>
-                                                <span className="quantity-badge" style={{ fontSize: "13px", fontWeight: "800" }}>
-                                                    {q} units
-                                                </span>
+                                                <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                                                    <span className="quantity-badge" style={{ fontSize: "13px", fontWeight: "800" }}>
+                                                        {isFiltered ? `${campaignMatchingItems.length} matching` : `${q} units`}
+                                                    </span>
+                                                    {isFiltered && (
+                                                        <span style={{ fontSize: "11px", color: "#64748b" }}>
+                                                            of {q} total
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
 
                                             <td>
@@ -1285,7 +1413,7 @@ export default function ExecutiveBrandDetails() {
                                                         style={{ background: isExpanded ? "#e0e7ff" : "#f1f5f9", color: isExpanded ? "#3730a3" : "#334155" }}
                                                         title="Expand/Collapse units inline"
                                                     >
-                                                        {isExpanded ? "▲ Hide" : "▼ Units"}
+                                                        {isExpanded ? `▲ Hide (${displayUnits.length})` : `▼ Units (${displayUnits.length})`}
                                                     </button>
 
                                                     <button
@@ -1326,7 +1454,7 @@ export default function ExecutiveBrandDetails() {
                                                 <td colSpan="7" style={{ padding: "16px 20px", background: "#f8fafc", borderBottom: "2px solid #e2e8f0" }}>
                                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
                                                         <div style={{ fontSize: "13px", fontWeight: "800", color: "#1e293b" }}>
-                                                            📦 Inline Units ({units.length} total) for: {order.productName}
+                                                            📦 Inline Units ({displayUnits.length} {isFiltered ? "filtered" : "total"}) for: {order.productName}
                                                         </div>
                                                         <button
                                                             type="button"
@@ -1359,7 +1487,7 @@ export default function ExecutiveBrandDetails() {
                                                                 </tr>
                                                             </thead>
                                                             <tbody>
-                                                                {units.map((u, uIdx) => (
+                                                                {displayUnits.map((u, uIdx) => (
                                                                     <tr key={u._id || uIdx}>
                                                                         <td style={{ color: "#94a3b8", fontWeight: "700", fontSize: "11px" }}>{uIdx + 1}</td>
                                                                         <td>

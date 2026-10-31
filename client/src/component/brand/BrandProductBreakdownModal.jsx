@@ -58,13 +58,29 @@ export default function BrandProductBreakdownModal({ order, onClose }) {
         return units.filter((unit, idx) => {
             const unitStatus = unit.status || "unassigned";
 
-            // Status filter
+            // Status filter (Robust & Case-Insensitive)
             if (statusFilter !== "all") {
-                if (statusFilter === "pending" && unitStatus !== "unassigned" && unitStatus !== "assigned") {
-                    return false;
-                }
-                if (statusFilter !== "pending" && unitStatus !== statusFilter) {
-                    return false;
+                const s = statusFilter.toLowerCase().trim();
+                const uSt = (unit.status || "unassigned").toLowerCase().trim();
+
+                if (s === "in_progress") {
+                    if (uSt !== "in_progress" && uSt !== "assigned") return false;
+                } else if (s === "assigned") {
+                    if (uSt !== "assigned") return false;
+                } else if (s === "pending") {
+                    if (uSt !== "unassigned" && uSt !== "assigned") return false;
+                } else if (s === "pending_verification") {
+                    if (uSt !== "pending_verification") return false;
+                } else if (s === "pending_refund") {
+                    if (uSt !== "pending_refund") return false;
+                } else if (s === "pending_payment") {
+                    if (uSt !== "pending_payment") return false;
+                } else if (s === "completed") {
+                    if (uSt !== "completed") return false;
+                } else if (s === "unassigned") {
+                    if (uSt !== "unassigned") return false;
+                } else {
+                    if (uSt !== s) return false;
                 }
             }
 
@@ -326,10 +342,12 @@ export default function BrandProductBreakdownModal({ order, onClose }) {
                                     className="modal-select"
                                 >
                                     <option value="all">All Statuses ({units.length})</option>
-                                    <option value="pending">Pending / Processing ({(summary.unassigned || 0) + (summary.assigned || 0)})</option>
-                                    <option value="in_progress">In Progress ({summary.inProgress || 0})</option>
-                                    <option value="pending_refund">Under Review ({summary.pendingRefund || 0})</option>
-                                    <option value="completed">Completed ({summary.completed || 0})</option>
+                                    <option value="in_progress">In Progress & Assigned ({units.filter(u => u.status === "in_progress" || u.status === "assigned").length})</option>
+                                    <option value="pending_verification">Pending Verification ({units.filter(u => u.status === "pending_verification").length})</option>
+                                    <option value="pending_refund">Pending Refund ({units.filter(u => u.status === "pending_refund").length})</option>
+                                    <option value="completed">Completed ({units.filter(u => u.status === "completed").length})</option>
+                                    <option value="pending_payment">Pending Payment ({units.filter(u => u.status === "pending_payment").length})</option>
+                                    <option value="unassigned">Unassigned ({units.filter(u => !u.status || u.status === "unassigned").length})</option>
                                 </select>
                             </div>
 

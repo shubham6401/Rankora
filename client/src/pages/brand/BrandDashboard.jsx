@@ -424,8 +424,11 @@ export default function BrandDashboard() {
 
             // 3. Status filter
             if (filterStatus !== "all") {
-                const st = (r.status || "unassigned").toLowerCase();
-                if (st !== filterStatus.toLowerCase()) {
+                const st = (r.status || "unassigned").toLowerCase().trim();
+                const fs = filterStatus.toLowerCase().trim();
+                if (fs === "in_progress") {
+                    if (st !== "in_progress" && st !== "assigned") return false;
+                } else if (st !== fs) {
                     return false;
                 }
             }
