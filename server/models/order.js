@@ -108,6 +108,10 @@ const orderUnitSchema = new mongoose.Schema({
         type: Date,
         default: null,
     },
+    advanceBatchId: {
+        type: String,
+        default: null,
+    },
     mediatorPaymentScreenshot: {
         type: String,
         default: null,

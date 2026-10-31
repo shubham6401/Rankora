@@ -883,6 +883,7 @@ const submitExecutivePayment = async (req, res, next) => {
 
         const now = new Date();
         const paymentMessage = req.body.message || req.body.paymentMessage || null;
+        const advanceBatchId = `ADV_${Date.now()}_${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
         let totalUnitsForwarded = 0;
 
         for (const order of orders) {
@@ -897,6 +898,7 @@ const submitExecutivePayment = async (req, res, next) => {
                     unit.paymentScreenshot = screenshotPath;
                     unit.paymentMessage = paymentMessage;
                     unit.paymentSentAt = now;
+                    unit.advanceBatchId = advanceBatchId;
                     orderModified = true;
                     totalUnitsForwarded++;
                 }
@@ -911,6 +913,7 @@ const submitExecutivePayment = async (req, res, next) => {
             success: true,
             message: `Successfully uploaded payment proof. ${totalUnitsForwarded} unit(s) forwarded to mediator for verification.`,
             screenshotUrl: screenshotPath,
+            advanceBatchId,
         });
     } catch (err) {
         next(err);

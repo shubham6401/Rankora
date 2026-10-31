@@ -26,12 +26,18 @@ export default function PendingPaymentOrders() {
     const [selectedFiles, setSelectedFiles] = useState({});
     const [previewUrls, setPreviewUrls] = useState({});
     const [execMessages, setExecMessages] = useState({});
+    const [pendingSearch, setPendingSearch] = useState("");
 
     // History state
     const [historyOrders, setHistoryOrders] = useState([]);
     const [historyLoading, setHistoryLoading] = useState(false);
+    const [historyViewMode, setHistoryViewMode] = useState("batches"); // "batches" | "table"
     const [historySearch, setHistorySearch] = useState("");
+    const [historyMediatorFilter, setHistoryMediatorFilter] = useState("all");
+    const [historyDateFilter, setHistoryDateFilter] = useState(""); // YYYY-MM-DD
+    const [historyQuickDate, setHistoryQuickDate] = useState("all"); // "all" | "today" | "yesterday" | "last7" | "thisMonth"
     const [historyStatusFilter, setHistoryStatusFilter] = useState("all");
+    const [historyBrandFilter, setHistoryBrandFilter] = useState("all");
 
     // Modal preview
     const [modalImage, setModalImage] = useState(null);
@@ -114,6 +120,23 @@ export default function PendingPaymentOrders() {
         orders: Object.values(group.orders),
     }));
 
+    const filteredPendingGroups = useMemo(() => {
+        if (!pendingSearch.trim()) return mediatorGroups;
+        const q = pendingSearch.toLowerCase().trim();
+        return mediatorGroups.filter((g) => {
+            return (
+                (g.mediator.name || "").toLowerCase().includes(q) ||
+                (g.mediator.mediatorCode || "").toLowerCase().includes(q) ||
+                g.orders.some(
+                    (o) =>
+                        (o.productName || "").toLowerCase().includes(q) ||
+                        (o.brand || "").toLowerCase().includes(q) ||
+                        (o.orderPlatform || "").toLowerCase().includes(q)
+                )
+            );
+        });
+    }, [mediatorGroups, pendingSearch]);
+
     // Flatten history units for granular historical viewing
     const historyUnitsList = useMemo(() => {
         const list = [];
@@ -128,6 +151,7 @@ export default function PendingPaymentOrders() {
                         orderPlatform: order.orderPlatform,
                         orderPrice: order.price,
                         orderCreatedAt: order.createdAt,
+                        productLink: order.productLink,
                     });
                 }
             });
@@ -143,13 +167,228 @@ export default function PendingPaymentOrders() {
         return list;
     }, [historyOrders]);
 
-    // Filter history units
+    // Group history units into Advance Payment Batches (orders funded together in one transaction)
+    const advanceBatches = useMemo(() => {
+        const advanceBatchesMap = {};
+
+        historyUnitsList.forEach((u) => {
+            const medId = u.mediatorId?._id?.toString() || u.mediatorId?.toString() || "unknown";
+            const timeKey = u.paymentSentAt ? new Date(u.paymentSentAt).toISOString().slice(0, 16) : "notime";
+            const ssKey = u.paymentScreenshot ? u.paymentScreenshot.split("/").pop().split("?")[0] : "";
+
+            const batchKey =
+                u.advanceBatchId ||
+                (ssKey
+                    ? `ss_${ssKey}_${medId}`
+                    : timeKey !== "notime"
+                    ? `time_${timeKey}_${medId}`
+                    : `single_${u._id}`);
+
+            if (!advanceBatchesMap[batchKey]) {
+                advanceBatchesMap[batchKey] = {
+                    batchKey,
+                    advanceBatchId: u.advanceBatchId || null,
+                    screenshot: u.paymentScreenshot || null,
+                    message: u.paymentMessage || "",
+                    paidAt: u.paymentSentAt || u.updatedAt || u.orderCreatedAt,
+                    mediatorId: medId,
+                    mediatorName: u.mediatorId?.name || "Mediator",
+                    mediatorCode: u.mediatorId?.mediatorCode || "N/A",
+                    teamCode: u.mediatorId?.teamCode || u.teamCode || "N/A",
+                    totalAdvance: 0,
+                    totalHikedDiff: 0,
+                    units: [],
+                    statusCounts: {
+                        assigned: 0,
+                        in_progress: 0,
+                        pending_refund: 0,
+                        pending_verification: 0,
+                        completed: 0,
+                    },
+                };
+            }
+
+            advanceBatchesMap[batchKey].units.push(u);
+            const base = Number(u.orderPrice) || 0;
+            const actual = Number(u.purchasePrice) || base;
+            advanceBatchesMap[batchKey].totalAdvance += actual;
+            if (actual > base) {
+                advanceBatchesMap[batchKey].totalHikedDiff += actual - base;
+            }
+            if (advanceBatchesMap[batchKey].statusCounts[u.status] !== undefined) {
+                advanceBatchesMap[batchKey].statusCounts[u.status]++;
+            }
+        });
+
+        return Object.values(advanceBatchesMap).sort((a, b) => {
+            const timeA = new Date(a.paidAt || 0).getTime();
+            const timeB = new Date(b.paidAt || 0).getTime();
+            return timeB - timeA;
+        });
+    }, [historyUnitsList]);
+
+    // Unique mediators list for filter dropdown
+    const uniqueHistoryMediators = useMemo(() => {
+        const map = {};
+        historyUnitsList.forEach((u) => {
+            const mId = u.mediatorId?._id?.toString() || u.mediatorId?.toString();
+            if (mId && !map[mId]) {
+                map[mId] = {
+                    id: mId,
+                    name: u.mediatorId?.name || "Mediator",
+                    code: u.mediatorId?.mediatorCode || "N/A",
+                    count: 0,
+                };
+            }
+            if (mId) map[mId].count++;
+        });
+        return Object.values(map).sort((a, b) => a.name.localeCompare(b.name));
+    }, [historyUnitsList]);
+
+    // Unique brands list for filter dropdown
+    const uniqueHistoryBrands = useMemo(() => {
+        const set = new Set();
+        historyUnitsList.forEach((u) => {
+            if (u.brand) set.add(u.brand);
+        });
+        return Array.from(set).sort();
+    }, [historyUnitsList]);
+
+    // Filtered Batches
+    const filteredBatches = useMemo(() => {
+        return advanceBatches.filter((batch) => {
+            // Mediator filter
+            if (historyMediatorFilter !== "all" && batch.mediatorId !== historyMediatorFilter) {
+                return false;
+            }
+
+            // Date filter (exact YYYY-MM-DD or quick pill)
+            if (historyDateFilter) {
+                const d = batch.paidAt ? new Date(batch.paidAt) : null;
+                if (!d) return false;
+                const batchDateStr = d.toISOString().split("T")[0];
+                const localDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+                    d.getDate()
+                ).padStart(2, "0")}`;
+                if (batchDateStr !== historyDateFilter && localDateStr !== historyDateFilter) {
+                    return false;
+                }
+            } else if (historyQuickDate !== "all") {
+                const d = batch.paidAt ? new Date(batch.paidAt) : null;
+                if (!d) return false;
+                const now = new Date();
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const batchDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+                const diffDays = Math.floor((today - batchDay) / (1000 * 60 * 60 * 24));
+
+                if (historyQuickDate === "today" && diffDays !== 0) return false;
+                if (historyQuickDate === "yesterday" && diffDays !== 1) return false;
+                if (historyQuickDate === "last7" && (diffDays < 0 || diffDays > 7)) return false;
+                if (historyQuickDate === "thisMonth") {
+                    if (d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear()) return false;
+                }
+            }
+
+            // Brand filter
+            if (historyBrandFilter !== "all") {
+                const matchesBrand = batch.units.some(
+                    (u) => (u.brand || "").toLowerCase() === historyBrandFilter.toLowerCase()
+                );
+                if (!matchesBrand) return false;
+            }
+
+            // Status filter
+            if (historyStatusFilter !== "all") {
+                const matchesStatus = batch.units.some((u) => u.status === historyStatusFilter);
+                if (!matchesStatus) return false;
+            }
+
+            // Search query
+            if (historySearch.trim()) {
+                const q = historySearch.toLowerCase().trim();
+                const medName = (batch.mediatorName || "").toLowerCase();
+                const medCode = (batch.mediatorCode || "").toLowerCase();
+                const note = (batch.message || "").toLowerCase();
+                const batchId = (batch.advanceBatchId || "").toLowerCase();
+                const hasUnitMatch = batch.units.some((u) => {
+                    return (
+                        (u.productName || "").toLowerCase().includes(q) ||
+                        (u.brand || "").toLowerCase().includes(q) ||
+                        (u.orderId || "").toLowerCase().includes(q) ||
+                        (u._id || "").toLowerCase().includes(q) ||
+                        (u.reviewerName || "").toLowerCase().includes(q)
+                    );
+                });
+
+                if (
+                    !medName.includes(q) &&
+                    !medCode.includes(q) &&
+                    !note.includes(q) &&
+                    !batchId.includes(q) &&
+                    !hasUnitMatch
+                ) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
+    }, [
+        advanceBatches,
+        historyMediatorFilter,
+        historyDateFilter,
+        historyQuickDate,
+        historyBrandFilter,
+        historyStatusFilter,
+        historySearch,
+    ]);
+
+    // Filtered Individual Units for table mode
     const filteredHistoryUnits = useMemo(() => {
         return historyUnitsList.filter((item) => {
+            // Mediator filter
+            if (historyMediatorFilter !== "all") {
+                const mId = item.mediatorId?._id?.toString() || item.mediatorId?.toString();
+                if (mId !== historyMediatorFilter) return false;
+            }
+
+            // Date filter
+            const paidDate = item.paymentSentAt || item.updatedAt || item.orderCreatedAt;
+            if (historyDateFilter) {
+                const d = paidDate ? new Date(paidDate) : null;
+                if (!d) return false;
+                const dStr = d.toISOString().split("T")[0];
+                const localStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+                    d.getDate()
+                ).padStart(2, "0")}`;
+                if (dStr !== historyDateFilter && localStr !== historyDateFilter) return false;
+            } else if (historyQuickDate !== "all") {
+                const d = paidDate ? new Date(paidDate) : null;
+                if (!d) return false;
+                const now = new Date();
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const itemDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+                const diffDays = Math.floor((today - itemDay) / (1000 * 60 * 60 * 24));
+
+                if (historyQuickDate === "today" && diffDays !== 0) return false;
+                if (historyQuickDate === "yesterday" && diffDays !== 1) return false;
+                if (historyQuickDate === "last7" && (diffDays < 0 || diffDays > 7)) return false;
+                if (historyQuickDate === "thisMonth") {
+                    if (d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear()) return false;
+                }
+            }
+
+            // Brand filter
+            if (historyBrandFilter !== "all" && (item.brand || "").toLowerCase() !== historyBrandFilter.toLowerCase()) {
+                return false;
+            }
+
+            // Status filter
             if (historyStatusFilter !== "all" && item.status !== historyStatusFilter) {
                 return false;
             }
 
+            // Search query
             if (historySearch.trim()) {
                 const q = historySearch.toLowerCase().trim();
                 const medName = (item.mediatorId?.name || "").toLowerCase();
@@ -158,6 +397,7 @@ export default function PendingPaymentOrders() {
                 const br = (item.brand || "").toLowerCase();
                 const oId = (item.orderId || item.parentOrderId || "").toLowerCase();
                 const utr = (item.paymentMessage || "").toLowerCase();
+                const batchId = (item.advanceBatchId || "").toLowerCase();
 
                 if (
                     !medName.includes(q) &&
@@ -165,7 +405,8 @@ export default function PendingPaymentOrders() {
                     !prod.includes(q) &&
                     !br.includes(q) &&
                     !oId.includes(q) &&
-                    !utr.includes(q)
+                    !utr.includes(q) &&
+                    !batchId.includes(q)
                 ) {
                     return false;
                 }
@@ -173,7 +414,15 @@ export default function PendingPaymentOrders() {
 
             return true;
         });
-    }, [historyUnitsList, historySearch, historyStatusFilter]);
+    }, [
+        historyUnitsList,
+        historyMediatorFilter,
+        historyDateFilter,
+        historyQuickDate,
+        historyBrandFilter,
+        historyStatusFilter,
+        historySearch,
+    ]);
 
     // Handle Alter / Revert wrongly assigned order
     const handleRevertOrder = async (orderId, mediatorId, count) => {
@@ -254,18 +503,45 @@ export default function PendingPaymentOrders() {
         }
     };
 
+    const resetFilters = () => {
+        setHistorySearch("");
+        setHistoryMediatorFilter("all");
+        setHistoryDateFilter("");
+        setHistoryQuickDate("all");
+        setHistoryStatusFilter("all");
+        setHistoryBrandFilter("all");
+    };
+
+    const hasActiveFilters =
+        Boolean(historySearch.trim()) ||
+        historyMediatorFilter !== "all" ||
+        Boolean(historyDateFilter) ||
+        historyQuickDate !== "all" ||
+        historyStatusFilter !== "all" ||
+        historyBrandFilter !== "all";
+
     const totalDue = mediatorGroups.reduce((acc, g) => acc + g.totalAmount, 0);
     const totalUnitsCount = mediatorGroups.reduce((acc, g) => acc + g.totalUnits, 0);
 
     // History statistics
-    const historyTotalAmount = historyUnitsList.reduce((sum, u) => {
-        const price = Number(u.purchasePrice || u.orderPrice) || 0;
-        return sum + price;
+    const historyTotalAmount = historyUnitsList.reduce((acc, u) => {
+        const price = Number(u.purchasePrice || u.orderPrice || 0);
+        return acc + price;
     }, 0);
-    const historyUniqueMediators = new Set(
-        historyUnitsList.map((u) => u.mediatorId?._id || u.mediatorId).filter(Boolean)
-    ).size;
     const historyCompletedCount = historyUnitsList.filter((u) => u.status === "completed").length;
+
+    const formatDateTime = (dateStr) => {
+        if (!dateStr) return "—";
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return "—";
+        return d.toLocaleString("en-IN", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+    };
 
     return (
         <div className="table-page-container">
@@ -275,44 +551,30 @@ export default function PendingPaymentOrders() {
             {/* Header */}
             <div className="table-page-header">
                 <div className="table-header-info">
-                    <span className="table-page-badge">Stage 2</span>
-                    <h1 className="table-page-title">Advance Payment</h1>
+                    <span
+                        className="table-page-badge"
+                        style={{
+                            background: "#eff6ff",
+                            color: "#2563eb",
+                            borderColor: "#bfdbfe",
+                        }}
+                    >
+                        Stage 2 of Executive Pipeline
+                    </span>
+                    <h1 className="table-page-title">Advance Payments & Order Allocations</h1>
                     <p className="table-page-subtitle">
-                        Manage active mediator advance payments and browse complete historical disbursement records.
+                        Manage upfront payments to mediators for newly assigned orders. Upload payment proofs to approve batches, or audit all past advance payment records.
                     </p>
-                </div>
-                <div className="table-header-actions">
-                    <button
-                        type="button"
-                        className="nav-btn nav-btn-default"
-                        onClick={() => navigate("/dashboard-executive")}
-                    >
-                        ← Dashboard
-                    </button>
-                    <button
-                        type="button"
-                        className="nav-btn nav-btn-primary"
-                        onClick={() => navigate("/executive-mediator-sent-payment")}
-                    >
-                        Verify Refunds
-                    </button>
-                    <button
-                        type="button"
-                        className="nav-btn nav-btn-default"
-                        onClick={() => navigate("/executive-assigned-order")}
-                    >
-                        Assigned Orders →
-                    </button>
                 </div>
             </div>
 
-            {/* View Switcher Tabs */}
+            {/* View Switching Tabs */}
             <div
                 style={{
                     display: "flex",
                     gap: "10px",
                     borderBottom: "2px solid var(--slate-200)",
-                    marginBottom: "20px",
+                    marginBottom: "24px",
                     paddingBottom: "2px",
                 }}
             >
@@ -320,14 +582,15 @@ export default function PendingPaymentOrders() {
                     type="button"
                     onClick={() => setActiveTab("pending")}
                     style={{
-                        padding: "10px 18px",
-                        fontSize: "14px",
+                        padding: "10px 22px",
                         fontWeight: 700,
+                        fontSize: "14px",
+                        borderRadius: "8px 8px 0 0",
                         border: "none",
-                        background: "none",
                         cursor: "pointer",
-                        borderBottom: activeTab === "pending" ? "3px solid #2563eb" : "3px solid transparent",
-                        color: activeTab === "pending" ? "#2563eb" : "#64748b",
+                        background: activeTab === "pending" ? "#2563eb" : "#f1f5f9",
+                        color: activeTab === "pending" ? "#ffffff" : "var(--slate-600)",
+                        boxShadow: activeTab === "pending" ? "0 2px 8px rgba(37, 99, 235, 0.25)" : "none",
                         display: "flex",
                         alignItems: "center",
                         gap: "8px",
@@ -337,30 +600,34 @@ export default function PendingPaymentOrders() {
                     <span>⏳ Pending Advance Payments</span>
                     <span
                         style={{
-                            background: activeTab === "pending" ? "#eff6ff" : "#f1f5f9",
-                            color: activeTab === "pending" ? "#2563eb" : "#64748b",
+                            background: activeTab === "pending" ? "rgba(255,255,255,0.25)" : "#e2e8f0",
+                            color: activeTab === "pending" ? "#ffffff" : "var(--slate-700)",
                             padding: "2px 8px",
                             borderRadius: "12px",
                             fontSize: "12px",
                             fontWeight: 800,
                         }}
                     >
-                        {totalUnitsCount} Units
+                        {mediatorGroups.length} Mediators
                     </span>
                 </button>
 
                 <button
                     type="button"
-                    onClick={() => setActiveTab("history")}
+                    onClick={() => {
+                        setActiveTab("history");
+                        if (historyOrders.length === 0) loadHistory();
+                    }}
                     style={{
-                        padding: "10px 18px",
-                        fontSize: "14px",
+                        padding: "10px 22px",
                         fontWeight: 700,
+                        fontSize: "14px",
+                        borderRadius: "8px 8px 0 0",
                         border: "none",
-                        background: "none",
                         cursor: "pointer",
-                        borderBottom: activeTab === "history" ? "3px solid #2563eb" : "3px solid transparent",
-                        color: activeTab === "history" ? "#2563eb" : "#64748b",
+                        background: activeTab === "history" ? "#0f172a" : "#f1f5f9",
+                        color: activeTab === "history" ? "#ffffff" : "var(--slate-600)",
+                        boxShadow: activeTab === "history" ? "0 2px 8px rgba(15, 23, 42, 0.25)" : "none",
                         display: "flex",
                         alignItems: "center",
                         gap: "8px",
@@ -370,15 +637,15 @@ export default function PendingPaymentOrders() {
                     <span>📜 All Advance Payment History</span>
                     <span
                         style={{
-                            background: activeTab === "history" ? "#eff6ff" : "#f1f5f9",
-                            color: activeTab === "history" ? "#2563eb" : "#64748b",
+                            background: activeTab === "history" ? "rgba(255,255,255,0.25)" : "#e2e8f0",
+                            color: activeTab === "history" ? "#ffffff" : "var(--slate-700)",
                             padding: "2px 8px",
                             borderRadius: "12px",
                             fontSize: "12px",
                             fontWeight: 800,
                         }}
                     >
-                        {historyUnitsList.length} Records
+                        {advanceBatches.length} Batches
                     </span>
                 </button>
             </div>
@@ -390,77 +657,107 @@ export default function PendingPaymentOrders() {
                     <div className="table-metrics-bar">
                         <div className="metric-card">
                             <span className="metric-label">Mediators Awaiting Advance</span>
-                            <span className="metric-value metric-value-primary">{mediatorGroups.length}</span>
+                            <span className="metric-value metric-value-warning">
+                                {mediatorGroups.length} Mediators
+                            </span>
                         </div>
                         <div className="metric-card">
-                            <span className="metric-label">Pending Units</span>
-                            <span className="metric-value">{totalUnitsCount}</span>
+                            <span className="metric-label">Total Units Pending Payment</span>
+                            <span className="metric-value">{totalUnitsCount} Units</span>
                         </div>
                         <div className="metric-card">
-                            <span className="metric-label">Total Advance Due</span>
-                            <span className="metric-value">₹{totalDue.toLocaleString()}</span>
+                            <span className="metric-label">Total Payment Due</span>
+                            <span className="metric-value metric-value-primary">
+                                ₹{totalDue.toLocaleString()}
+                            </span>
                         </div>
                     </div>
 
+                    {/* Pending Search */}
+                    {mediatorGroups.length > 0 && (
+                        <div style={{ marginBottom: "16px" }}>
+                            <div style={{ position: "relative", maxWidth: "420px" }}>
+                                <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--slate-400)" }}>
+                                    🔍
+                                </span>
+                                <input
+                                    type="text"
+                                    placeholder="Filter pending mediators, products, brands..."
+                                    value={pendingSearch}
+                                    onChange={(e) => setPendingSearch(e.target.value)}
+                                    style={{
+                                        width: "100%",
+                                        padding: "8px 12px 8px 36px",
+                                        borderRadius: "6px",
+                                        border: "1px solid var(--slate-300)",
+                                        fontSize: "13px",
+                                        boxSizing: "border-box",
+                                    }}
+                                />
+                            </div>
+                        </div>
+                    )}
+
                     {loading ? (
                         <div className="table-page-container" style={{ textAlign: "center", padding: "60px 0" }}>
-                            <h2>Loading Pending Payments...</h2>
+                            <h2>Loading Pending Advance Orders...</h2>
                         </div>
                     ) : mediatorGroups.length === 0 ? (
                         <div className="empty-state-card">
                             <div className="empty-state-icon">✓</div>
-                            <h3 className="empty-state-title">No Pending Advance Payments</h3>
+                            <h3 className="empty-state-title">No Advance Payments Pending</h3>
                             <p className="empty-state-text">
-                                All assigned orders have payment screenshots uploaded, or no orders are currently pending advance disbursement.
+                                All newly assigned orders have been funded, or no orders are currently awaiting advance payment proof.
                             </p>
-                            <div style={{ display: "flex", gap: "10px", justifyContent: "center", marginTop: "12px" }}>
-                                <button
-                                    type="button"
-                                    className="nav-btn nav-btn-primary"
-                                    onClick={() => navigate("/executive-pending-order")}
-                                >
-                                    Go to Pending Orders to Assign More
-                                </button>
-                                <button
-                                    type="button"
-                                    className="nav-btn nav-btn-default"
-                                    onClick={() => setActiveTab("history")}
-                                >
-                                    View Past Payment History →
-                                </button>
-                            </div>
+                            <button
+                                type="button"
+                                className="nav-btn nav-btn-primary"
+                                onClick={() => navigate("/executive-assigned-order")}
+                            >
+                                View Assigned Orders →
+                            </button>
+                        </div>
+                    ) : filteredPendingGroups.length === 0 ? (
+                        <div className="empty-state-card">
+                            <div className="empty-state-icon">🔍</div>
+                            <h3 className="empty-state-title">No Matching Mediators Found</h3>
+                            <p className="empty-state-text">No pending payment groups match your search query.</p>
+                            <button
+                                type="button"
+                                className="nav-btn nav-btn-default"
+                                onClick={() => setPendingSearch("")}
+                            >
+                                Clear Search
+                            </button>
                         </div>
                     ) : (
-                        <div className="groups-container">
-                            {mediatorGroups.map((group) => {
+                        <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
+                            {filteredPendingGroups.map((group) => {
                                 const med = group.mediator;
-                                const hasFile = !!selectedFiles[med._id];
                                 const isUploading = uploadingMediatorId === med._id;
+                                const hasFile = Boolean(selectedFiles[med._id]);
 
                                 return (
-                                    <div key={med._id} className="group-card">
-                                        {/* Mediator Header */}
-                                        <div className="group-card-header">
-                                            <div>
-                                                <h2 className="group-title">Mediator: {med.name}</h2>
-                                                <div className="group-meta">
-                                                    <span>Code: <b>{med.mediatorCode}</b></span>
-                                                    <span>Team: <b>{med.teamCode}</b></span>
+                                    <div key={med._id} className="mediator-payment-card">
+                                        {/* Card Header */}
+                                        <div className="mediator-card-header">
+                                            <div className="mediator-info">
+                                                <div className="mediator-name">{med.name}</div>
+                                                <div className="mediator-meta">
+                                                    Code: <b>{med.mediatorCode}</b> • Team: <b>{med.teamCode || "N/A"}</b>
                                                 </div>
                                             </div>
-                                            <div className="group-summary-stats">
-                                                <span style={{ fontSize: "13px", color: "var(--slate-500)" }}>Total Advance Due: </span>
-                                                <span className="group-total-amount">
-                                                    ₹{group.totalAmount.toLocaleString()}
-                                                </span>
-                                                <span className="group-unit-tag">
-                                                    {group.totalUnits} {group.totalUnits === 1 ? "Unit" : "Units"}
-                                                </span>
+                                            <div className="mediator-due-box">
+                                                <div className="due-label">Total Advance Due:</div>
+                                                <div className="due-amount">₹{group.totalAmount.toLocaleString()}</div>
+                                                <div className="due-count">
+                                                    {group.totalUnits} {group.totalUnits === 1 ? "unit" : "units"} across {group.orders.length} product(s)
+                                                </div>
                                             </div>
                                         </div>
 
-                                        {/* Orders Table */}
-                                        <div className="data-table-container" style={{ margin: 0, boxShadow: "none" }}>
+                                        {/* Nested Orders Table */}
+                                        <div className="data-table-container" style={{ margin: "16px 0 20px 0" }}>
                                             <div className="data-table-responsive">
                                                 <table className="data-table">
                                                     <thead>
@@ -468,8 +765,8 @@ export default function PendingPaymentOrders() {
                                                             <th>Product</th>
                                                             <th>Brand</th>
                                                             <th>Platform</th>
-                                                            <th>Price/Unit</th>
-                                                            <th>Assigned Qty</th>
+                                                            <th>Price</th>
+                                                            <th>Assigned Units</th>
                                                             <th>Subtotal</th>
                                                             <th style={{ textAlign: "center" }}>Actions</th>
                                                         </tr>
@@ -479,22 +776,24 @@ export default function PendingPaymentOrders() {
                                                             const unitCount = ord.units.length;
                                                             const subtotal = ord.price * unitCount;
                                                             const isReverting = revertingKey === `${ord.orderId}-${med._id}`;
-                                                            const whUnits = ord.units.filter((u) => u.unitType === "warehouse").length;
-                                                            const emUnits = ord.units.filter((u) => u.unitType === "empty").length;
 
                                                             return (
                                                                 <tr key={ord.orderId}>
                                                                     <td className="product-name-cell">
-                                                                        <div>{ord.productName}</div>
-                                                                        {(whUnits > 0 || emUnits > 0) && (
-                                                                            <div className="unit-spec-group" style={{ marginTop: "4px" }}>
-                                                                                {whUnits > 0 && (
-                                                                                    <span className="unit-spec-chip warehouse">🏢 {whUnits} WH</span>
-                                                                                )}
-                                                                                {emUnits > 0 && (
-                                                                                    <span className="unit-spec-chip empty">📦 {emUnits} Empty</span>
-                                                                                )}
-                                                                            </div>
+                                                                        <span style={{ fontWeight: 600 }}>{ord.productName}</span>
+                                                                        {ord.productLink && (
+                                                                            <a
+                                                                                href={ord.productLink}
+                                                                                target="_blank"
+                                                                                rel="noreferrer"
+                                                                                style={{
+                                                                                    marginLeft: "6px",
+                                                                                    color: "var(--primary-600)",
+                                                                                    textDecoration: "none",
+                                                                                }}
+                                                                            >
+                                                                                🔗
+                                                                            </a>
                                                                         )}
                                                                     </td>
                                                                     <td>{ord.brand}</td>
@@ -503,7 +802,11 @@ export default function PendingPaymentOrders() {
                                                                         <PriceDisplay
                                                                             basePrice={ord.price}
                                                                             actualPrice={
-                                                                                ord.units.find((u) => u.purchasePrice && Number(u.purchasePrice) > Number(ord.price))?.purchasePrice
+                                                                                ord.units.find(
+                                                                                    (u) =>
+                                                                                        u.purchasePrice &&
+                                                                                        Number(u.purchasePrice) > Number(ord.price)
+                                                                                )?.purchasePrice
                                                                             }
                                                                             layout="stack"
                                                                         />
@@ -650,16 +953,22 @@ export default function PendingPaymentOrders() {
                     {/* Metrics Bar */}
                     <div className="table-metrics-bar">
                         <div className="metric-card">
-                            <span className="metric-label">Total Advance Payments</span>
-                            <span className="metric-value metric-value-primary">{historyUnitsList.length} Units</span>
+                            <span className="metric-label">Total Advance Batches</span>
+                            <span className="metric-value metric-value-primary">
+                                {advanceBatches.length} Batches
+                            </span>
                         </div>
                         <div className="metric-card">
                             <span className="metric-label">Total Disbursed Volume</span>
                             <span className="metric-value">₹{historyTotalAmount.toLocaleString()}</span>
                         </div>
                         <div className="metric-card">
+                            <span className="metric-label">Total Units Funded</span>
+                            <span className="metric-value">{historyUnitsList.length} Units</span>
+                        </div>
+                        <div className="metric-card">
                             <span className="metric-label">Unique Mediators Funded</span>
-                            <span className="metric-value">{historyUniqueMediators}</span>
+                            <span className="metric-value">{uniqueHistoryMediators.length}</span>
                         </div>
                         <div className="metric-card">
                             <span className="metric-label">Fully Completed Units</span>
@@ -669,75 +978,311 @@ export default function PendingPaymentOrders() {
                         </div>
                     </div>
 
-                    {/* Filter & Search Controls */}
+                    {/* Filter & Search Bar */}
                     <div
                         style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            gap: "12px",
-                            flexWrap: "wrap",
-                            marginBottom: "16px",
                             background: "#ffffff",
-                            padding: "14px 18px",
-                            borderRadius: "10px",
+                            padding: "16px 20px",
+                            borderRadius: "12px",
                             border: "1px solid var(--slate-200)",
+                            boxShadow: "0 2px 6px rgba(0,0,0,0.03)",
+                            marginBottom: "20px",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "14px",
                         }}
                     >
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, minWidth: "260px" }}>
-                            <div style={{ position: "relative", width: "100%", maxWidth: "420px" }}>
-                                <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--slate-400)" }}>
+                        {/* Top Row: Search, View Mode Switcher, Refresh */}
+                        <div
+                            style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                gap: "12px",
+                                flexWrap: "wrap",
+                            }}
+                        >
+                            <div style={{ position: "relative", flex: 1, minWidth: "260px", maxWidth: "460px" }}>
+                                <span
+                                    style={{
+                                        position: "absolute",
+                                        left: "12px",
+                                        top: "50%",
+                                        transform: "translateY(-50%)",
+                                        color: "var(--slate-400)",
+                                    }}
+                                >
                                     🔍
                                 </span>
                                 <input
                                     type="text"
-                                    placeholder="Search by mediator, product, brand, order ID, or UTR note..."
+                                    placeholder="Search by mediator, product, brand, batch ID, or UTR note..."
                                     value={historySearch}
                                     onChange={(e) => setHistorySearch(e.target.value)}
                                     style={{
                                         width: "100%",
-                                        padding: "8px 12px 8px 36px",
-                                        borderRadius: "6px",
+                                        padding: "9px 12px 9px 36px",
+                                        borderRadius: "7px",
                                         border: "1px solid var(--slate-300)",
                                         fontSize: "13px",
                                         boxSizing: "border-box",
                                     }}
                                 />
                             </div>
+
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                                {/* View Mode Toggle */}
+                                <div
+                                    style={{
+                                        display: "inline-flex",
+                                        background: "#f1f5f9",
+                                        padding: "3px",
+                                        borderRadius: "8px",
+                                        border: "1px solid #e2e8f0",
+                                    }}
+                                >
+                                    <button
+                                        type="button"
+                                        onClick={() => setHistoryViewMode("batches")}
+                                        style={{
+                                            padding: "6px 14px",
+                                            borderRadius: "6px",
+                                            border: "none",
+                                            fontSize: "12.5px",
+                                            fontWeight: 700,
+                                            cursor: "pointer",
+                                            background: historyViewMode === "batches" ? "#2563eb" : "transparent",
+                                            color: historyViewMode === "batches" ? "#ffffff" : "var(--slate-600)",
+                                            transition: "all 0.15s ease",
+                                        }}
+                                    >
+                                        📦 Payment Batches ({filteredBatches.length})
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setHistoryViewMode("table")}
+                                        style={{
+                                            padding: "6px 14px",
+                                            borderRadius: "6px",
+                                            border: "none",
+                                            fontSize: "12.5px",
+                                            fontWeight: 700,
+                                            cursor: "pointer",
+                                            background: historyViewMode === "table" ? "#2563eb" : "transparent",
+                                            color: historyViewMode === "table" ? "#ffffff" : "var(--slate-600)",
+                                            transition: "all 0.15s ease",
+                                        }}
+                                    >
+                                        📋 Individual Orders ({filteredHistoryUnits.length})
+                                    </button>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={loadHistory}
+                                    className="table-btn table-btn-outline"
+                                    style={{ fontSize: "12px", padding: "7px 12px" }}
+                                >
+                                    🔄 Refresh
+                                </button>
+                            </div>
                         </div>
 
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                            <label style={{ fontSize: "12.5px", fontWeight: 600, color: "var(--slate-600)" }}>
-                                Current Status:
-                            </label>
-                            <select
-                                value={historyStatusFilter}
-                                onChange={(e) => setHistoryStatusFilter(e.target.value)}
-                                style={{
-                                    padding: "7px 12px",
-                                    borderRadius: "6px",
-                                    border: "1px solid var(--slate-300)",
-                                    fontSize: "13px",
-                                    fontWeight: 600,
-                                    color: "var(--slate-800)",
-                                }}
-                            >
-                                <option value="all">All Statuses ({historyUnitsList.length})</option>
-                                <option value="assigned">Assigned (Awaiting Order Placement)</option>
-                                <option value="in_progress">In Progress</option>
-                                <option value="pending_refund">Pending Refund / Details</option>
-                                <option value="pending_verification">Pending Verification</option>
-                                <option value="completed">Completed</option>
-                            </select>
+                        {/* Bottom Row: Mediator-wise, Date-wise, Status, Brand filters */}
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "12px",
+                                flexWrap: "wrap",
+                                paddingTop: "10px",
+                                borderTop: "1px solid var(--slate-100)",
+                            }}
+                        >
+                            {/* Mediator-wise Filter */}
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--slate-700)" }}>
+                                    👤 Mediator:
+                                </label>
+                                <select
+                                    value={historyMediatorFilter}
+                                    onChange={(e) => setHistoryMediatorFilter(e.target.value)}
+                                    style={{
+                                        padding: "7px 10px",
+                                        borderRadius: "6px",
+                                        border: "1px solid var(--slate-300)",
+                                        fontSize: "12.5px",
+                                        fontWeight: 600,
+                                        color: "var(--slate-800)",
+                                        maxWidth: "200px",
+                                    }}
+                                >
+                                    <option value="all">All Mediators ({uniqueHistoryMediators.length})</option>
+                                    {uniqueHistoryMediators.map((m) => (
+                                        <option key={m.id} value={m.id}>
+                                            {m.name} ({m.code}) — {m.count}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
 
-                            <button
-                                type="button"
-                                onClick={loadHistory}
-                                className="table-btn table-btn-outline"
-                                style={{ fontSize: "12px", padding: "7px 12px" }}
-                            >
-                                🔄 Refresh
-                            </button>
+                            {/* Date-wise Filter: Date Picker */}
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--slate-700)" }}>
+                                    📅 Date:
+                                </label>
+                                <input
+                                    type="date"
+                                    value={historyDateFilter}
+                                    onChange={(e) => {
+                                        setHistoryDateFilter(e.target.value);
+                                        setHistoryQuickDate("all");
+                                    }}
+                                    style={{
+                                        padding: "6px 8px",
+                                        borderRadius: "6px",
+                                        border: "1px solid var(--slate-300)",
+                                        fontSize: "12px",
+                                        fontWeight: 600,
+                                        color: "var(--slate-800)",
+                                    }}
+                                />
+                                {historyDateFilter && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setHistoryDateFilter("")}
+                                        style={{
+                                            border: "none",
+                                            background: "none",
+                                            color: "#dc2626",
+                                            cursor: "pointer",
+                                            fontWeight: 700,
+                                            fontSize: "12px",
+                                            padding: "2px 4px",
+                                        }}
+                                        title="Clear Date"
+                                    >
+                                        ✕
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Quick Date Pills */}
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                {[
+                                    { label: "All Dates", val: "all" },
+                                    { label: "Today", val: "today" },
+                                    { label: "Yesterday", val: "yesterday" },
+                                    { label: "Last 7 Days", val: "last7" },
+                                    { label: "This Month", val: "thisMonth" },
+                                ].map((pill) => (
+                                    <button
+                                        key={pill.val}
+                                        type="button"
+                                        onClick={() => {
+                                            setHistoryQuickDate(pill.val);
+                                            setHistoryDateFilter("");
+                                        }}
+                                        style={{
+                                            padding: "4px 8px",
+                                            borderRadius: "5px",
+                                            border: "1px solid",
+                                            borderColor:
+                                                historyQuickDate === pill.val && !historyDateFilter
+                                                    ? "#2563eb"
+                                                    : "var(--slate-200)",
+                                            background:
+                                                historyQuickDate === pill.val && !historyDateFilter
+                                                    ? "#eff6ff"
+                                                    : "#ffffff",
+                                            color:
+                                                historyQuickDate === pill.val && !historyDateFilter
+                                                    ? "#1d4ed8"
+                                                    : "var(--slate-600)",
+                                            fontSize: "11.5px",
+                                            fontWeight: 600,
+                                            cursor: "pointer",
+                                        }}
+                                    >
+                                        {pill.label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Status Filter */}
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--slate-700)" }}>
+                                    ⚡ Status:
+                                </label>
+                                <select
+                                    value={historyStatusFilter}
+                                    onChange={(e) => setHistoryStatusFilter(e.target.value)}
+                                    style={{
+                                        padding: "7px 10px",
+                                        borderRadius: "6px",
+                                        border: "1px solid var(--slate-300)",
+                                        fontSize: "12.5px",
+                                        fontWeight: 600,
+                                        color: "var(--slate-800)",
+                                    }}
+                                >
+                                    <option value="all">All Statuses</option>
+                                    <option value="assigned">Assigned</option>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="pending_verification">Pending Verification</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="pending_refund">Pending Refund</option>
+                                </select>
+                            </div>
+
+                            {/* Brand Filter */}
+                            {uniqueHistoryBrands.length > 0 && (
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                    <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--slate-700)" }}>
+                                        🏷️ Brand:
+                                    </label>
+                                    <select
+                                        value={historyBrandFilter}
+                                        onChange={(e) => setHistoryBrandFilter(e.target.value)}
+                                        style={{
+                                            padding: "7px 10px",
+                                            borderRadius: "6px",
+                                            border: "1px solid var(--slate-300)",
+                                            fontSize: "12.5px",
+                                            fontWeight: 600,
+                                            color: "var(--slate-800)",
+                                            maxWidth: "160px",
+                                        }}
+                                    >
+                                        <option value="all">All Brands ({uniqueHistoryBrands.length})</option>
+                                        {uniqueHistoryBrands.map((b) => (
+                                            <option key={b} value={b}>
+                                                {b}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            {/* Reset Filters */}
+                            {hasActiveFilters && (
+                                <button
+                                    type="button"
+                                    onClick={resetFilters}
+                                    style={{
+                                        background: "#fef2f2",
+                                        color: "#dc2626",
+                                        border: "1px solid #fecaca",
+                                        borderRadius: "6px",
+                                        padding: "6px 12px",
+                                        fontSize: "12px",
+                                        fontWeight: 700,
+                                        cursor: "pointer",
+                                    }}
+                                >
+                                    ↺ Reset Filters
+                                </button>
+                            )}
                         </div>
                     </div>
 
@@ -745,25 +1290,304 @@ export default function PendingPaymentOrders() {
                         <div className="table-page-container" style={{ textAlign: "center", padding: "60px 0" }}>
                             <h2>Loading Advance Payment History...</h2>
                         </div>
-                    ) : filteredHistoryUnits.length === 0 ? (
+                    ) : (historyViewMode === "batches" ? filteredBatches.length === 0 : filteredHistoryUnits.length === 0) ? (
                         <div className="empty-state-card">
                             <div className="empty-state-icon">📜</div>
                             <h3 className="empty-state-title">No Payment History Found</h3>
                             <p className="empty-state-text">
-                                No advance payment records matched your search query or filters.
+                                No advance payment records matched your selected filters or search query.
                             </p>
-                            <button
-                                type="button"
-                                className="nav-btn nav-btn-default"
-                                onClick={() => {
-                                    setHistorySearch("");
-                                    setHistoryStatusFilter("all");
-                                }}
-                            >
-                                Reset Filters
-                            </button>
+                            {hasActiveFilters && (
+                                <button type="button" className="nav-btn nav-btn-default" onClick={resetFilters}>
+                                    Reset All Filters
+                                </button>
+                            )}
+                        </div>
+                    ) : historyViewMode === "batches" ? (
+                        /* BATCHES VIEW: Combine records given together in one transaction */
+                        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                            {filteredBatches.map((batch, idx) => (
+                                <div
+                                    key={batch.batchKey || idx}
+                                    style={{
+                                        background: "#ffffff",
+                                        borderRadius: "14px",
+                                        border: "1.5px solid #bfdbfe",
+                                        padding: "18px 22px",
+                                        boxShadow: "0 4px 14px rgba(59, 130, 246, 0.08)",
+                                    }}
+                                >
+                                    {/* Batch Card Header */}
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            justifyContent: "space-between",
+                                            alignItems: "center",
+                                            flexWrap: "wrap",
+                                            gap: "14px",
+                                            paddingBottom: "14px",
+                                            borderBottom: "1px solid #f1f5f9",
+                                            marginBottom: "14px",
+                                        }}
+                                    >
+                                        <div style={{ display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap" }}>
+                                            <div
+                                                style={{
+                                                    background: "linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)",
+                                                    color: "#1d4ed8",
+                                                    fontWeight: 800,
+                                                    fontSize: "18px",
+                                                    padding: "8px 16px",
+                                                    borderRadius: "10px",
+                                                    border: "1px solid #bfdbfe",
+                                                    boxShadow: "0 2px 4px rgba(37, 99, 235, 0.1)",
+                                                }}
+                                            >
+                                                ₹{batch.totalAdvance.toLocaleString()}
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: "15px", fontWeight: 700, color: "#0f172a" }}>
+                                                    Advance to {batch.mediatorName} ({batch.mediatorCode || "Code"}) • {batch.units.length} Order(s) Funded Together
+                                                    {batch.advanceBatchId && (
+                                                        <span
+                                                            style={{
+                                                                marginLeft: "8px",
+                                                                fontSize: "11px",
+                                                                background: "#f1f5f9",
+                                                                color: "#475569",
+                                                                padding: "2px 8px",
+                                                                borderRadius: "4px",
+                                                                fontWeight: 600,
+                                                            }}
+                                                        >
+                                                            #{batch.advanceBatchId}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div
+                                                    style={{
+                                                        fontSize: "12.5px",
+                                                        color: "#64748b",
+                                                        marginTop: "3px",
+                                                        display: "flex",
+                                                        flexWrap: "wrap",
+                                                        gap: "12px",
+                                                        alignItems: "center",
+                                                    }}
+                                                >
+                                                    <span>📅 Paid on: <b>{formatDateTime(batch.paidAt)}</b></span>
+                                                    <span>🏢 Team: <b>{batch.teamCode}</b></span>
+                                                    {batch.message && (
+                                                        <span>
+                                                            💬 UTR / Note: <b style={{ color: "#334155" }}>{batch.message}</b>
+                                                        </span>
+                                                    )}
+                                                    {batch.totalHikedDiff > 0 && (
+                                                        <span style={{ color: "#d97706", fontWeight: 700 }}>
+                                                            ▲ Includes ₹{batch.totalHikedDiff.toLocaleString()} Price Hike
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {batch.screenshot && (
+                                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                                <ProofThumbnail
+                                                    url={batch.screenshot}
+                                                    alt="Advance Proof"
+                                                    size={42}
+                                                    onClick={() => setModalImage(batch.screenshot)}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setModalImage(batch.screenshot)}
+                                                    className="table-btn table-btn-outline"
+                                                    style={{ fontSize: "12px", padding: "5px 10px", fontWeight: 600 }}
+                                                >
+                                                    🔍 View Proof
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Nested Table of Units inside Batch */}
+                                    <div
+                                        className="data-table-responsive"
+                                        style={{ border: "1px solid #e2e8f0", borderRadius: "10px", overflow: "hidden" }}
+                                    >
+                                        <table className="data-table" style={{ fontSize: "12.5px" }}>
+                                            <thead>
+                                                <tr style={{ background: "#f8fafc" }}>
+                                                    <th style={{ padding: "8px 12px" }}>Product</th>
+                                                    <th style={{ padding: "8px 12px" }}>Brand</th>
+                                                    <th style={{ padding: "8px 12px" }}>Platform</th>
+                                                    <th style={{ padding: "8px 12px" }}>Unit / Market ID</th>
+                                                    <th style={{ padding: "8px 12px" }}>Advance Amount</th>
+                                                    <th style={{ padding: "8px 12px" }}>Current Status</th>
+                                                    <th style={{ padding: "8px 12px", textAlign: "center" }}>Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {batch.units.map((unit) => {
+                                                    const statusClass = `status-badge status-badge-${unit.status}`;
+                                                    return (
+                                                        <tr key={unit._id}>
+                                                            <td style={{ padding: "8px 12px", fontWeight: 600 }}>
+                                                                {unit.productName}
+                                                                {unit.productLink && (
+                                                                    <a
+                                                                        href={unit.productLink}
+                                                                        target="_blank"
+                                                                        rel="noreferrer"
+                                                                        style={{
+                                                                            marginLeft: "6px",
+                                                                            color: "var(--primary-600)",
+                                                                            textDecoration: "none",
+                                                                        }}
+                                                                    >
+                                                                        🔗
+                                                                    </a>
+                                                                )}
+                                                            </td>
+                                                            <td style={{ padding: "8px 12px" }}>{unit.brand}</td>
+                                                            <td style={{ padding: "8px 12px" }}>{unit.orderPlatform}</td>
+                                                            <td style={{ padding: "8px 12px" }}>
+                                                                <span style={{ color: "var(--primary-600)", fontWeight: 700 }}>
+                                                                    {unit.orderId || unit._id?.slice(-8) || "N/A"}
+                                                                </span>
+                                                            </td>
+                                                            <td style={{ padding: "8px 12px" }}>
+                                                                <PriceDisplay
+                                                                    basePrice={unit.orderPrice}
+                                                                    actualPrice={unit.purchasePrice}
+                                                                    layout="stack"
+                                                                />
+                                                            </td>
+                                                            <td style={{ padding: "8px 12px" }}>
+                                                                <span className={statusClass}>
+                                                                    ● {unit.status?.replace("_", " ")}
+                                                                </span>
+                                                                {unit.unitType && (
+                                                                    <span
+                                                                        className={`unit-spec-chip ${unit.unitType}`}
+                                                                        style={{
+                                                                            fontSize: "9px",
+                                                                            padding: "1px 5px",
+                                                                            marginLeft: "6px",
+                                                                        }}
+                                                                    >
+                                                                        {unit.unitType === "warehouse" ? "🏢 WH" : "📦 Empty"}
+                                                                    </span>
+                                                                )}
+                                                            </td>
+                                                            <td style={{ padding: "8px 12px", textAlign: "center" }}>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => navigate(`/order/${unit.parentOrderId}`)}
+                                                                    className="table-btn table-btn-outline"
+                                                                    style={{ fontSize: "11px", padding: "4px 8px" }}
+                                                                >
+                                                                    Details →
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    {/* Batch Status Summary Footer */}
+                                    <div
+                                        style={{
+                                            marginTop: "12px",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "space-between",
+                                            flexWrap: "wrap",
+                                            gap: "10px",
+                                            fontSize: "12px",
+                                            color: "#64748b",
+                                            paddingTop: "6px",
+                                        }}
+                                    >
+                                        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                                            {batch.statusCounts.completed > 0 && (
+                                                <span
+                                                    style={{
+                                                        background: "#ecfdf5",
+                                                        color: "#059669",
+                                                        padding: "2px 8px",
+                                                        borderRadius: "4px",
+                                                        fontWeight: 600,
+                                                    }}
+                                                >
+                                                    ✓ {batch.statusCounts.completed} Completed
+                                                </span>
+                                            )}
+                                            {batch.statusCounts.in_progress > 0 && (
+                                                <span
+                                                    style={{
+                                                        background: "#eff6ff",
+                                                        color: "#2563eb",
+                                                        padding: "2px 8px",
+                                                        borderRadius: "4px",
+                                                        fontWeight: 600,
+                                                    }}
+                                                >
+                                                    ⏳ {batch.statusCounts.in_progress} In Progress
+                                                </span>
+                                            )}
+                                            {batch.statusCounts.assigned > 0 && (
+                                                <span
+                                                    style={{
+                                                        background: "#fef3c7",
+                                                        color: "#d97706",
+                                                        padding: "2px 8px",
+                                                        borderRadius: "4px",
+                                                        fontWeight: 600,
+                                                    }}
+                                                >
+                                                    📦 {batch.statusCounts.assigned} Assigned
+                                                </span>
+                                            )}
+                                            {batch.statusCounts.pending_verification > 0 && (
+                                                <span
+                                                    style={{
+                                                        background: "#f5f3ff",
+                                                        color: "#7c3aed",
+                                                        padding: "2px 8px",
+                                                        borderRadius: "4px",
+                                                        fontWeight: 600,
+                                                    }}
+                                                >
+                                                    🔍 {batch.statusCounts.pending_verification} Pending Verification
+                                                </span>
+                                            )}
+                                            {batch.statusCounts.pending_refund > 0 && (
+                                                <span
+                                                    style={{
+                                                        background: "#fef2f2",
+                                                        color: "#dc2626",
+                                                        padding: "2px 8px",
+                                                        borderRadius: "4px",
+                                                        fontWeight: 600,
+                                                    }}
+                                                >
+                                                    ⚠️ {batch.statusCounts.pending_refund} Pending Refund
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div>
+                                            Batch Total: <b>{batch.units.length} unit(s)</b>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     ) : (
+                        /* TABLE VIEW: Granular row-by-row table of units */
                         <div className="data-table-container">
                             <div className="data-table-responsive">
                                 <table className="data-table">
@@ -783,16 +1607,7 @@ export default function PendingPaymentOrders() {
                                     <tbody>
                                         {filteredHistoryUnits.map((item, idx) => {
                                             const paidDateStr = item.paymentSentAt || item.updatedAt || item.orderCreatedAt;
-                                            const paidFormatted = paidDateStr
-                                                ? new Date(paidDateStr).toLocaleString("en-IN", {
-                                                      day: "numeric",
-                                                      month: "short",
-                                                      year: "numeric",
-                                                      hour: "2-digit",
-                                                      minute: "2-digit",
-                                                  })
-                                                : "—";
-
+                                            const paidFormatted = formatDateTime(paidDateStr);
                                             const statusClass = `status-badge status-badge-${item.status}`;
 
                                             return (
@@ -804,6 +1619,7 @@ export default function PendingPaymentOrders() {
                                                         </div>
                                                         <div style={{ fontSize: "10.5px", color: "var(--slate-500)" }}>
                                                             Unit ID: {item._id?.slice(-8) || "N/A"}
+                                                            {item.advanceBatchId && ` • #${item.advanceBatchId}`}
                                                         </div>
                                                     </td>
 
@@ -884,7 +1700,10 @@ export default function PendingPaymentOrders() {
                                                         </span>
                                                         {item.unitType && (
                                                             <div style={{ marginTop: "3px" }}>
-                                                                <span className={`unit-spec-chip ${item.unitType}`} style={{ fontSize: "9px", padding: "1px 5px" }}>
+                                                                <span
+                                                                    className={`unit-spec-chip ${item.unitType}`}
+                                                                    style={{ fontSize: "9px", padding: "1px 5px" }}
+                                                                >
                                                                     {item.unitType === "warehouse" ? "🏢 WH" : "📦 Empty"}
                                                                 </span>
                                                             </div>
