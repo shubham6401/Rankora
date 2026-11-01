@@ -395,7 +395,7 @@ export default function ExecutiveVerifyOrders() {
                                                 </div>
                                             </td>
                                             <td style={{ fontSize: "12px", color: "var(--slate-500)" }}>
-                                                {new Date(submittedDate).toLocaleDateString()}
+                                                {submittedDate && !isNaN(new Date(submittedDate).getTime()) ? new Date(submittedDate).toLocaleDateString("en-IN") : "—"}
                                             </td>
                                             <td style={{ textAlign: "center" }}>
                                                 <div className="action-btn-group" style={{ justifyContent: "center", gap: "6px", flexWrap: "wrap" }}>

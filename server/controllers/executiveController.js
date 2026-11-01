@@ -617,7 +617,12 @@ const getPendingVerificationOrders = async (req, res, next) => {
         const query = {
             "orderUnits.status": "pending_verification",
         };
-        if (teamCode) query.teamCode = teamCode;
+        if (teamCode) {
+            query.$or = [
+                { teamCode: { $regex: new RegExp(`^${teamCode.trim()}$`, "i") } },
+                { createdBy: req.user.id },
+            ];
+        }
 
         const orders = await Order.find(query)
             .populate("brandUserId", "name brand role")

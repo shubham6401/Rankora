@@ -381,14 +381,14 @@ export default function ExecutiveInspectOrder() {
 
                     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                         {pendingUnits
-                            .filter((u) => activeUnitTab === "all" || u._id === activeUnitTab)
-                            .map((unit) => {
-                                const originalIndex = allUnits.findIndex((orig) => orig._id === unit._id);
-                                const unitNumber = originalIndex >= 0 ? originalIndex + 1 : 1;
+                            .filter((u) => activeUnitTab === "all" || u._id?.toString() === activeUnitTab?.toString())
+                            .map((unit, uIdx) => {
+                                const originalIndex = allUnits.findIndex((orig) => orig._id?.toString() === unit._id?.toString());
+                                const unitNumber = originalIndex >= 0 ? originalIndex + 1 : uIdx + 1;
 
                                 return (
                                     <div
-                                        key={unit._id}
+                                        key={unit._id || `unit-${uIdx}`}
                                         className={`unit-item-card ${unit.verificationRejectionReason ? "unit-card-revision" : ""}`}
                                         style={{
                                             border: "1.5px solid #c7d2fe",
@@ -506,7 +506,7 @@ export default function ExecutiveInspectOrder() {
                                                         )}
                                                     </div>
                                                     <div className="proof-dossier-body">
-                                                        {renderDossierPreview(unit.orderedScreenshot, `Unit #${uIdx + 1} Ordered Screenshot`)}
+                                                        {renderDossierPreview(unit.orderedScreenshot, `Unit #${unitNumber} Ordered Screenshot`)}
                                                     </div>
                                                 </div>
 
@@ -521,7 +521,7 @@ export default function ExecutiveInspectOrder() {
                                                         )}
                                                     </div>
                                                     <div className="proof-dossier-body">
-                                                        {renderDossierPreview(unit.postDeliveryDetails?.productReviewScreenshot, `Unit #${uIdx + 1} Review Proof`)}
+                                                        {renderDossierPreview(unit.postDeliveryDetails?.productReviewScreenshot, `Unit #${unitNumber} Review Proof`)}
                                                     </div>
                                                 </div>
 
@@ -536,7 +536,7 @@ export default function ExecutiveInspectOrder() {
                                                         )}
                                                     </div>
                                                     <div className="proof-dossier-body">
-                                                        {renderDossierPreview(unit.postDeliveryDetails?.invoiceScreenshot, `Unit #${uIdx + 1} Invoice Proof`)}
+                                                        {renderDossierPreview(unit.postDeliveryDetails?.invoiceScreenshot, `Unit #${unitNumber} Invoice Proof`)}
                                                     </div>
                                                 </div>
 
@@ -551,7 +551,7 @@ export default function ExecutiveInspectOrder() {
                                                         )}
                                                     </div>
                                                     <div className="proof-dossier-body">
-                                                        {renderDossierPreview(unit.postDeliveryDetails?.sellerFeedbackScreenShot, `Unit #${uIdx + 1} Seller Feedback Proof`)}
+                                                        {renderDossierPreview(unit.postDeliveryDetails?.sellerFeedbackScreenShot, `Unit #${unitNumber} Seller Feedback Proof`)}
                                                     </div>
                                                 </div>
                                             </div>
