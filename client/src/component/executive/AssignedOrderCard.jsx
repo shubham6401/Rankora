@@ -3,46 +3,24 @@ import { useNavigate } from "react-router-dom";
 import ProofThumbnail from "../common/ProofThumbnail";
 import ProofPreviewModal from "../common/ProofPreviewModal";
 import PriceDisplay from "../common/PriceDisplay";
-import { deleteExecutiveOrderBatch } from "../../services/executive/order";
+import DeleteOrderUnitsModal from "./DeleteOrderUnitsModal";
+import OrderUnitSelectorModal from "./OrderUnitSelectorModal";
+import ExecutiveUnitEditorModal from "./ExecutiveUnitEditorModal";
 import "../../styles/ordersTable.css";
 
 export default function AssignedOrderCard({ order, status, onOrderUpdated }) {
     const navigate = useNavigate();
     const [modalImg, setModalImg] = useState(null);
-    const [isDeleting, setIsDeleting] = useState(false);
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [selectorModalOpen, setSelectorModalOpen] = useState(false);
+    const [editorModal, setEditorModal] = useState({ isOpen: false, unit: null, unitNumber: 1 });
 
-    const handleDeleteBatch = async () => {
-        const totalU = order.quantity || (order.orderUnits ? order.orderUnits.length : 0);
-        const confirmMsg =
-            `⚠️ ARE YOU SURE YOU WANT TO DELETE THIS ORDER BATCH?\n\n` +
-            `Product: ${order.productName || "Unnamed"}\n` +
-            `Brand: ${order.brand || "Unknown"}\n` +
-            `Total Units: ${totalU}\n\n` +
-            `This will permanently delete the entire order batch and all associated units.\n` +
-            `This action CANNOT be undone. Proceed?`;
-
-        if (!window.confirm(confirmMsg)) return;
-
-        try {
-            setIsDeleting(true);
-            await deleteExecutiveOrderBatch(order._id);
-            alert("✓ Order batch deleted successfully.");
-            if (onOrderUpdated) {
-                onOrderUpdated();
-            } else {
-                window.location.reload();
-            }
-        } catch (err) {
-            console.error("Failed to delete order batch:", err);
-            alert(err?.response?.data?.message || "Failed to delete order batch");
-            setIsDeleting(false);
-        }
-    };
+    const units = order.orderUnits || [];
 
     // Group assigned units by mediator
     const assignedMediators = {};
 
-    (order.orderUnits || [])
+    units
         .filter((unit) => unit.status === "assigned" && unit.mediatorId)
         .forEach((unit) => {
             const mediatorId = unit.mediatorId._id || unit.mediatorId;
@@ -65,9 +43,18 @@ export default function AssignedOrderCard({ order, status, onOrderUpdated }) {
 
     const mediators = Object.values(assignedMediators);
 
-    const assignedUnits = (order.orderUnits || []).filter((u) => u.status === "assigned");
+    const assignedUnits = units.filter((u) => u.status === "assigned");
     const whCount = assignedUnits.filter((u) => u.unitType === "warehouse").length;
     const emCount = assignedUnits.filter((u) => u.unitType === "empty").length;
+
+    const handleEditClick = () => {
+        if (units.length <= 1) {
+            const primaryUnit = units[0] || {};
+            setEditorModal({ isOpen: true, unit: primaryUnit, unitNumber: 1 });
+        } else {
+            setSelectorModalOpen(true);
+        }
+    };
 
     return (
         <>
@@ -91,7 +78,7 @@ export default function AssignedOrderCard({ order, status, onOrderUpdated }) {
                     <PriceDisplay
                         basePrice={order.price}
                         actualPrice={
-                            (order.orderUnits || []).find((u) => u.purchasePrice && Number(u.purchasePrice) > Number(order.price))?.purchasePrice
+                            units.find((u) => u.purchasePrice && Number(u.purchasePrice) > Number(order.price))?.purchasePrice
                         }
                         layout="stack"
                     />
@@ -186,8 +173,23 @@ export default function AssignedOrderCard({ order, status, onOrderUpdated }) {
                             type="button"
                             className="table-btn table-btn-outline"
                             onClick={() => navigate(`/order/${order._id}`)}
+                            title="View order details and units"
                         >
-                            View Details
+                            Details
+                        </button>
+                        <button
+                            type="button"
+                            className="table-btn"
+                            style={{
+                                backgroundColor: "#eff6ff",
+                                color: "#1d4ed8",
+                                border: "1px solid #bfdbfe",
+                                fontWeight: 700,
+                            }}
+                            onClick={handleEditClick}
+                            title="Edit marketplace order ID, price, reviewer name, etc."
+                        >
+                            ✏️ Edit
                         </button>
                         <button
                             type="button"
@@ -197,13 +199,12 @@ export default function AssignedOrderCard({ order, status, onOrderUpdated }) {
                                 color: "#dc2626",
                                 border: "1px solid #fca5a5",
                                 padding: "6px 10px",
-                                cursor: isDeleting ? "not-allowed" : "pointer"
+                                cursor: "pointer",
                             }}
-                            disabled={isDeleting}
-                            onClick={handleDeleteBatch}
-                            title="Permanently delete this entire order batch"
+                            onClick={() => setDeleteModalOpen(true)}
+                            title="Delete specific units or entire order batch"
                         >
-                            {isDeleting ? "..." : "🗑️"}
+                            🗑️ Delete
                         </button>
                     </div>
                 </td>
@@ -215,6 +216,41 @@ export default function AssignedOrderCard({ order, status, onOrderUpdated }) {
                     url={modalImg}
                     title="Payment Proof Verification Screenshot"
                     onClose={() => setModalImg(null)}
+                />
+            )}
+
+            {deleteModalOpen && (
+                <DeleteOrderUnitsModal
+                    isOpen={deleteModalOpen}
+                    order={order}
+                    onClose={() => setDeleteModalOpen(false)}
+                    onSuccess={() => {
+                        if (onOrderUpdated) onOrderUpdated();
+                    }}
+                />
+            )}
+
+            {selectorModalOpen && (
+                <OrderUnitSelectorModal
+                    isOpen={selectorModalOpen}
+                    order={order}
+                    onClose={() => setSelectorModalOpen(false)}
+                    onSelectUnit={(unit, unitNumber) => {
+                        setEditorModal({ isOpen: true, unit, unitNumber });
+                    }}
+                />
+            )}
+
+            {editorModal.isOpen && (
+                <ExecutiveUnitEditorModal
+                    isOpen={editorModal.isOpen}
+                    order={order}
+                    unit={editorModal.unit}
+                    unitNumber={editorModal.unitNumber}
+                    onClose={() => setEditorModal({ isOpen: false, unit: null, unitNumber: 1 })}
+                    onSuccess={() => {
+                        if (onOrderUpdated) onOrderUpdated();
+                    }}
                 />
             )}
         </>

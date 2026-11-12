@@ -9,6 +9,9 @@ import {
 import { isPdfUrl } from "../../component/common/ProofThumbnail";
 import { isSuperAdminSessionActive } from "../../utils/authUtils";
 import SuperAdminUnitEditorModal from "../../component/admin/SuperAdminUnitEditorModal";
+import ExecutiveUnitEditorModal from "../../component/executive/ExecutiveUnitEditorModal";
+import DeleteOrderUnitsModal from "../../component/executive/DeleteOrderUnitsModal";
+import OrderUnitSelectorModal from "../../component/executive/OrderUnitSelectorModal";
 import ProofPreviewModal from "../../component/common/ProofPreviewModal";
 import "../../styles/ordersTable.css";
 import "../../styles/displayOrder.css";
@@ -23,6 +26,9 @@ export default function ExecutiveInspectOrder() {
     const [error, setError] = useState(null);
     const [activeUnitTab, setActiveUnitTab] = useState("all");
     const [previewImage, setPreviewImage] = useState(null);
+    const [deleteUnitsModalOpen, setDeleteUnitsModalOpen] = useState(false);
+    const [selectorModalOpen, setSelectorModalOpen] = useState(false);
+    const [editorModal, setEditorModal] = useState({ isOpen: false, unit: null, unitNumber: 1 });
     const [verifyingUnitId, setVerifyingUnitId] = useState(null);
     const [superAdminUnitModal, setSuperAdminUnitModal] = useState({
         isOpen: false,
@@ -281,12 +287,36 @@ export default function ExecutiveInspectOrder() {
                     </button>
                     <button
                         type="button"
-                        onClick={handleDeleteBatch}
+                        onClick={() => {
+                            if ((order.orderUnits || []).length <= 1) {
+                                setEditorModal({ isOpen: true, unit: order.orderUnits?.[0] || {}, unitNumber: 1 });
+                            } else {
+                                setSelectorModalOpen(true);
+                            }
+                        }}
+                        className="table-btn"
+                        style={{
+                            padding: "8px 14px",
+                            fontSize: "13px",
+                            fontWeight: 700,
+                            backgroundColor: "#eff6ff",
+                            color: "#1d4ed8",
+                            border: "1.5px solid #bfdbfe",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                        }}
+                        title="Edit marketplace order ID, price, reviewer name, etc."
+                    >
+                        ✏️ Edit Units
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setDeleteUnitsModalOpen(true)}
                         className="table-btn table-btn-danger"
                         style={{ padding: "8px 14px", fontSize: "13px", fontWeight: 600, background: "#ef4444", color: "#fff", border: "1px solid #dc2626" }}
-                        title="Permanently delete this order batch"
+                        title="Delete specific units or entire order batch"
                     >
-                        🗑️ Delete Batch
+                        🗑️ Delete Units
                     </button>
                 </div>
             </div>
@@ -440,6 +470,26 @@ export default function ExecutiveInspectOrder() {
                                                         👑 Edit Unit &amp; Proofs
                                                     </button>
                                                 )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setEditorModal({ isOpen: true, unit, unitNumber })}
+                                                    style={{
+                                                        fontSize: "12px",
+                                                        fontWeight: 700,
+                                                        padding: "4px 10px",
+                                                        borderRadius: "6px",
+                                                        border: "1.5px solid #2563eb",
+                                                        background: "#eff6ff",
+                                                        color: "#1d4ed8",
+                                                        cursor: "pointer",
+                                                        display: "inline-flex",
+                                                        alignItems: "center",
+                                                        gap: "4px",
+                                                    }}
+                                                    title="Edit operational details for this unit (Order ID, price, reviewer, etc.)"
+                                                >
+                                                    ✏️ Edit Unit
+                                                </button>
                                                 <span className={`unit-spec-chip ${unit.unitType || "unclassified"}`}>
                                                     {unit.unitType === "warehouse" ? "🏢 Warehouse" : unit.unitType === "empty" ? "📦 Empty" : "⚪ Unclassified"}
                                                 </span>
@@ -760,6 +810,48 @@ export default function ExecutiveInspectOrder() {
                     unit={superAdminUnitModal.unit}
                     unitNumber={superAdminUnitModal.unitNumber}
                     onSuccess={handleSuperAdminUnitSaved}
+                />
+            )}
+
+            {/* EXECUTIVE DELETE UNITS MODAL */}
+            {deleteUnitsModalOpen && (
+                <DeleteOrderUnitsModal
+                    isOpen={deleteUnitsModalOpen}
+                    order={order}
+                    onClose={() => setDeleteUnitsModalOpen(false)}
+                    onSuccess={(updatedOrder, isFullBatchDeleted) => {
+                        if (isFullBatchDeleted) {
+                            navigate("/executive-verify-orders");
+                        } else if (updatedOrder) {
+                            setOrder(updatedOrder);
+                        }
+                    }}
+                />
+            )}
+
+            {/* EXECUTIVE ORDER UNIT SELECTOR MODAL */}
+            {selectorModalOpen && (
+                <OrderUnitSelectorModal
+                    isOpen={selectorModalOpen}
+                    order={order}
+                    onClose={() => setSelectorModalOpen(false)}
+                    onSelectUnit={(unit, unitNumber) => {
+                        setEditorModal({ isOpen: true, unit, unitNumber });
+                    }}
+                />
+            )}
+
+            {/* EXECUTIVE OPERATIONAL UNIT EDITOR MODAL */}
+            {editorModal.isOpen && (
+                <ExecutiveUnitEditorModal
+                    isOpen={editorModal.isOpen}
+                    order={order}
+                    unit={editorModal.unit}
+                    unitNumber={editorModal.unitNumber}
+                    onClose={() => setEditorModal({ isOpen: false, unit: null, unitNumber: 1 })}
+                    onSuccess={(updatedOrder) => {
+                        if (updatedOrder) setOrder(updatedOrder);
+                    }}
                 />
             )}
         </div>

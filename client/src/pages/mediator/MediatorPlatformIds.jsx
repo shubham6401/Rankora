@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
     fetchMediatorPlatformIds,
     addMediatorPlatformId,
@@ -8,12 +8,12 @@ import {
 import "../../styles/ordersTable.css";
 
 const PLATFORMS = [
-    { label: "Amazon", value: "Amazon", badgeBg: "#fff7ed", badgeColor: "#c2410c", border: "#fed7aa" },
-    { label: "Flipkart", value: "Flipkart", badgeBg: "#eff6ff", badgeColor: "#1d4ed8", border: "#bfdbfe" },
-    { label: "Myntra", value: "Myntra", badgeBg: "#fdf2f8", badgeColor: "#be185d", border: "#fbcfe8" },
-    { label: "Nykaa", value: "Nykaa", badgeBg: "#fff1f2", badgeColor: "#e11d48", border: "#fecdd3" },
-    { label: "Meesho", value: "Meesho", badgeBg: "#f5f3ff", badgeColor: "#6d28d9", border: "#ddd6fe" },
-    { label: "Other", value: "Other", badgeBg: "#f1f5f9", badgeColor: "#475569", border: "#cbd5e1" },
+    { label: "Amazon", value: "Amazon", badgeBg: "#fff7ed", badgeColor: "#c2410c", border: "#fed7aa", icon: "📦" },
+    { label: "Flipkart", value: "Flipkart", badgeBg: "#eff6ff", badgeColor: "#1d4ed8", border: "#bfdbfe", icon: "🛒" },
+    { label: "Myntra", value: "Myntra", badgeBg: "#fdf2f8", badgeColor: "#be185d", border: "#fbcfe8", icon: "👗" },
+    { label: "Nykaa", value: "Nykaa", badgeBg: "#fff1f2", badgeColor: "#e11d48", border: "#fecdd3", icon: "💄" },
+    { label: "Meesho", value: "Meesho", badgeBg: "#f5f3ff", badgeColor: "#6d28d9", border: "#ddd6fe", icon: "🛍️" },
+    { label: "Other", value: "Other", badgeBg: "#f1f5f9", badgeColor: "#475569", border: "#cbd5e1", icon: "🌐" },
 ];
 
 export default function MediatorPlatformIds() {
@@ -25,12 +25,14 @@ export default function MediatorPlatformIds() {
     const [editingId, setEditingId] = useState(null);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
+    const [successToast, setSuccessToast] = useState("");
+    const nameInputRef = useRef(null);
+
+    // Exactly 3 fields: Platform, Buyer Profile Name, Buyer Profile URL
     const [modalForm, setModalForm] = useState({
         platform: "Amazon",
         profileName: "",
         profileUrl: "",
-        identifier: "",
-        notes: "",
     });
 
     useEffect(() => {
@@ -58,11 +60,13 @@ export default function MediatorPlatformIds() {
             platform: "Amazon",
             profileName: "",
             profileUrl: "",
-            identifier: "",
-            notes: "",
         });
         setError("");
+        setSuccessToast("");
         setIsModalOpen(true);
+        setTimeout(() => {
+            if (nameInputRef.current) nameInputRef.current.focus();
+        }, 100);
     };
 
     const handleOpenEditModal = (item) => {
@@ -71,10 +75,9 @@ export default function MediatorPlatformIds() {
             platform: item.platform || "Amazon",
             profileName: item.profileName || "",
             profileUrl: item.profileUrl || "",
-            identifier: item.identifier || "",
-            notes: item.notes || "",
         });
         setError("");
+        setSuccessToast("");
         setIsModalOpen(true);
     };
 
@@ -82,20 +85,27 @@ export default function MediatorPlatformIds() {
         setIsModalOpen(false);
         setEditingId(null);
         setError("");
+        setSuccessToast("");
     };
 
-    const handleSave = async (e) => {
-        e.preventDefault();
+    const handleSave = async (andAddAnother = false) => {
         setError("");
+        setSuccessToast("");
         if (!modalForm.profileName.trim()) {
-            setError("Profile Name / Buyer Name is required.");
+            setError("Buyer Profile Name is required (e.g. Rohan Sharma).");
             return;
         }
 
         try {
             setSubmitting(true);
+            const payload = {
+                platform: modalForm.platform,
+                profileName: modalForm.profileName.trim(),
+                profileUrl: modalForm.profileUrl ? modalForm.profileUrl.trim() : null,
+            };
+
             if (editingId) {
-                const res = await updateMediatorPlatformId(editingId._id, modalForm);
+                const res = await updateMediatorPlatformId(editingId._id, payload);
                 if (res.data?.success) {
                     setIds((prev) =>
                         prev.map((id) => (id._id === editingId._id ? res.data.platformId : id))
@@ -103,10 +113,21 @@ export default function MediatorPlatformIds() {
                     handleCloseModal();
                 }
             } else {
-                const res = await addMediatorPlatformId(modalForm);
+                const res = await addMediatorPlatformId(payload);
                 if (res.data?.success) {
                     setIds((prev) => [res.data.platformId, ...prev]);
-                    handleCloseModal();
+
+                    if (andAddAnother) {
+                        setSuccessToast(`✓ "${payload.profileName}" saved! Enter details for your next buyer ID below.`);
+                        setModalForm((prev) => ({
+                            ...prev,
+                            profileName: "",
+                            profileUrl: "",
+                        }));
+                        if (nameInputRef.current) nameInputRef.current.focus();
+                    } else {
+                        handleCloseModal();
+                    }
                 }
             }
         } catch (err) {
@@ -132,7 +153,7 @@ export default function MediatorPlatformIds() {
 
     const getPlatformStyle = (pName) => {
         const found = PLATFORMS.find((p) => p.value.toLowerCase() === (pName || "").toLowerCase());
-        return found || { badgeBg: "#f1f5f9", badgeColor: "#475569", border: "#cbd5e1" };
+        return found || { badgeBg: "#f1f5f9", badgeColor: "#475569", border: "#cbd5e1", icon: "🌐" };
     };
 
     const filteredIds = ids.filter((item) => {
@@ -142,10 +163,9 @@ export default function MediatorPlatformIds() {
         if (searchQuery.trim()) {
             const q = searchQuery.toLowerCase().trim();
             const matchName = item.profileName?.toLowerCase().includes(q);
-            const matchId = item.identifier?.toLowerCase().includes(q);
-            const matchNotes = item.notes?.toLowerCase().includes(q);
+            const matchPlatform = item.platform?.toLowerCase().includes(q);
             const matchUrl = item.profileUrl?.toLowerCase().includes(q);
-            if (!matchName && !matchId && !matchNotes && !matchUrl) return false;
+            if (!matchName && !matchPlatform && !matchUrl) return false;
         }
         return true;
     });
@@ -162,7 +182,7 @@ export default function MediatorPlatformIds() {
                 alignItems: "flex-start",
                 flexWrap: "wrap",
                 gap: "16px",
-                marginBottom: "24px"
+                marginBottom: "24px",
             }}>
                 <div>
                     <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
@@ -177,13 +197,13 @@ export default function MediatorPlatformIds() {
                             borderRadius: "12px",
                             backgroundColor: "#e0f2fe",
                             color: "#0369a1",
-                            border: "1px solid #bae6fd"
+                            border: "1px solid #bae6fd",
                         }}>
                             Profile Vault
                         </span>
                     </div>
                     <p style={{ margin: 0, fontSize: "14px", color: "#64748b", maxWidth: "680px" }}>
-                        Register your e-commerce buyer accounts (Amazon, Flipkart, Myntra, Nykaa, Meesho). Active accounts will automatically auto-fill reviewer credentials when placing orders.
+                        Save your buyer profiles (Amazon, Flipkart, Myntra, etc.). You can add multiple accounts to quickly autofill buyer names when placing orders.
                     </p>
                 </div>
 
@@ -203,7 +223,7 @@ export default function MediatorPlatformIds() {
                         border: "none",
                         cursor: "pointer",
                         boxShadow: "0 2px 6px rgba(37,99,235,0.25)",
-                        transition: "background-color 0.15s"
+                        transition: "background-color 0.15s",
                     }}
                 >
                     <span>➕</span>
@@ -216,14 +236,14 @@ export default function MediatorPlatformIds() {
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
                 gap: "16px",
-                marginBottom: "24px"
+                marginBottom: "24px",
             }}>
                 <div style={{
                     background: "#ffffff",
                     padding: "16px 20px",
                     borderRadius: "12px",
                     border: "1px solid #e2e8f0",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.03)"
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
                 }}>
                     <div style={{ fontSize: "12px", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>
                         Total Registered IDs
@@ -238,7 +258,7 @@ export default function MediatorPlatformIds() {
                     padding: "16px 20px",
                     borderRadius: "12px",
                     border: "1px solid #bbf7d0",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.03)"
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
                 }}>
                     <div style={{ fontSize: "12px", fontWeight: 700, color: "#15803d", textTransform: "uppercase" }}>
                         Active Buyer IDs
@@ -253,10 +273,10 @@ export default function MediatorPlatformIds() {
                     padding: "16px 20px",
                     borderRadius: "12px",
                     border: "1px solid #fecaca",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.03)"
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
                 }}>
                     <div style={{ fontSize: "12px", fontWeight: 700, color: "#b91c1c", textTransform: "uppercase" }}>
-                        Inactive / Suspended IDs
+                        Inactive IDs
                     </div>
                     <div style={{ fontSize: "26px", fontWeight: 800, color: "#dc2626", marginTop: "4px" }}>
                         {inactiveCount}
@@ -275,7 +295,7 @@ export default function MediatorPlatformIds() {
                 padding: "12px 16px",
                 borderRadius: "10px",
                 border: "1px solid #e2e8f0",
-                marginBottom: "20px"
+                marginBottom: "20px",
             }}>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", alignItems: "center" }}>
                     <span style={{ fontSize: "12.5px", fontWeight: 700, color: "#475569" }}>Platform:</span>
@@ -313,7 +333,7 @@ export default function MediatorPlatformIds() {
                                     color: filterPlatform === p.value ? p.badgeColor : "#475569",
                                 }}
                             >
-                                {p.label} {count > 0 && `(${count})`}
+                                {p.icon} {p.label} {count > 0 && `(${count})`}
                             </button>
                         );
                     })}
@@ -322,7 +342,7 @@ export default function MediatorPlatformIds() {
                 <div style={{ position: "relative", minWidth: "240px", flex: "1 1 200px", maxWidth: "340px" }}>
                     <input
                         type="text"
-                        placeholder="Search by name, ID tag, notes..."
+                        placeholder="Search buyer name or platform..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         style={{
@@ -352,7 +372,7 @@ export default function MediatorPlatformIds() {
                     borderRadius: "12px",
                     border: "1px dashed #cbd5e1",
                     padding: "48px 24px",
-                    textAlign: "center"
+                    textAlign: "center",
                 }}>
                     <div style={{ fontSize: "40px", marginBottom: "12px" }}>💳</div>
                     <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#1e293b", margin: "0 0 6px 0" }}>
@@ -373,7 +393,7 @@ export default function MediatorPlatformIds() {
                             color: "#ffffff",
                             fontWeight: 700,
                             border: "none",
-                            cursor: "pointer"
+                            cursor: "pointer",
                         }}
                     >
                         + Add Your First Buyer ID
@@ -383,7 +403,7 @@ export default function MediatorPlatformIds() {
                 <div style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-                    gap: "18px"
+                    gap: "18px",
                 }}>
                     {filteredIds.map((item) => {
                         const styleInfo = getPlatformStyle(item.platform);
@@ -416,9 +436,9 @@ export default function MediatorPlatformIds() {
                                             borderRadius: "6px",
                                             display: "inline-flex",
                                             alignItems: "center",
-                                            gap: "4px"
+                                            gap: "4px",
                                         }}>
-                                            🛍️ {item.platform}
+                                            {styleInfo.icon} {item.platform}
                                         </span>
 
                                         <span style={{
@@ -431,75 +451,53 @@ export default function MediatorPlatformIds() {
                                             borderRadius: "12px",
                                             display: "inline-flex",
                                             alignItems: "center",
-                                            gap: "4px"
+                                            gap: "4px",
                                         }}>
                                             <span>{isActive ? "●" : "✕"}</span>
                                             <span>{isActive ? "Active" : "Inactive"}</span>
                                         </span>
                                     </div>
 
-                                    {/* Profile Name & Identifier */}
-                                    <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0f172a", margin: "0 0 4px 0" }}>
+                                    {/* Buyer Profile Name */}
+                                    <div style={{ fontSize: "12px", color: "#64748b", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                                        Buyer Profile Name
+                                    </div>
+                                    <h3 style={{ fontSize: "17px", fontWeight: 800, color: "#0f172a", margin: "2px 0 8px 0" }}>
                                         {item.profileName}
                                     </h3>
-                                    {item.identifier && (
-                                        <div style={{
-                                            fontSize: "12px",
-                                            color: "#475569",
-                                            fontWeight: 600,
-                                            backgroundColor: "#f8fafc",
-                                            display: "inline-block",
-                                            padding: "2px 8px",
-                                            borderRadius: "4px",
-                                            border: "1px solid #e2e8f0",
-                                            marginBottom: "8px"
-                                        }}>
-                                            Tag: #{item.identifier}
-                                        </div>
-                                    )}
 
-                                    {/* Profile URL Link */}
-                                    {item.profileUrl && (
+                                    {/* Buyer Profile URL */}
+                                    {item.profileUrl ? (
                                         <div style={{ margin: "6px 0 10px 0" }}>
                                             <a
                                                 href={item.profileUrl.startsWith("http") ? item.profileUrl : `https://${item.profileUrl}`}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 style={{
-                                                    fontSize: "12px",
+                                                    fontSize: "12.5px",
                                                     color: "#2563eb",
                                                     textDecoration: "none",
                                                     display: "inline-flex",
                                                     alignItems: "center",
-                                                    gap: "4px",
+                                                    gap: "5px",
                                                     fontWeight: 600,
                                                     maxWidth: "100%",
                                                     overflow: "hidden",
                                                     textOverflow: "ellipsis",
-                                                    whiteSpace: "nowrap"
+                                                    whiteSpace: "nowrap",
                                                 }}
                                             >
                                                 <span>🔗</span>
-                                                <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>View Buyer Profile</span>
+                                                <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                                                    {item.profileUrl.replace(/^https?:\/\//, "")}
+                                                </span>
                                                 <span>↗</span>
                                             </a>
                                         </div>
-                                    )}
-
-                                    {/* Notes */}
-                                    {item.notes && (
-                                        <p style={{
-                                            fontSize: "12px",
-                                            color: "#64748b",
-                                            lineHeight: "1.4",
-                                            margin: "6px 0",
-                                            background: "#f8fafc",
-                                            padding: "8px 10px",
-                                            borderRadius: "6px",
-                                            border: "1px solid #f1f5f9"
-                                        }}>
-                                            📝 {item.notes}
-                                        </p>
+                                    ) : (
+                                        <div style={{ fontSize: "12px", color: "#94a3b8", fontStyle: "italic", margin: "6px 0" }}>
+                                            No profile URL provided
+                                        </div>
                                     )}
 
                                     {/* Inactive Callout from Executive */}
@@ -511,7 +509,7 @@ export default function MediatorPlatformIds() {
                                             border: "1px solid #fecaca",
                                             borderRadius: "6px",
                                             fontSize: "11.5px",
-                                            color: "#991b1b"
+                                            color: "#991b1b",
                                         }}>
                                             <b>⚠️ Deactivated by Executive:</b>{" "}
                                             {item.deactivationReason || "Contact your executive to re-activate this buyer profile."}
@@ -526,20 +524,20 @@ export default function MediatorPlatformIds() {
                                     gap: "8px",
                                     borderTop: "1px solid #f1f5f9",
                                     paddingTop: "12px",
-                                    marginTop: "14px"
+                                    marginTop: "14px",
                                 }}>
                                     <button
                                         type="button"
                                         onClick={() => handleOpenEditModal(item)}
                                         style={{
-                                            padding: "5px 12px",
+                                            padding: "6px 14px",
                                             fontSize: "12px",
                                             fontWeight: 600,
                                             borderRadius: "6px",
                                             border: "1px solid #cbd5e1",
                                             backgroundColor: "#ffffff",
                                             color: "#334155",
-                                            cursor: "pointer"
+                                            cursor: "pointer",
                                         }}
                                     >
                                         ✏️ Edit
@@ -548,14 +546,14 @@ export default function MediatorPlatformIds() {
                                         type="button"
                                         onClick={() => handleDelete(item._id)}
                                         style={{
-                                            padding: "5px 12px",
+                                            padding: "6px 14px",
                                             fontSize: "12px",
                                             fontWeight: 600,
                                             borderRadius: "6px",
                                             border: "1px solid #fecaca",
                                             backgroundColor: "#fff1f2",
                                             color: "#b91c1c",
-                                            cursor: "pointer"
+                                            cursor: "pointer",
                                         }}
                                     >
                                         🗑️ Delete
@@ -581,7 +579,7 @@ export default function MediatorPlatformIds() {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    padding: "16px"
+                    padding: "16px",
                 }}>
                     <div style={{
                         background: "#ffffff",
@@ -589,7 +587,7 @@ export default function MediatorPlatformIds() {
                         boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
                         width: "100%",
                         maxWidth: "480px",
-                        overflow: "hidden"
+                        overflow: "hidden",
                     }}>
                         <div style={{
                             padding: "18px 22px",
@@ -597,14 +595,14 @@ export default function MediatorPlatformIds() {
                             display: "flex",
                             justifyContent: "space-between",
                             alignItems: "center",
-                            background: "#f8fafc"
+                            background: "#f8fafc",
                         }}>
                             <div>
                                 <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0f172a", margin: 0 }}>
-                                    {editingId ? "Edit Buyer Platform ID" : "Register New Platform ID"}
+                                    {editingId ? "Edit Buyer Platform ID" : "Register Buyer Platform ID"}
                                 </h3>
                                 <p style={{ fontSize: "12px", color: "#64748b", margin: "2px 0 0 0" }}>
-                                    Record your buyer account credentials for rapid order placement.
+                                    Save your buyer accounts to easily manage multiple IDs.
                                 </p>
                             </div>
                             <button
@@ -615,7 +613,7 @@ export default function MediatorPlatformIds() {
                                     background: "transparent",
                                     fontSize: "18px",
                                     color: "#94a3b8",
-                                    cursor: "pointer"
+                                    cursor: "pointer",
                                 }}
                             >
                                 ✕
@@ -630,16 +628,37 @@ export default function MediatorPlatformIds() {
                                 border: "1px solid #fecdd3",
                                 borderRadius: "6px",
                                 color: "#be123c",
-                                fontSize: "12.5px"
+                                fontSize: "12.5px",
                             }}>
                                 {error}
                             </div>
                         )}
 
-                        <form onSubmit={handleSave} style={{ padding: "20px 22px" }}>
-                            {/* Platform */}
-                            <div style={{ marginBottom: "14px" }}>
-                                <label style={{ display: "block", fontSize: "12.5px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>
+                        {successToast && (
+                            <div style={{
+                                margin: "14px 22px 0 22px",
+                                padding: "8px 12px",
+                                background: "#ecfdf5",
+                                border: "1px solid #a7f3d0",
+                                borderRadius: "6px",
+                                color: "#047857",
+                                fontSize: "12.5px",
+                                fontWeight: 600,
+                            }}>
+                                {successToast}
+                            </div>
+                        )}
+
+                        <form
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                handleSave(false);
+                            }}
+                            style={{ padding: "20px 22px" }}
+                        >
+                            {/* Field 1: Platform * */}
+                            <div style={{ marginBottom: "16px" }}>
+                                <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>
                                     Platform <span style={{ color: "#e11d48" }}>*</span>
                                 </label>
                                 <select
@@ -647,12 +666,13 @@ export default function MediatorPlatformIds() {
                                     onChange={(e) => setModalForm({ ...modalForm, platform: e.target.value })}
                                     style={{
                                         width: "100%",
-                                        padding: "9px 12px",
+                                        padding: "10px 12px",
                                         borderRadius: "6px",
                                         border: "1px solid #cbd5e1",
-                                        fontSize: "13.5px",
+                                        fontSize: "14px",
                                         fontWeight: 600,
-                                        outline: "none"
+                                        outline: "none",
+                                        backgroundColor: "#f8fafc",
                                     }}
                                 >
                                     {PLATFORMS.map((p) => (
@@ -663,12 +683,13 @@ export default function MediatorPlatformIds() {
                                 </select>
                             </div>
 
-                            {/* Profile Name */}
-                            <div style={{ marginBottom: "14px" }}>
-                                <label style={{ display: "block", fontSize: "12.5px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>
+                            {/* Field 2: Buyer Profile Name * */}
+                            <div style={{ marginBottom: "16px" }}>
+                                <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>
                                     Buyer Profile Name <span style={{ color: "#e11d48" }}>*</span>
                                 </label>
                                 <input
+                                    ref={nameInputRef}
                                     type="text"
                                     placeholder="e.g. Rohan Sharma"
                                     required
@@ -676,80 +697,41 @@ export default function MediatorPlatformIds() {
                                     onChange={(e) => setModalForm({ ...modalForm, profileName: e.target.value })}
                                     style={{
                                         width: "100%",
-                                        padding: "9px 12px",
+                                        padding: "10px 12px",
                                         borderRadius: "6px",
                                         border: "1px solid #cbd5e1",
-                                        fontSize: "13.5px",
-                                        outline: "none"
+                                        fontSize: "14px",
+                                        outline: "none",
                                     }}
                                 />
                             </div>
 
-                            {/* Profile URL */}
-                            <div style={{ marginBottom: "14px" }}>
-                                <label style={{ display: "block", fontSize: "12.5px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>
-                                    Buyer Profile URL (Optional)
+                            {/* Field 3: Buyer Profile URL */}
+                            <div style={{ marginBottom: "22px" }}>
+                                <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>
+                                    Buyer Profile URL
                                 </label>
                                 <input
                                     type="text"
-                                    placeholder="e.g. amazon.in/gp/profile/amzn1.account.XYZ"
+                                    placeholder="e.g. https://www.amazon.in/gp/profile/amzn1.account.XYZ"
                                     value={modalForm.profileUrl}
                                     onChange={(e) => setModalForm({ ...modalForm, profileUrl: e.target.value })}
                                     style={{
                                         width: "100%",
-                                        padding: "9px 12px",
+                                        padding: "10px 12px",
                                         borderRadius: "6px",
                                         border: "1px solid #cbd5e1",
-                                        fontSize: "13px",
-                                        outline: "none"
-                                    }}
-                                />
-                            </div>
-
-                            {/* Identifier */}
-                            <div style={{ marginBottom: "14px" }}>
-                                <label style={{ display: "block", fontSize: "12.5px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>
-                                    Internal Identifier / Tag (Optional)
-                                </label>
-                                <input
-                                    type="text"
-                                    placeholder="e.g. prime_delhi_01 or mobile hint"
-                                    value={modalForm.identifier}
-                                    onChange={(e) => setModalForm({ ...modalForm, identifier: e.target.value })}
-                                    style={{
-                                        width: "100%",
-                                        padding: "9px 12px",
-                                        borderRadius: "6px",
-                                        border: "1px solid #cbd5e1",
-                                        fontSize: "13px",
-                                        outline: "none"
-                                    }}
-                                />
-                            </div>
-
-                            {/* Notes */}
-                            <div style={{ marginBottom: "20px" }}>
-                                <label style={{ display: "block", fontSize: "12.5px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>
-                                    Personal Notes (Optional)
-                                </label>
-                                <textarea
-                                    rows="2"
-                                    placeholder="e.g. Daily limit 2 reviews, tied to SBI card."
-                                    value={modalForm.notes}
-                                    onChange={(e) => setModalForm({ ...modalForm, notes: e.target.value })}
-                                    style={{
-                                        width: "100%",
-                                        padding: "8px 12px",
-                                        borderRadius: "6px",
-                                        border: "1px solid #cbd5e1",
-                                        fontSize: "13px",
+                                        fontSize: "13.5px",
                                         outline: "none",
-                                        resize: "vertical"
                                     }}
                                 />
+                                <span style={{ display: "block", fontSize: "11.5px", color: "#94a3b8", marginTop: "4px" }}>
+                                    Optional: Paste profile or review page link for quick verification.
+                                </span>
                             </div>
 
-                            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                            {/* Action Buttons */}
+                            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
                                 <button
                                     type="button"
                                     onClick={handleCloseModal}
@@ -761,11 +743,33 @@ export default function MediatorPlatformIds() {
                                         color: "#475569",
                                         fontWeight: 600,
                                         fontSize: "13px",
-                                        cursor: "pointer"
+                                        cursor: "pointer",
                                     }}
                                 >
                                     Cancel
                                 </button>
+
+                                {!editingId && (
+                                    <button
+                                        type="button"
+                                        disabled={submitting}
+                                        onClick={() => handleSave(true)}
+                                        style={{
+                                            padding: "9px 16px",
+                                            borderRadius: "6px",
+                                            border: "1.5px solid #2563eb",
+                                            backgroundColor: "#eff6ff",
+                                            color: "#1d4ed8",
+                                            fontWeight: 700,
+                                            fontSize: "13px",
+                                            cursor: submitting ? "not-allowed" : "pointer",
+                                        }}
+                                        title="Save this ID and immediately enter another ID"
+                                    >
+                                        ➕ Save &amp; Add Another
+                                    </button>
+                                )}
+
                                 <button
                                     type="submit"
                                     disabled={submitting}
@@ -778,10 +782,10 @@ export default function MediatorPlatformIds() {
                                         fontWeight: 700,
                                         fontSize: "13px",
                                         cursor: submitting ? "not-allowed" : "pointer",
-                                        opacity: submitting ? 0.7 : 1
+                                        opacity: submitting ? 0.7 : 1,
                                     }}
                                 >
-                                    {submitting ? "Saving..." : editingId ? "Update ID" : "Register ID"}
+                                    {submitting ? "Saving..." : editingId ? "Update ID" : "Save ID"}
                                 </button>
                             </div>
                         </form>
@@ -791,4 +795,3 @@ export default function MediatorPlatformIds() {
         </div>
     );
 }
-

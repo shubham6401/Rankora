@@ -11,6 +11,8 @@ import { isSuperAdminSessionActive } from "../utils/authUtils";
 import SuperAdminUnitEditorModal from "./admin/SuperAdminUnitEditorModal";
 import SuperAdminOrderEditorModal from "./admin/SuperAdminOrderEditorModal";
 import ExecutiveUnitEditorModal from "./executive/ExecutiveUnitEditorModal";
+import DeleteOrderUnitsModal from "./executive/DeleteOrderUnitsModal";
+import OrderUnitSelectorModal from "./executive/OrderUnitSelectorModal";
 import ProofThumbnail from "./common/ProofThumbnail";
 import ProofPreviewModal from "./common/ProofPreviewModal";
 import PriceDisplay from "./common/PriceDisplay";
@@ -62,6 +64,8 @@ export default function DisplayOrder({ order }) {
     });
     const [deletingUnitId, setDeletingUnitId] = useState(null);
     const [bulkDeleting, setBulkDeleting] = useState(false);
+    const [deleteUnitsModalOpen, setDeleteUnitsModalOpen] = useState(false);
+    const [selectorModalOpen, setSelectorModalOpen] = useState(false);
 
     useEffect(() => {
         if (order) {
@@ -442,16 +446,52 @@ export default function DisplayOrder({ order }) {
                 </button>
 
                 {isExecutive && (
-                    <button
-                        type="button"
-                        onClick={handleDeleteOrderBatch}
-                        className="table-btn table-btn-danger"
-                        disabled={isDeletingBatch}
-                        style={{ padding: "8px 16px", fontWeight: 700, fontSize: "13px", display: "flex", alignItems: "center", gap: "6px" }}
-                        title="Permanently delete this entire order batch"
-                    >
-                        {isDeletingBatch ? "Deleting Batch..." : "🗑️ Delete Order Batch"}
-                    </button>
+                    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                if ((currentOrder?.orderUnits || []).length <= 1) {
+                                    setExecutiveUnitModal({ isOpen: true, unit: currentOrder?.orderUnits?.[0] || {}, unitNumber: 1 });
+                                } else {
+                                    setSelectorModalOpen(true);
+                                }
+                            }}
+                            className="table-btn"
+                            style={{
+                                padding: "8px 16px",
+                                fontWeight: 700,
+                                fontSize: "13px",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "6px",
+                                backgroundColor: "#eff6ff",
+                                color: "#1d4ed8",
+                                border: "1.5px solid #bfdbfe",
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                            }}
+                            title="Edit operational details (Order ID, price, reviewer name, etc.)"
+                        >
+                            ✏️ Edit Order Units
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setDeleteUnitsModalOpen(true)}
+                            className="table-btn table-btn-danger"
+                            style={{
+                                padding: "8px 16px",
+                                fontWeight: 700,
+                                fontSize: "13px",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "6px",
+                                cursor: "pointer",
+                            }}
+                            title="Delete specific units or entire order batch"
+                        >
+                            🗑️ Delete Units / Batch
+                        </button>
+                    </div>
                 )}
             </div>
 
@@ -1086,16 +1126,19 @@ export default function DisplayOrder({ order }) {
                                                         type="button"
                                                         onClick={() => setExecutiveUnitModal({ isOpen: true, unit, unitNumber })}
                                                         style={{
-                                                            fontSize: "11.5px",
+                                                            fontSize: "12px",
                                                             fontWeight: 700,
-                                                            padding: "3px 9px",
-                                                            borderRadius: "5px",
-                                                            border: "1px solid #bfdbfe",
+                                                            padding: "4px 10px",
+                                                            borderRadius: "6px",
+                                                            border: "1.5px solid #2563eb",
                                                             background: "#eff6ff",
                                                             color: "#1d4ed8",
-                                                            cursor: "pointer"
+                                                            cursor: "pointer",
+                                                            display: "inline-flex",
+                                                            alignItems: "center",
+                                                            gap: "4px",
                                                         }}
-                                                        title="Edit operational details for this unit"
+                                                        title="Edit operational details for this unit (Order ID, price, reviewer, etc.)"
                                                     >
                                                         ✏️ Edit Unit
                                                     </button>
@@ -1104,18 +1147,21 @@ export default function DisplayOrder({ order }) {
                                                         disabled={deletingUnitId === unit._id}
                                                         onClick={() => handleDeleteSingleUnit(unit, unitNumber)}
                                                         style={{
-                                                            fontSize: "11.5px",
+                                                            fontSize: "12px",
                                                             fontWeight: 700,
-                                                            padding: "3px 9px",
-                                                            borderRadius: "5px",
-                                                            border: "1px solid #fecdd3",
+                                                            padding: "4px 10px",
+                                                            borderRadius: "6px",
+                                                            border: "1.5px solid #f87171",
                                                             background: "#fff1f2",
                                                             color: "#be123c",
-                                                            cursor: deletingUnitId === unit._id ? "not-allowed" : "pointer"
+                                                            cursor: deletingUnitId === unit._id ? "not-allowed" : "pointer",
+                                                            display: "inline-flex",
+                                                            alignItems: "center",
+                                                            gap: "4px",
                                                         }}
                                                         title="Permanently delete this individual unit"
                                                     >
-                                                        {deletingUnitId === unit._id ? "..." : "🗑️ Delete"}
+                                                        {deletingUnitId === unit._id ? "..." : "🗑️ Delete Unit"}
                                                     </button>
                                                 </>
                                             )}
@@ -1699,6 +1745,37 @@ export default function DisplayOrder({ order }) {
                     unit={executiveUnitModal.unit}
                     unitNumber={executiveUnitModal.unitNumber}
                     onSuccess={handleExecutiveUnitSaved}
+                />
+            )}
+
+            {/* EXECUTIVE DELETE UNITS MODAL */}
+            {deleteUnitsModalOpen && (
+                <DeleteOrderUnitsModal
+                    isOpen={deleteUnitsModalOpen}
+                    order={activeOrder}
+                    onClose={() => setDeleteUnitsModalOpen(false)}
+                    onSuccess={(updatedOrder, isFullBatchDeleted) => {
+                        if (isFullBatchDeleted) {
+                            navigate(-1);
+                        } else if (updatedOrder) {
+                            setCurrentOrder(updatedOrder);
+                            if (updatedOrder.orderUnits) {
+                                setUnitsList(updatedOrder.orderUnits);
+                            }
+                        }
+                    }}
+                />
+            )}
+
+            {/* EXECUTIVE ORDER UNIT SELECTOR MODAL */}
+            {selectorModalOpen && (
+                <OrderUnitSelectorModal
+                    isOpen={selectorModalOpen}
+                    order={activeOrder}
+                    onClose={() => setSelectorModalOpen(false)}
+                    onSelectUnit={(unit, unitNumber) => {
+                        setExecutiveUnitModal({ isOpen: true, unit, unitNumber });
+                    }}
                 />
             )}
 

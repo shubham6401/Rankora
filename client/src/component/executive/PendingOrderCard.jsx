@@ -2,41 +2,30 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import AssignMediatorModal from "./AssignMediatorModal";
 import PriceDisplay from "../common/PriceDisplay";
-import { deleteExecutiveOrderBatch } from "../../services/executive/order";
+import DeleteOrderUnitsModal from "./DeleteOrderUnitsModal";
+import OrderUnitSelectorModal from "./OrderUnitSelectorModal";
+import ExecutiveUnitEditorModal from "./ExecutiveUnitEditorModal";
 import "../../styles/ordersTable.css";
 
 export default function PendingOrderCard({ order, mediators, status, onOrderUpdated }) {
     const navigate = useNavigate();
     const [modalOpen, setModalOpen] = useState(false);
-    const [deleting, setDeleting] = useState(false);
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [selectorModalOpen, setSelectorModalOpen] = useState(false);
+    const [editorModal, setEditorModal] = useState({ isOpen: false, unit: null, unitNumber: 1 });
 
+    const units = order.orderUnits || [];
     const unassignedUnits = order.summary?.unassigned || 0;
-    const unassignedList = (order.orderUnits || []).filter((u) => u.status === "unassigned");
+    const unassignedList = units.filter((u) => u.status === "unassigned");
     const whCount = unassignedList.filter((u) => u.unitType === "warehouse").length;
     const emCount = unassignedList.filter((u) => u.unitType === "empty").length;
 
-    const handleDeleteBatch = async () => {
-        const confirmMsg = `Are you sure you want to permanently delete this order batch?\n\n` +
-            `Product: ${order.productName}\n` +
-            `Brand: ${order.brand}\n` +
-            `Total Units: ${order.quantity}\n` +
-            `Unassigned Units: ${unassignedUnits}\n\n` +
-            `This action will permanently delete the entire batch and cannot be undone.`;
-
-        if (!window.confirm(confirmMsg)) return;
-
-        try {
-            setDeleting(true);
-            const res = await deleteExecutiveOrderBatch(order._id);
-            if (res.data?.success) {
-                alert(`Order batch "${order.productName}" deleted successfully!`);
-                if (onOrderUpdated) onOrderUpdated();
-            }
-        } catch (err) {
-            console.error("Error deleting order batch:", err);
-            alert(err?.response?.data?.message || "Failed to delete order batch.");
-        } finally {
-            setDeleting(false);
+    const handleEditClick = () => {
+        if (units.length <= 1) {
+            const primaryUnit = units[0] || {};
+            setEditorModal({ isOpen: true, unit: primaryUnit, unitNumber: 1 });
+        } else {
+            setSelectorModalOpen(true);
         }
     };
 
@@ -89,6 +78,20 @@ export default function PendingOrderCard({ order, mediators, status, onOrderUpda
                         </button>
                         <button
                             type="button"
+                            className="table-btn"
+                            style={{
+                                backgroundColor: "#eff6ff",
+                                color: "#1d4ed8",
+                                border: "1px solid #bfdbfe",
+                                fontWeight: 700,
+                            }}
+                            onClick={handleEditClick}
+                            title="Edit marketplace order ID, price, reviewer name, etc."
+                        >
+                            ✏️ Edit
+                        </button>
+                        <button
+                            type="button"
                             className="table-btn table-btn-primary"
                             disabled={unassignedUnits <= 0}
                             onClick={() => setModalOpen(true)}
@@ -99,11 +102,10 @@ export default function PendingOrderCard({ order, mediators, status, onOrderUpda
                         <button
                             type="button"
                             className="table-btn table-btn-danger"
-                            disabled={deleting}
-                            onClick={handleDeleteBatch}
-                            title="Permanently delete this order batch"
+                            onClick={() => setDeleteModalOpen(true)}
+                            title="Delete specific units or entire order batch"
                         >
-                            {deleting ? "..." : "🗑️ Delete"}
+                            🗑️ Delete
                         </button>
                     </div>
                 </td>
@@ -114,6 +116,41 @@ export default function PendingOrderCard({ order, mediators, status, onOrderUpda
                     order={order}
                     mediators={mediators}
                     onClose={() => setModalOpen(false)}
+                    onSuccess={() => {
+                        if (onOrderUpdated) onOrderUpdated();
+                    }}
+                />
+            )}
+
+            {deleteModalOpen && (
+                <DeleteOrderUnitsModal
+                    isOpen={deleteModalOpen}
+                    order={order}
+                    onClose={() => setDeleteModalOpen(false)}
+                    onSuccess={() => {
+                        if (onOrderUpdated) onOrderUpdated();
+                    }}
+                />
+            )}
+
+            {selectorModalOpen && (
+                <OrderUnitSelectorModal
+                    isOpen={selectorModalOpen}
+                    order={order}
+                    onClose={() => setSelectorModalOpen(false)}
+                    onSelectUnit={(unit, unitNumber) => {
+                        setEditorModal({ isOpen: true, unit, unitNumber });
+                    }}
+                />
+            )}
+
+            {editorModal.isOpen && (
+                <ExecutiveUnitEditorModal
+                    isOpen={editorModal.isOpen}
+                    order={order}
+                    unit={editorModal.unit}
+                    unitNumber={editorModal.unitNumber}
+                    onClose={() => setEditorModal({ isOpen: false, unit: null, unitNumber: 1 })}
                     onSuccess={() => {
                         if (onOrderUpdated) onOrderUpdated();
                     }}
