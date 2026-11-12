@@ -5,6 +5,9 @@ import {
     rejectExecutiveOrderUnitVerification,
     deleteExecutiveOrderBatch,
 } from "../services/executive/order";
+import { isSuperAdminSessionActive } from "../utils/authUtils";
+import SuperAdminUnitEditorModal from "./admin/SuperAdminUnitEditorModal";
+import SuperAdminOrderEditorModal from "./admin/SuperAdminOrderEditorModal";
 import ProofThumbnail from "./common/ProofThumbnail";
 import ProofPreviewModal from "./common/ProofPreviewModal";
 import PriceDisplay from "./common/PriceDisplay";
@@ -16,6 +19,7 @@ export default function DisplayOrder({ order }) {
 
     const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
     const isExecutive = currentUser.role === "executive" || currentUser.role === "admin";
+    const isSuperAdmin = isSuperAdminSessionActive();
 
     const [statusFilter, setStatusFilter] = useState("all");
     const [specFilter, setSpecFilter] = useState("all");
@@ -23,6 +27,7 @@ export default function DisplayOrder({ order }) {
     const [searchOrderId, setSearchOrderId] = useState("");
     const [searchReviewer, setSearchReviewer] = useState("");
     const [activeUnitTab, setActiveUnitTab] = useState("all");
+    const [currentOrder, setCurrentOrder] = useState(order);
     const [unitsList, setUnitsList] = useState(order?.orderUnits || []);
     const [previewImage, setPreviewImage] = useState(null);
     const [verifyingUnitId, setVerifyingUnitId] = useState(null);
@@ -35,13 +40,48 @@ export default function DisplayOrder({ order }) {
         isSubmitting: false,
     });
 
+    // Super Admin Overrides Modals
+    const [superAdminUnitModal, setSuperAdminUnitModal] = useState({
+        isOpen: false,
+        unit: null,
+        unitNumber: 1,
+    });
+    const [superAdminOrderModal, setSuperAdminOrderModal] = useState({
+        isOpen: false,
+    });
+
     useEffect(() => {
-        if (order?.orderUnits) {
-            setUnitsList(order.orderUnits);
+        if (order) {
+            setCurrentOrder(order);
+            if (order.orderUnits) {
+                setUnitsList(order.orderUnits);
+            }
         }
     }, [order]);
 
-    if (!order) {
+    const handleSuperAdminUnitSaved = (updatedOrder, updatedUnit) => {
+        if (updatedOrder) {
+            setCurrentOrder(updatedOrder);
+            setUnitsList(updatedOrder.orderUnits || []);
+        } else if (updatedUnit) {
+            setUnitsList((prev) =>
+                prev.map((u) => (u._id === updatedUnit._id ? updatedUnit : u))
+            );
+        }
+    };
+
+    const handleSuperAdminOrderSaved = (updatedOrder) => {
+        if (updatedOrder) {
+            setCurrentOrder(updatedOrder);
+            if (updatedOrder.orderUnits) {
+                setUnitsList(updatedOrder.orderUnits);
+            }
+        }
+    };
+
+    const activeOrder = currentOrder || order;
+
+    if (!activeOrder) {
         return (
             <div className="display-order-page">
                 <div className="empty-state-card">
@@ -367,18 +407,30 @@ export default function DisplayOrder({ order }) {
             <div className="master-order-card">
                 <div className="master-order-top">
                     <div>
-                        <h1 className="master-order-title">{order.productName}</h1>
-                        <div className="master-order-meta">
-                            <span>Brand: <b>{order.brand}</b></span>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                            <h1 className="master-order-title" style={{ margin: 0 }}>{activeOrder.productName}</h1>
+                            {isSuperAdmin && (
+                                <button
+                                    type="button"
+                                    onClick={() => setSuperAdminOrderModal({ isOpen: true })}
+                                    className="sa-override-trigger-btn"
+                                    title="Edit master order properties (Super Admin Only)"
+                                >
+                                    👑 Edit Master Order
+                                </button>
+                            )}
+                        </div>
+                        <div className="master-order-meta" style={{ marginTop: "6px" }}>
+                            <span>Brand: <b>{activeOrder.brand}</b></span>
                             <span>•</span>
-                            <span>Platform: <b>{order.orderPlatform}</b></span>
+                            <span>Platform: <b>{activeOrder.orderPlatform}</b></span>
                             <span>•</span>
                             <span>
                                 Price:{" "}
                                 <PriceDisplay
-                                    basePrice={order.price}
+                                    basePrice={activeOrder.price}
                                     actualPrice={
-                                        (order.orderUnits || []).find((u) => u.purchasePrice && Number(u.purchasePrice) > Number(order.price))?.purchasePrice
+                                        (activeOrder.orderUnits || []).find((u) => u.purchasePrice && Number(u.purchasePrice) > Number(activeOrder.price))?.purchasePrice
                                     }
                                 />
                             </span>
@@ -394,9 +446,9 @@ export default function DisplayOrder({ order }) {
                             </div>
                         )}
                     </div>
-                    {order.productLink && (
+                    {activeOrder.productLink && (
                         <a
-                            href={order.productLink}
+                            href={activeOrder.productLink}
                             target="_blank"
                             rel="noreferrer"
                             className="master-order-link"
@@ -411,20 +463,20 @@ export default function DisplayOrder({ order }) {
                 <div className="master-order-grid">
                     <div>
                         <span className="master-spec-label">Executive</span>
-                        <div className="master-spec-val">{order.executiveName || "N/A"}</div>
+                        <div className="master-spec-val">{activeOrder.executiveName || "N/A"}</div>
                     </div>
                     <div>
                         <span className="master-spec-label">Team Code</span>
-                        <div className="master-spec-val">{order.teamCode || "N/A"}</div>
+                        <div className="master-spec-val">{activeOrder.teamCode || "N/A"}</div>
                     </div>
                     <div>
                         <span className="master-spec-label">Total Quantity</span>
-                        <div className="master-spec-val">{order.quantity || units.length} Units</div>
+                        <div className="master-spec-val">{activeOrder.quantity || units.length} Units</div>
                     </div>
                     <div>
                         <span className="master-spec-label">Created On</span>
                         <div className="master-spec-val">
-                            {order.createdAt ? new Date(order.createdAt).toLocaleString() : "N/A"}
+                            {activeOrder.createdAt ? new Date(activeOrder.createdAt).toLocaleString() : "N/A"}
                         </div>
                     </div>
                 </div>
@@ -847,6 +899,20 @@ export default function DisplayOrder({ order }) {
                                             </span>
                                         </div>
                                         <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                                            {isSuperAdmin && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSuperAdminUnitModal({
+                                                        isOpen: true,
+                                                        unit,
+                                                        unitNumber,
+                                                    })}
+                                                    className="sa-override-trigger-btn"
+                                                    title="Edit any field, order ID, or replace any proof screenshot/PDF for this unit"
+                                                >
+                                                    👑 Edit Unit &amp; Proofs
+                                                </button>
+                                            )}
                                             {isExecutive && (
                                                 <span className={`unit-spec-chip ${unit.unitType || "unclassified"}`}>
                                                     {unit.unitType === "warehouse" ? "🏢 Warehouse" : unit.unitType === "empty" ? "📦 Empty" : "⚪ Unclassified"}
@@ -1404,6 +1470,27 @@ export default function DisplayOrder({ order }) {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* SUPER ADMIN OVERRIDE MODALS */}
+            {isSuperAdmin && superAdminUnitModal.isOpen && (
+                <SuperAdminUnitEditorModal
+                    isOpen={superAdminUnitModal.isOpen}
+                    onClose={() => setSuperAdminUnitModal({ isOpen: false, unit: null, unitNumber: 1 })}
+                    order={activeOrder}
+                    unit={superAdminUnitModal.unit}
+                    unitNumber={superAdminUnitModal.unitNumber}
+                    onSuccess={handleSuperAdminUnitSaved}
+                />
+            )}
+
+            {isSuperAdmin && superAdminOrderModal.isOpen && (
+                <SuperAdminOrderEditorModal
+                    isOpen={superAdminOrderModal.isOpen}
+                    onClose={() => setSuperAdminOrderModal({ isOpen: false })}
+                    order={activeOrder}
+                    onSuccess={handleSuperAdminOrderSaved}
+                />
             )}
 
             {/* FULLSCREEN PROOF PREVIEW MODAL */}

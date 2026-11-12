@@ -223,8 +223,8 @@ export default function AppLayout({ children }) {
     const initial = (user.name || user.brand || (isAdmin ? "Admin" : "U")).charAt(0).toUpperCase();
 
     return (
-        <div className="app-shell" style={{ paddingTop: adminBackup ? "44px" : "0" }}>
-            {/* TOP HEADING: RETURN TO SUPER ADMIN (STRICTLY DISPLAYED ONLY FOR SUPER ADMIN IMPERSONATION) */}
+        <div className="app-shell" style={{ paddingTop: adminBackup ? "46px" : "0" }}>
+            {/* TOP HEADING: SUPER ADMIN OVERRIDE MODE (STRICTLY DISPLAYED ONLY FOR SUPER ADMIN IMPERSONATION) */}
             {adminBackup && (
                 <header
                     id="super-admin-return-header"
@@ -233,30 +233,48 @@ export default function AppLayout({ children }) {
                         top: 0,
                         left: 0,
                         right: 0,
-                        height: "44px",
+                        height: "46px",
                         zIndex: 99999,
-                        background: "linear-gradient(90deg, #581c87 0%, #7e22ce 50%, #6b21a8 100%)",
+                        background: "linear-gradient(90deg, #3b0764 0%, #581c87 40%, #7e22ce 100%)",
                         color: "#ffffff",
-                        padding: "0 24px",
+                        padding: "0 20px",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "space-between",
-                        boxShadow: "0 4px 14px rgba(0, 0, 0, 0.35)",
+                        boxShadow: "0 4px 16px rgba(0, 0, 0, 0.4)",
                         boxSizing: "border-box"
                     }}
                 >
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                        <span style={{ fontSize: "16px" }}>👑</span>
-                        <h2 style={{
-                            margin: 0,
-                            padding: 0,
-                            fontSize: "14px",
-                            fontWeight: "800",
-                            letterSpacing: "0.3px",
-                            color: "#ffffff"
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                        <span style={{ fontSize: "18px" }}>👑</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <span style={{
+                                fontSize: "12.5px",
+                                fontWeight: "800",
+                                color: "#f5d0fe",
+                                letterSpacing: "0.4px",
+                            }}>
+                                SUPER ADMIN OVERRIDE MODE:
+                            </span>
+                            <span style={{
+                                fontSize: "12.5px",
+                                fontWeight: "700",
+                                color: "#ffffff",
+                            }}>
+                                Logged in as {user.name || "User"} ({userRoleDisplay})
+                            </span>
+                        </div>
+                        <span style={{
+                            fontSize: "11px",
+                            background: "rgba(255, 255, 255, 0.18)",
+                            border: "1px solid rgba(255, 255, 255, 0.3)",
+                            padding: "2px 8px",
+                            borderRadius: "10px",
+                            color: "#ffffff",
+                            fontWeight: "700",
                         }}>
-                            Return to Super Admin
-                        </h2>
+                            ⚡ Full Field &amp; Proof Editing Active
+                        </span>
                     </div>
 
                     <button
@@ -272,7 +290,7 @@ export default function AppLayout({ children }) {
                             fontWeight: "800",
                             fontSize: "12.5px",
                             cursor: "pointer",
-                            boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
+                            boxShadow: "0 2px 6px rgba(0,0,0,0.25)",
                             display: "inline-flex",
                             alignItems: "center",
                             gap: "6px",
@@ -281,7 +299,7 @@ export default function AppLayout({ children }) {
                         }}
                     >
                         <span>↩</span>
-                        <span>Return to Super Admin</span>
+                        <span>Exit to Super Admin Console</span>
                     </button>
                 </header>
             )}

@@ -34,3 +34,21 @@ export const fetchExecutiveMediatorsApi = (teamCode) => {
     return api.get(`/admin/executive-mediators/${encodeURIComponent(teamCode)}`);
 };
 
+export const fetchAllMediatorsApi = () => {
+    return api.get("/admin/all-mediators");
+};
+
+// Super Admin Universal Overrides (Edit Any Field & Replace Any Proof Screenshot or PDF)
+export const superAdminOverrideOrderUnitApi = (orderId, unitId, formData) => {
+    return api.put(`/admin/orders/${orderId}/units/${unitId}/override`, formData, {
+        headers: {
+            "Content-Type": "multipart/form-data",
+        },
+    });
+};
+
+export const superAdminOverrideMasterOrderApi = (orderId, data) => {
+    return api.put(`/admin/orders/${orderId}/master-override`, data);
+};
+
+

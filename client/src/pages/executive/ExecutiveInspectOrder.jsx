@@ -7,6 +7,8 @@ import {
     deleteExecutiveOrderBatch,
 } from "../../services/executive/order";
 import { isPdfUrl } from "../../component/common/ProofThumbnail";
+import { isSuperAdminSessionActive } from "../../utils/authUtils";
+import SuperAdminUnitEditorModal from "../../component/admin/SuperAdminUnitEditorModal";
 import ProofPreviewModal from "../../component/common/ProofPreviewModal";
 import "../../styles/ordersTable.css";
 import "../../styles/displayOrder.css";
@@ -15,12 +17,18 @@ export default function ExecutiveInspectOrder() {
     const { id } = useParams();
     const navigate = useNavigate();
 
+    const isSuperAdmin = isSuperAdminSessionActive();
     const [order, setOrder] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [activeUnitTab, setActiveUnitTab] = useState("all");
     const [previewImage, setPreviewImage] = useState(null);
     const [verifyingUnitId, setVerifyingUnitId] = useState(null);
+    const [superAdminUnitModal, setSuperAdminUnitModal] = useState({
+        isOpen: false,
+        unit: null,
+        unitNumber: 1,
+    });
 
     const renderDossierPreview = (url, label) => {
         if (!url) return <div className="proof-dossier-empty">No proof provided</div>;
@@ -162,6 +170,22 @@ export default function ExecutiveInspectOrder() {
             console.error("Error requesting revision:", err);
             alert(err?.response?.data?.message || "Failed to request revision");
             setRevisionModal((prev) => ({ ...prev, isSubmitting: false }));
+        }
+    };
+
+    const handleSuperAdminUnitSaved = (updatedOrder, updatedUnit) => {
+        if (updatedOrder) {
+            setOrder(updatedOrder);
+        } else if (updatedUnit) {
+            setOrder((prev) => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    orderUnits: (prev.orderUnits || []).map((u) =>
+                        u._id === updatedUnit._id ? updatedUnit : u
+                    ),
+                };
+            });
         }
     };
 
@@ -401,7 +425,21 @@ export default function ExecutiveInspectOrder() {
                                                 Unit #{unitNumber}
                                                 <span className="unit-item-id">ID: {unit._id}</span>
                                             </div>
-                                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                            <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                                                {isSuperAdmin && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setSuperAdminUnitModal({
+                                                            isOpen: true,
+                                                            unit,
+                                                            unitNumber,
+                                                        })}
+                                                        className="sa-override-trigger-btn"
+                                                        title="Edit any field, order ID, or replace any proof screenshot/PDF for this unit"
+                                                    >
+                                                        👑 Edit Unit &amp; Proofs
+                                                    </button>
+                                                )}
                                                 <span className={`unit-spec-chip ${unit.unitType || "unclassified"}`}>
                                                     {unit.unitType === "warehouse" ? "🏢 Warehouse" : unit.unitType === "empty" ? "📦 Empty" : "⚪ Unclassified"}
                                                 </span>
@@ -711,6 +749,18 @@ export default function ExecutiveInspectOrder() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* SUPER ADMIN OVERRIDE UNIT MODAL */}
+            {isSuperAdmin && superAdminUnitModal.isOpen && (
+                <SuperAdminUnitEditorModal
+                    isOpen={superAdminUnitModal.isOpen}
+                    onClose={() => setSuperAdminUnitModal({ isOpen: false, unit: null, unitNumber: 1 })}
+                    order={order}
+                    unit={superAdminUnitModal.unit}
+                    unitNumber={superAdminUnitModal.unitNumber}
+                    onSuccess={handleSuperAdminUnitSaved}
+                />
             )}
         </div>
     );

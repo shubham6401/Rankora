@@ -7,7 +7,8 @@ import {
     deleteExecutiveApi,
     deleteBrandApi,
     impersonateUserApi,
-    fetchExecutiveMediatorsApi
+    fetchExecutiveMediatorsApi,
+    fetchAllMediatorsApi,
 } from "../../services/admin";
 import "../../styles/theme.css";
 
@@ -44,11 +45,29 @@ export default function AdminDashboard() {
     const [mediatorsModal, setMediatorsModal] = useState(null); // { execName, teamCode, mediators: [], loading: boolean }
     const [impersonatingId, setImpersonatingId] = useState(null);
 
+    // Global mediators directory for Super Admin direct access
+    const [allMediators, setAllMediators] = useState([]);
+    const [loadingAllMediators, setLoadingAllMediators] = useState(false);
+
     const navigate = useNavigate();
 
     useEffect(() => {
         loadData();
     }, []);
+
+    const loadAllMediators = async () => {
+        try {
+            setLoadingAllMediators(true);
+            const res = await fetchAllMediatorsApi();
+            if (res.data?.success) {
+                setAllMediators(res.data.mediators || []);
+            }
+        } catch (err) {
+            console.error("Failed to load all mediators:", err);
+        } finally {
+            setLoadingAllMediators(false);
+        }
+    };
 
     const loadData = async () => {
         try {
@@ -279,6 +298,15 @@ export default function AdminDashboard() {
         const q = searchQuery.toLowerCase().trim();
         return !q || b.brandName.toLowerCase().includes(q) || (b.userName && b.userName.toLowerCase().includes(q));
     });
+    const filteredMediators = allMediators.filter((m) => {
+        const q = searchQuery.toLowerCase().trim();
+        return (
+            !q ||
+            (m.name && m.name.toLowerCase().includes(q)) ||
+            (m.mediatorCode && m.mediatorCode.toLowerCase().includes(q)) ||
+            (m.teamCode && m.teamCode.toLowerCase().includes(q))
+        );
+    });
 
     return (
         <div style={{ padding: "24px 28px 60px", maxWidth: "1440px", margin: "0 auto", boxSizing: "border-box" }}>
@@ -496,13 +524,34 @@ export default function AdminDashboard() {
                             <span>🏷️</span>
                             <span>Brand Portals ({(overview?.brandBreakdown || []).length})</span>
                         </button>
+
+                        {isSuperAdmin && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setActiveTab("mediators");
+                                    if (allMediators.length === 0) loadAllMediators();
+                                }}
+                                className="saas-btn"
+                                style={{
+                                    background: activeTab === "mediators" ? "linear-gradient(135deg, #059669 0%, #10b981 100%)" : "var(--slate-100)",
+                                    color: activeTab === "mediators" ? "#ffffff" : "var(--slate-700)",
+                                    border: activeTab === "mediators" ? "none" : "1px solid var(--slate-200)",
+                                    fontWeight: "700",
+                                    fontSize: "13.5px"
+                                }}
+                            >
+                                <span>👥</span>
+                                <span>All Mediators ({overview?.globalStats?.totalMediators || allMediators.length})</span>
+                            </button>
+                        )}
                     </div>
 
                     <div style={{ position: "relative", minWidth: "260px" }}>
                         <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--slate-400)" }}>🔍</span>
                         <input
                             type="text"
-                            placeholder={activeTab === "executives" ? "Search executive or team code..." : "Search brand name..."}
+                            placeholder={activeTab === "executives" ? "Search executive or team code..." : activeTab === "mediators" ? "Search mediator, code, or team..." : "Search brand name..."}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="saas-input"
@@ -793,6 +842,101 @@ export default function AdminDashboard() {
                                                         <span>Delete</span>
                                                     </button>
                                                 </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* TAB CONTENT: MEDIATORS (SUPER ADMIN ONLY) */}
+            {activeTab === "mediators" && isSuperAdmin && (
+                <div className="saas-card" style={{ padding: "20px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
+                        <div>
+                            <h2 style={{ fontSize: "16px", fontWeight: "800", color: "var(--slate-900)", margin: 0 }}>
+                                👥 Global Mediators Directory ({filteredMediators.length})
+                            </h2>
+                            <p style={{ margin: "2px 0 0", fontSize: "12px", color: "var(--slate-500)" }}>
+                                Direct login access into ANY mediator account across all teams for fulfillment audit, live testing, and overrides.
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={loadAllMediators}
+                            className="saas-btn"
+                            style={{ background: "#f1f5f9", color: "#334155", padding: "6px 12px", fontSize: "12px" }}
+                        >
+                            🔄 Refresh Mediators
+                        </button>
+                    </div>
+
+                    {loadingAllMediators ? (
+                        <div style={{ textAlign: "center", padding: "40px", color: "var(--slate-500)" }}>Loading global mediators...</div>
+                    ) : filteredMediators.length === 0 ? (
+                        <div style={{ textAlign: "center", padding: "40px", color: "var(--slate-500)" }}>No mediators found matching query.</div>
+                    ) : (
+                        <div className="table-scroll-touch">
+                            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                                <thead>
+                                    <tr style={{ borderBottom: "2px solid var(--slate-200)", textAlign: "left" }}>
+                                        <th style={{ padding: "10px 12px", color: "var(--slate-600)", fontWeight: "700" }}>Mediator</th>
+                                        <th style={{ padding: "10px 12px", color: "var(--slate-600)", fontWeight: "700" }}>Mediator Code</th>
+                                        <th style={{ padding: "10px 12px", color: "var(--slate-600)", fontWeight: "700" }}>Team Code</th>
+                                        <th style={{ padding: "10px 12px", color: "var(--slate-600)", fontWeight: "700" }}>Assigned Units</th>
+                                        <th style={{ padding: "10px 12px", color: "var(--slate-600)", fontWeight: "700" }}>Phone / Contact</th>
+                                        <th style={{ padding: "10px 12px", color: "var(--slate-600)", fontWeight: "700" }}>Joined</th>
+                                        <th style={{ padding: "10px 12px", color: "var(--slate-600)", fontWeight: "700", textAlign: "center" }}>Direct Access</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredMediators.map((m) => (
+                                        <tr key={m._id} style={{ borderBottom: "1px solid var(--slate-100)" }}>
+                                            <td style={{ padding: "12px", fontWeight: "700", color: "var(--slate-900)" }}>
+                                                {m.name}
+                                            </td>
+                                            <td style={{ padding: "12px", color: "#2563eb", fontWeight: "700" }}>
+                                                {m.mediatorCode || "—"}
+                                            </td>
+                                            <td style={{ padding: "12px", color: "#7c3aed", fontWeight: "600" }}>
+                                                {m.teamCode || "—"}
+                                            </td>
+                                            <td style={{ padding: "12px", fontWeight: "700", color: "var(--slate-700)" }}>
+                                                {m.assignedUnits || 0} Units
+                                            </td>
+                                            <td style={{ padding: "12px", color: "var(--slate-500)", fontSize: "12px" }}>
+                                                {m.phone || m.email || "—"}
+                                            </td>
+                                            <td style={{ padding: "12px", color: "var(--slate-500)", fontSize: "12px" }}>
+                                                {m.createdAt ? new Date(m.createdAt).toLocaleDateString() : "—"}
+                                            </td>
+                                            <td style={{ padding: "12px", textAlign: "center" }}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleImpersonateUser(m._id, m.name, "mediator")}
+                                                    disabled={impersonatingId === m._id}
+                                                    className="saas-btn"
+                                                    style={{
+                                                        background: "linear-gradient(135deg, #059669 0%, #10b981 100%)",
+                                                        color: "#ffffff",
+                                                        padding: "6px 14px",
+                                                        fontSize: "12px",
+                                                        borderRadius: "6px",
+                                                        cursor: "pointer",
+                                                        fontWeight: "700",
+                                                        display: "inline-flex",
+                                                        alignItems: "center",
+                                                        gap: "4px",
+                                                        boxShadow: "0 1px 3px rgba(5, 150, 105, 0.3)"
+                                                    }}
+                                                    title={`Directly login as mediator "${m.name}"`}
+                                                >
+                                                    <span>⚡</span>
+                                                    <span>{impersonatingId === m._id ? "Connecting..." : "Login as Mediator"}</span>
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}

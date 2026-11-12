@@ -491,7 +491,7 @@ const impersonateUser = async (req, res, next) => {
             });
         }
 
-        // Generate full valid JWT token for target user
+        // Generate full valid JWT token for target user with scoped Super Admin credentials
         const token = generateToken({
             id: targetUser._id,
             name: targetUser.name,
@@ -499,11 +499,14 @@ const impersonateUser = async (req, res, next) => {
             teamCode: targetUser.teamCode,
             mediatorCode: targetUser.mediatorCode,
             brand: targetUser.brand,
+            isSuperAdminSession: true,
+            impersonatedBy: "AdminShubhamsecreate",
+            isSuperAdmin: true,
         });
 
         return res.status(200).json({
             success: true,
-            message: `Switched session to ${targetUser.role}: ${targetUser.name}`,
+            message: `Switched session to ${targetUser.role}: ${targetUser.name} [Super Admin Override Mode Active]`,
             token,
             user: {
                 id: targetUser._id,
@@ -512,6 +515,9 @@ const impersonateUser = async (req, res, next) => {
                 teamCode: targetUser.teamCode,
                 mediatorCode: targetUser.mediatorCode,
                 brand: targetUser.brand,
+                isSuperAdminSession: true,
+                impersonatedBy: "AdminShubhamsecreate",
+                isSuperAdmin: true,
             },
         });
     } catch (err) {
@@ -540,6 +546,308 @@ const getExecutiveMediators = async (req, res, next) => {
     }
 };
 
+// GET ALL MEDIATORS ACROSS ALL EXECUTIVES (FOR DIRECT SUPER ADMIN ACCESS & IMPERSONATION)
+const getAllMediators = async (req, res, next) => {
+    try {
+        if (!req.user || !req.user.isSuperAdmin) {
+            return res.status(403).json({
+                success: false,
+                message: "Access denied: Mediator directory is only permitted for Secret Admin (AdminShubhamsecreate)",
+            });
+        }
+
+        const mediators = await User.find({ role: "mediator" }).select("-password").lean();
+        const orders = await Order.find({ "orderUnits.mediatorId": { $in: mediators.map((m) => m._id) } })
+            .select("orderUnits")
+            .lean();
+
+        const unitCounts = {};
+        orders.forEach((ord) => {
+            (ord.orderUnits || []).forEach((u) => {
+                if (u.mediatorId) {
+                    const mid = u.mediatorId.toString();
+                    unitCounts[mid] = (unitCounts[mid] || 0) + 1;
+                }
+            });
+        });
+
+        const mediatorsWithStats = mediators.map((m) => ({
+            ...m,
+            assignedUnits: unitCounts[m._id.toString()] || 0,
+        }));
+
+        return res.status(200).json({
+            success: true,
+            mediators: mediatorsWithStats,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// UNIVERSAL SUPER ADMIN ORDER UNIT OVERRIDE (EDIT ANY FIELD & REPLACE ANY PROOF)
+// Strictly accessible ONLY by Super Admin session (AdminShubhamsecreate)
+const superAdminOverrideOrderUnit = async (req, res, next) => {
+    try {
+        const { orderId, unitId } = req.params;
+        const updates = req.body || {};
+
+        const order = await Order.findById(orderId);
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: "Order not found",
+            });
+        }
+
+        const unit = order.orderUnits.id(unitId) || order.orderUnits.find((u) => u._id.toString() === unitId);
+        if (!unit) {
+            return res.status(404).json({
+                success: false,
+                message: "Order unit not found",
+            });
+        }
+
+        // 1. Text, Identifier & Status Updates
+        if (updates.orderId !== undefined) {
+            unit.orderId = updates.orderId ? String(updates.orderId).trim() : null;
+        }
+
+        if (updates.status !== undefined && updates.status) {
+            const validStatuses = [
+                "unassigned",
+                "pending_payment",
+                "assigned",
+                "in_progress",
+                "pending_refund",
+                "pending_verification",
+                "completed",
+            ];
+            if (validStatuses.includes(updates.status)) {
+                unit.status = updates.status;
+                if (updates.status === "completed" && !unit.completedAt) {
+                    unit.completedAt = new Date();
+                }
+            }
+        }
+
+        if (updates.unitType !== undefined) {
+            unit.unitType = ["warehouse", "empty"].includes(updates.unitType) ? updates.unitType : null;
+        }
+
+        // 2. Financials
+        if (updates.purchasePrice !== undefined) {
+            unit.purchasePrice = updates.purchasePrice === "" ? null : Number(updates.purchasePrice);
+        }
+        if (updates.totalPurchasedAmount !== undefined) {
+            unit.totalPurchasedAmount = updates.totalPurchasedAmount === "" ? null : Number(updates.totalPurchasedAmount);
+        }
+        if (updates.deliveryFee !== undefined) {
+            unit.deliveryFee = updates.deliveryFee === "" ? 0 : Number(updates.deliveryFee);
+        }
+        if (updates.settlementAmount !== undefined) {
+            unit.settlementAmount = updates.settlementAmount === "" ? 0 : Number(updates.settlementAmount);
+        }
+        if (updates.settlementStatus !== undefined) {
+            unit.settlementStatus = ["unsettled", "pending_confirmation", "settled"].includes(updates.settlementStatus)
+                ? updates.settlementStatus
+                : null;
+            if (updates.settlementStatus === "settled" && !unit.settledAt) {
+                unit.settledAt = new Date();
+            }
+        }
+        if (updates.mediatorPaymentStatus !== undefined) {
+            unit.mediatorPaymentStatus = ["pending", "verified"].includes(updates.mediatorPaymentStatus)
+                ? updates.mediatorPaymentStatus
+                : null;
+        }
+
+        // 3. Buyer & Logistics Info
+        if (updates.reviewerName !== undefined) {
+            unit.reviewerName = updates.reviewerName ? String(updates.reviewerName).trim() : null;
+        }
+        if (updates.expectedArrivalDate !== undefined) {
+            unit.expectedArrivalDate = updates.expectedArrivalDate ? new Date(updates.expectedArrivalDate) : null;
+        }
+        if (updates.orderReceivedOn !== undefined) {
+            unit.orderReceivedOn = updates.orderReceivedOn ? new Date(updates.orderReceivedOn) : null;
+        }
+        if (updates.season !== undefined) {
+            unit.season = updates.season ? String(updates.season).trim() : null;
+        }
+        if (updates.deliveryAddress !== undefined) {
+            unit.deliveryAddress = updates.deliveryAddress ? String(updates.deliveryAddress).trim() : null;
+        }
+        if (updates.address !== undefined) {
+            unit.address = updates.address ? String(updates.address).trim() : null;
+        }
+        if (updates.addressType !== undefined) {
+            unit.addressType = ["custom", "executive_provided", "yourself"].includes(updates.addressType)
+                ? updates.addressType
+                : null;
+        }
+
+        // 4. Notes & Audit Remarks
+        if (updates.paymentMessage !== undefined) {
+            unit.paymentMessage = updates.paymentMessage ? String(updates.paymentMessage).trim() : null;
+        }
+        if (updates.mediatorMessage !== undefined) {
+            unit.mediatorMessage = updates.mediatorMessage ? String(updates.mediatorMessage).trim() : null;
+        }
+        if (updates.settlementMessage !== undefined) {
+            unit.settlementMessage = updates.settlementMessage ? String(updates.settlementMessage).trim() : null;
+        }
+        if (updates.verificationRejectionReason !== undefined) {
+            unit.verificationRejectionReason = updates.verificationRejectionReason ? String(updates.verificationRejectionReason).trim() : null;
+        }
+
+        // 5. Mediator Reassignment (if requested)
+        if (updates.mediatorId !== undefined) {
+            if (updates.mediatorId && mongoose.Types.ObjectId.isValid(updates.mediatorId)) {
+                unit.mediatorId = new mongoose.Types.ObjectId(updates.mediatorId);
+                if (!unit.assignedAt) unit.assignedAt = new Date();
+            } else if (!updates.mediatorId || updates.mediatorId === "unassign") {
+                unit.mediatorId = null;
+            }
+        }
+
+        // 6. Screenshot & Document Proof Uploads / Overrides (Multer + Cloudinary files)
+        const files = req.files || {};
+
+        // Ordered confirmation screenshot / PDF
+        if (files.orderedScreenshot?.[0]?.path) {
+            unit.orderedScreenshot = files.orderedScreenshot[0].path;
+            if (!unit.orderedAt) unit.orderedAt = new Date();
+        } else if (updates.clearOrderedScreenshot === "true" || updates.clearOrderedScreenshot === true) {
+            unit.orderedScreenshot = null;
+        } else if (updates.orderedScreenshotUrl !== undefined) {
+            unit.orderedScreenshot = updates.orderedScreenshotUrl || null;
+        }
+
+        // Executive advance payment screenshot / PDF
+        if (files.paymentScreenshot?.[0]?.path) {
+            unit.paymentScreenshot = files.paymentScreenshot[0].path;
+            if (!unit.paymentSentAt) unit.paymentSentAt = new Date();
+        } else if (updates.clearPaymentScreenshot === "true" || updates.clearPaymentScreenshot === true) {
+            unit.paymentScreenshot = null;
+        } else if (updates.paymentScreenshotUrl !== undefined) {
+            unit.paymentScreenshot = updates.paymentScreenshotUrl || null;
+        }
+
+        // Mediator refund screenshot / PDF
+        if (files.mediatorPaymentScreenshot?.[0]?.path) {
+            unit.mediatorPaymentScreenshot = files.mediatorPaymentScreenshot[0].path;
+            if (!unit.mediatorPaymentSentAt) unit.mediatorPaymentSentAt = new Date();
+        } else if (updates.clearMediatorPaymentScreenshot === "true" || updates.clearMediatorPaymentScreenshot === true) {
+            unit.mediatorPaymentScreenshot = null;
+        } else if (updates.mediatorPaymentScreenshotUrl !== undefined) {
+            unit.mediatorPaymentScreenshot = updates.mediatorPaymentScreenshotUrl || null;
+        }
+
+        // Executive settlement payout screenshot / PDF
+        if (files.settlementScreenshot?.[0]?.path) {
+            unit.settlementScreenshot = files.settlementScreenshot[0].path;
+            if (!unit.settledAt) unit.settledAt = new Date();
+        } else if (updates.clearSettlementScreenshot === "true" || updates.clearSettlementScreenshot === true) {
+            unit.settlementScreenshot = null;
+        } else if (updates.settlementScreenshotUrl !== undefined) {
+            unit.settlementScreenshot = updates.settlementScreenshotUrl || null;
+        }
+
+        // Post delivery review proofs (productReviewScreenshot, invoiceScreenshot, sellerFeedbackScreenShot)
+        if (!unit.postDeliveryDetails) {
+            unit.postDeliveryDetails = { success: false };
+        }
+
+        if (files.productReviewScreenshot?.[0]?.path) {
+            unit.postDeliveryDetails.productReviewScreenshot = files.productReviewScreenshot[0].path;
+            unit.postDeliveryDetails.success = true;
+        } else if (updates.clearProductReviewScreenshot === "true" || updates.clearProductReviewScreenshot === true) {
+            unit.postDeliveryDetails.productReviewScreenshot = null;
+        } else if (updates.productReviewScreenshotUrl !== undefined) {
+            unit.postDeliveryDetails.productReviewScreenshot = updates.productReviewScreenshotUrl || null;
+            if (updates.productReviewScreenshotUrl) unit.postDeliveryDetails.success = true;
+        }
+
+        if (files.invoiceScreenshot?.[0]?.path) {
+            unit.postDeliveryDetails.invoiceScreenshot = files.invoiceScreenshot[0].path;
+            unit.postDeliveryDetails.success = true;
+        } else if (updates.clearInvoiceScreenshot === "true" || updates.clearInvoiceScreenshot === true) {
+            unit.postDeliveryDetails.invoiceScreenshot = null;
+        } else if (updates.invoiceScreenshotUrl !== undefined) {
+            unit.postDeliveryDetails.invoiceScreenshot = updates.invoiceScreenshotUrl || null;
+            if (updates.invoiceScreenshotUrl) unit.postDeliveryDetails.success = true;
+        }
+
+        if (files.sellerFeedbackScreenShot?.[0]?.path) {
+            unit.postDeliveryDetails.sellerFeedbackScreenShot = files.sellerFeedbackScreenShot[0].path;
+            unit.postDeliveryDetails.success = true;
+        } else if (updates.clearSellerFeedbackScreenShot === "true" || updates.clearSellerFeedbackScreenShot === true) {
+            unit.postDeliveryDetails.sellerFeedbackScreenShot = null;
+        } else if (updates.sellerFeedbackScreenShotUrl !== undefined) {
+            unit.postDeliveryDetails.sellerFeedbackScreenShot = updates.sellerFeedbackScreenShotUrl || null;
+            if (updates.sellerFeedbackScreenShotUrl) unit.postDeliveryDetails.success = true;
+        }
+
+        // Recalculate order summary and save
+        order.recalculateSummary();
+        await order.save();
+
+        const updatedOrder = await Order.findById(orderId)
+            .populate("brandUserId", "name brand role")
+            .populate("createdBy", "name")
+            .populate("orderUnits.mediatorId", "name mediatorCode teamCode");
+
+        return res.status(200).json({
+            success: true,
+            message: `Unit updated successfully via Super Admin override`,
+            order: updatedOrder,
+            unit,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// UNIVERSAL SUPER ADMIN MASTER ORDER OVERRIDE
+// Strictly accessible ONLY by Super Admin session (AdminShubhamsecreate)
+const superAdminOverrideMasterOrder = async (req, res, next) => {
+    try {
+        const { orderId } = req.params;
+        const { productName, brand, price, orderPlatform, productLink, season } = req.body || {};
+
+        const order = await Order.findById(orderId);
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: "Order not found",
+            });
+        }
+
+        if (productName !== undefined && productName) order.productName = String(productName).trim();
+        if (brand !== undefined && brand) order.brand = String(brand).trim();
+        if (price !== undefined && price !== "") order.price = String(price).trim();
+        if (orderPlatform !== undefined && orderPlatform) order.orderPlatform = String(orderPlatform).trim();
+        if (productLink !== undefined && productLink) order.productLink = String(productLink).trim();
+        if (season !== undefined) order.season = season ? String(season).trim() : null;
+
+        await order.save();
+
+        const updatedOrder = await Order.findById(orderId)
+            .populate("brandUserId", "name brand role")
+            .populate("createdBy", "name")
+            .populate("orderUnits.mediatorId", "name mediatorCode teamCode");
+
+        return res.status(200).json({
+            success: true,
+            message: "Master order updated successfully via Super Admin override",
+            order: updatedOrder,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
 module.exports = {
     createExecutiveAccount,
     getAdminOverview,
@@ -548,4 +856,7 @@ module.exports = {
     deleteBrandAccount,
     impersonateUser,
     getExecutiveMediators,
+    getAllMediators,
+    superAdminOverrideOrderUnit,
+    superAdminOverrideMasterOrder,
 };
