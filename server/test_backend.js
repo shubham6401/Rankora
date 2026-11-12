@@ -46,9 +46,9 @@ async function request(endpoint, options = {}) {
     return { status: res.status, data };
 }
 
-function assert(condition, message) {
+function assert(condition, message, extra = null) {
     if (!condition) {
-        console.error(`❌ ASSERTION FAILED: ${message}`);
+        console.error(`❌ ASSERTION FAILED: ${message}`, extra ? JSON.stringify(extra, null, 2) : "");
         throw new Error(message);
     }
     console.log(`  ✅ ${message}`);
@@ -609,7 +609,7 @@ async function runTests() {
             method: "POST",
             headers: execHeaders,
         });
-        assert(execVerify.status === 200, "Executive verifies refund returns 200");
+        assert(execVerify.status === 200, "Executive verifies refund returns 200", execVerify);
         assert(execVerify.data.transaction.status === "verified", "Refund status updated to verified");
 
         // 28. Executive Fetching Team Mediators for Balance Settlement
@@ -727,7 +727,7 @@ async function runTests() {
                 ],
             },
         });
-        assert(assignSeasonOrder.status === 200, "Executive assign order with unitAddresses returns 200");
+        assert(assignSeasonOrder.status === 200, "Executive assign order with unitAddresses returns 200", assignSeasonOrder);
         const assignedSeasonOrder = assignSeasonOrder.data.order;
         assert(assignedSeasonOrder.orderUnits[0].addressType === "executive_provided", "Unit 0 has executive_provided addressType");
         assert(assignedSeasonOrder.orderUnits[1].addressType === "yourself", "Unit 1 has yourself addressType");

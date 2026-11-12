@@ -4,6 +4,14 @@ const User = require("../models/user");
 const Address = require("../models/address");
 const BalanceTransaction = require("../models/balanceTransaction");
 
+// High-performance index-compatible teamCode query filter
+const getTeamCodeFilter = (code) => {
+    if (!code) return "";
+    const clean = String(code).trim();
+    const variants = Array.from(new Set([clean, clean.toLowerCase(), clean.toUpperCase()]));
+    return variants.length === 1 ? clean : { $in: variants };
+};
+
 // ==========================================
 // ADD NEW MASTER ORDER
 // ==========================================
@@ -234,7 +242,7 @@ const getPendingOrders = async (req, res, next) => {
         };
         if (teamCode) {
             query.$or = [
-                { teamCode: { $regex: new RegExp(`^${teamCode}$`, "i") } },
+                { teamCode: getTeamCodeFilter(teamCode) },
                 { createdBy: req.user.id },
                 { "orderUnits.assignedExecutiveId": req.user.id },
             ];
@@ -268,7 +276,7 @@ const getPendingPaymentOrders = async (req, res, next) => {
         };
         if (teamCode) {
             query.$or = [
-                { teamCode: { $regex: new RegExp(`^${teamCode}$`, "i") } },
+                { teamCode: getTeamCodeFilter(teamCode) },
                 { createdBy: req.user.id },
                 { "orderUnits.assignedExecutiveId": req.user.id },
             ];
@@ -321,7 +329,7 @@ const getAdvancePaymentHistory = async (req, res, next) => {
 
         if (teamCode) {
             query.$or = [
-                { teamCode: { $regex: new RegExp(`^${teamCode}$`, "i") } },
+                { teamCode: getTeamCodeFilter(teamCode) },
                 { createdBy: req.user.id },
                 { "orderUnits.assignedExecutiveId": req.user.id },
             ];
@@ -365,7 +373,7 @@ const getAssignedOrders = async (req, res, next) => {
         };
         if (teamCode) {
             query.$or = [
-                { teamCode: { $regex: new RegExp(`^${teamCode}$`, "i") } },
+                { teamCode: getTeamCodeFilter(teamCode) },
                 { createdBy: req.user.id },
                 { "orderUnits.assignedExecutiveId": req.user.id },
             ];
@@ -399,7 +407,7 @@ const getInProgressOrders = async (req, res, next) => {
         };
         if (teamCode) {
             query.$or = [
-                { teamCode: { $regex: new RegExp(`^${teamCode}$`, "i") } },
+                { teamCode: getTeamCodeFilter(teamCode) },
                 { createdBy: req.user.id },
                 { "orderUnits.assignedExecutiveId": req.user.id },
             ];
@@ -433,7 +441,7 @@ const getPendingRefundOrders = async (req, res, next) => {
         };
         if (teamCode) {
             query.$or = [
-                { teamCode: { $regex: new RegExp(`^${teamCode}$`, "i") } },
+                { teamCode: getTeamCodeFilter(teamCode) },
                 { createdBy: req.user.id },
                 { "orderUnits.assignedExecutiveId": req.user.id },
             ];
@@ -476,7 +484,7 @@ const getCompletedOrders = async (req, res, next) => {
             };
         if (teamCode) {
             query.$or = [
-                { teamCode: { $regex: new RegExp(`^${teamCode}$`, "i") } },
+                { teamCode: getTeamCodeFilter(teamCode) },
                 { createdBy: req.user.id },
                 { "orderUnits.assignedExecutiveId": req.user.id },
             ];
@@ -510,7 +518,7 @@ const getSettledOrders = async (req, res, next) => {
         };
         if (teamCode) {
             query.$or = [
-                { teamCode: { $regex: new RegExp(`^${teamCode}$`, "i") } },
+                { teamCode: getTeamCodeFilter(teamCode) },
                 { createdBy: req.user.id },
                 { "orderUnits.assignedExecutiveId": req.user.id },
             ];
@@ -673,7 +681,7 @@ const getPendingVerificationOrders = async (req, res, next) => {
         };
         if (teamCode) {
             query.$or = [
-                { teamCode: { $regex: new RegExp(`^${teamCode.trim()}$`, "i") } },
+                { teamCode: getTeamCodeFilter(teamCode) },
                 { createdBy: req.user.id },
             ];
         }
@@ -948,7 +956,7 @@ const submitExecutivePayment = async (req, res, next) => {
         };
         if (teamCode) {
             query.$or = [
-                { teamCode: { $regex: new RegExp(`^${teamCode}$`, "i") } },
+                { teamCode: getTeamCodeFilter(teamCode) },
                 { createdBy: req.user.id },
                 { "orderUnits.assignedExecutiveId": req.user.id },
             ];
@@ -1013,7 +1021,7 @@ const getMediatorSentOrders = async (req, res, next) => {
         };
         if (teamCode) {
             query.$or = [
-                { teamCode: { $regex: new RegExp(`^${teamCode}$`, "i") } },
+                { teamCode: getTeamCodeFilter(teamCode) },
                 { createdBy: req.user.id },
                 { "orderUnits.assignedExecutiveId": req.user.id },
             ];
@@ -1116,7 +1124,7 @@ const getMediators = async (req, res, next) => {
         const teamCode = req.user.teamCode;
         const query = { role: "mediator" };
         if (teamCode) {
-            query.teamCode = { $regex: new RegExp(`^${teamCode}$`, "i") };
+            query.teamCode = getTeamCodeFilter(teamCode);
         }
 
         const mediators = await User.find(query).select("-password").sort({ createdAt: -1 });
@@ -1287,7 +1295,7 @@ const getExecutiveBrandDetails = async (req, res, next) => {
                 teamCode
                     ? {
                           $or: [
-                              { teamCode: { $regex: new RegExp(`^${teamCode.trim()}$`, "i") } },
+                              { teamCode: getTeamCodeFilter(teamCode) },
                               { createdBy: req.user.id },
                           ],
                       }

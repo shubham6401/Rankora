@@ -23,7 +23,15 @@ const loginMediator = async (req, res, next) => {
             });
         }
 
-        const existingUser = await User.findOne({ mediatorCode, role: "mediator" }).lean();
+        const trimmed = String(mediatorCode).trim();
+        const existingUser = await User.findOne({
+            $or: [
+                { mediatorCode: trimmed },
+                { mediatorCode: trimmed.toLowerCase() },
+                { mediatorCode: trimmed.toUpperCase() },
+            ],
+            role: "mediator"
+        }).lean();
         if (!existingUser) {
             return res.status(401).json({
                 success: false,
@@ -131,8 +139,13 @@ const loginExecutive = async (req, res, next) => {
             });
         }
 
+        const trimmed = String(teamCode).trim();
         const existingUser = await User.findOne({
-            teamCode,
+            $or: [
+                { teamCode: trimmed },
+                { teamCode: trimmed.toLowerCase() },
+                { teamCode: trimmed.toUpperCase() },
+            ],
             role: "executive",
         }).lean();
 
@@ -230,8 +243,13 @@ const loginBrand = async (req, res, next) => {
             });
         }
 
+        const trimmed = String(brand).trim();
         const existingUser = await User.findOne({
-            brand,
+            $or: [
+                { brand: trimmed },
+                { brand: trimmed.toLowerCase() },
+                { brand: trimmed.toUpperCase() },
+            ],
             role: "brand",
         }).lean();
 
