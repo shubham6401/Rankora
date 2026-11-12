@@ -4,7 +4,20 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>client</title>
+    <title>Rankora - Smart Order Management & Fulfillment System</title>
+    <!-- Preconnect & DNS prefetch to eliminate backend connection latency on Render -->
+    <link rel="preconnect" href="https://rankora-xbvm.onrender.com" crossorigin />
+    <link rel="dns-prefetch" href="https://rankora-xbvm.onrender.com" />
+    <!-- Non-blocking pre-warm ping for Render free tier sleep/spin-down -->
+    <script>
+      (function() {
+        try {
+          var isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+          var healthUrl = isLocal ? 'http://localhost:8000/api/health' : 'https://rankora-xbvm.onrender.com/api/health';
+          fetch(healthUrl, { mode: 'cors', credentials: 'omit' }).catch(function() {});
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

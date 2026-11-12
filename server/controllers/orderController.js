@@ -32,7 +32,7 @@ const getOrderById = async (req, res, next) => {
             });
         }
 
-        const orderObj = order.toObject();
+        const orderObj = typeof order.toObject === "function" ? order.toObject() : { ...order };
 
         // Provide backward compatibility fields for DisplayOrder.jsx
         const primaryUnit = matchingUnit || orderObj.orderUnits?.[0] || {};
@@ -101,7 +101,7 @@ const getOrderHistory = async (req, res, next) => {
         let sanitizedOrders = orders;
         if (user.role === "mediator") {
             sanitizedOrders = orders.map((o) => {
-                const obj = o.toObject();
+                const obj = typeof o.toObject === "function" ? o.toObject() : { ...o };
                 delete obj.unitType;
                 if (Array.isArray(obj.orderUnits)) {
                     obj.orderUnits = obj.orderUnits.map((u) => {

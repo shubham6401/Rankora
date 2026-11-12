@@ -111,6 +111,9 @@ userSchema.index({ teamCode: 1 }, { sparse: true });
 userSchema.index({ mediatorCode: 1, role: 1 });
 userSchema.index({ teamCode: 1, role: 1 });
 userSchema.index({ brand: 1, role: 1 });
+userSchema.index({ username: 1 }, { sparse: true });
+userSchema.index({ role: 1, isSuperAdmin: 1 });
+userSchema.index({ "platformIds._id": 1 });
 
 const User = mongoose.model("User", userSchema);
 module.exports = User;

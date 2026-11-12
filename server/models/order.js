@@ -394,5 +394,20 @@ orderSchema.methods.recalculateSummary = function () {
     return summary;
 };
 
+// High-Performance Query & Sorting Indexes
+orderSchema.index({ teamCode: 1, createdAt: -1 });
+orderSchema.index({ createdBy: 1, createdAt: -1 });
+orderSchema.index({ brandUserId: 1, createdAt: -1 });
+orderSchema.index({ "orderUnits.mediatorId": 1, "orderUnits.status": 1 });
+orderSchema.index({ "orderUnits.assignedExecutiveId": 1, createdAt: -1 });
+orderSchema.index({ "orderUnits.transferredByExecutiveId": 1, createdAt: -1 });
+orderSchema.index({ "summary.unassigned": 1, teamCode: 1 });
+orderSchema.index({ "summary.assigned": 1, teamCode: 1 });
+orderSchema.index({ "summary.inProgress": 1, teamCode: 1 });
+orderSchema.index({ "summary.pendingRefund": 1, teamCode: 1 });
+orderSchema.index({ "summary.completed": 1, teamCode: 1 });
+orderSchema.index({ "orderUnits.orderId": 1 });
+orderSchema.index({ createdAt: -1 });
+
 const Order = mongoose.model("Order", orderSchema);
 module.exports = Order;

@@ -44,13 +44,14 @@ const getNewOrders = async (req, res, next) => {
             .populate("brandUserId", "name brand role")
             .populate("createdBy", "name")
             .populate("orderUnits.mediatorId", "name mediatorCode teamCode")
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean();
 
         const mediatorOrders = orders.map((order) => {
-            const orderObj = order.toObject();
-            orderObj.orderUnits = orderObj.orderUnits.filter(
+            const orderObj = order;
+            orderObj.orderUnits = (orderObj.orderUnits || []).filter(
                 (unit) =>
-                    unit.mediatorId?._id?.toString() === mediatorId &&
+                    (unit.mediatorId?._id?.toString() || unit.mediatorId?.toString()) === mediatorId &&
                     unit.status === "assigned"
             );
             return orderObj;
@@ -141,11 +142,12 @@ const getPendingOrders = async (req, res, next) => {
             .populate("brandUserId", "name brand role")
             .populate("createdBy", "name")
             .populate("orderUnits.mediatorId", "name mediatorCode teamCode")
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean();
 
         const mappedOrders = orders.map((order) => {
-            const orderObj = order.toObject();
-            orderObj.orderUnits = orderObj.orderUnits.filter(
+            const orderObj = { ...order };
+            orderObj.orderUnits = (orderObj.orderUnits || []).filter(
                 (unit) =>
                     unit.mediatorId?._id?.toString() === mediatorId &&
                     unit.status === "in_progress"
@@ -271,14 +273,16 @@ const getRefundPendingOrders = async (req, res, next) => {
             .populate("brandUserId", "name brand role")
             .populate("createdBy", "name")
             .populate("orderUnits.mediatorId", "name mediatorCode teamCode")
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean();
 
         const mappedOrders = orders.map((order) => {
-            const orderObj = order.toObject();
-            orderObj.orderUnits = orderObj.orderUnits.filter(
-                (unit) =>
-                    unit.mediatorId?._id?.toString() === mediatorId &&
-                    unit.status === "pending_refund"
+            const orderObj = { ...order };
+            orderObj.orderUnits = (orderObj.orderUnits || []).filter(
+                (unit) => {
+                    const uMedId = (unit.mediatorId?._id || unit.mediatorId)?.toString();
+                    return uMedId === mediatorId && unit.status === "pending_refund";
+                }
             );
             orderObj.status = "pending_refund";
             orderObj.assignedTo = req.user;
@@ -388,16 +392,16 @@ const getPendingVerificationOrders = async (req, res, next) => {
             .populate("brandUserId", "name brand role")
             .populate("createdBy", "name")
             .populate("orderUnits.mediatorId", "name mediatorCode teamCode")
-            .sort({ updatedAt: -1 });
+            .sort({ updatedAt: -1 })
+            .lean();
 
         const formattedOrders = orders.map((order) => {
-            const orderObj = order.toObject();
-            orderObj.orderUnits = orderObj.orderUnits.filter(
-                (unit) =>
-                    unit.status === "pending_verification" &&
-                    unit.mediatorId &&
-                    (unit.mediatorId._id?.toString() === mediatorId ||
-                        unit.mediatorId.toString() === mediatorId)
+            const orderObj = { ...order };
+            orderObj.orderUnits = (orderObj.orderUnits || []).filter(
+                (unit) => {
+                    const uMedId = (unit.mediatorId?._id || unit.mediatorId)?.toString();
+                    return unit.status === "pending_verification" && uMedId === mediatorId;
+                }
             );
             return orderObj;
         });
@@ -430,11 +434,12 @@ const getCompletedOrders = async (req, res, next) => {
             .populate("brandUserId", "name brand role")
             .populate("createdBy", "name")
             .populate("orderUnits.mediatorId", "name mediatorCode teamCode")
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean();
 
         const mappedOrders = orders.map((order) => {
-            const orderObj = order.toObject();
-            orderObj.orderUnits = orderObj.orderUnits.filter((unit) => {
+            const orderObj = { ...order };
+            orderObj.orderUnits = (orderObj.orderUnits || []).filter((unit) => {
                 const uMedId = (unit.mediatorId?._id || unit.mediatorId)?.toString();
                 return uMedId === mediatorId.toString() && unit.status === "completed";
             });
@@ -550,10 +555,11 @@ const getPendingPaymentOrders = async (req, res, next) => {
             .populate("brandUserId", "name brand role")
             .populate("createdBy", "name email teamCode")
             .populate("orderUnits.mediatorId", "name mediatorCode teamCode")
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean();
 
         const mappedOrders = orders.map((order) => {
-            const orderObj = order.toObject();
+            const orderObj = { ...order };
             orderObj.orderUnits = (orderObj.orderUnits || []).filter((unit) => {
                 const uMedId = unit.mediatorId?._id ? unit.mediatorId._id.toString() : unit.mediatorId?.toString();
                 const uRefMedId = unit.refundedByMediatorId?._id ? unit.refundedByMediatorId._id.toString() : unit.refundedByMediatorId?.toString();
@@ -580,10 +586,11 @@ const getPendingPaymentOrders = async (req, res, next) => {
         })
             .populate("brandUserId", "name brand role")
             .populate("createdBy", "name email teamCode")
-            .sort({ updatedAt: -1 });
+            .sort({ updatedAt: -1 })
+            .lean();
 
         const mappedVerified = verifiedOrders.map((order) => {
-            const orderObj = order.toObject();
+            const orderObj = { ...order };
             orderObj.orderUnits = (orderObj.orderUnits || []).filter((unit) => {
                 const uRefMedId = unit.refundedByMediatorId?._id ? unit.refundedByMediatorId._id.toString() : unit.refundedByMediatorId?.toString();
                 const uMedId = unit.mediatorId?._id ? unit.mediatorId._id.toString() : unit.mediatorId?.toString();
@@ -682,7 +689,8 @@ const getMediatorSummary = async (req, res, next) => {
             .populate("brandUserId", "name brand role")
             .populate("createdBy", "name email teamCode")
             .populate("orderUnits.mediatorId", "name mediatorCode teamCode")
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean();
 
         let totalUnits = 0;
         let totalValue = 0;
@@ -713,10 +721,10 @@ const getMediatorSummary = async (req, res, next) => {
         let cancelledOrders = 0;
 
         const mappedOrders = orders.map((order) => {
-            const orderObj = order.toObject();
+            const orderObj = { ...order };
             const price = parseFloat(order.price) || 0;
 
-            const myUnits = orderObj.orderUnits.filter(
+            const myUnits = (orderObj.orderUnits || []).filter(
                 (u) =>
                     u.mediatorId?._id?.toString() === mediatorId ||
                     u.mediatorId?.toString() === mediatorId ||
@@ -1043,11 +1051,12 @@ const getSettledOrders = async (req, res, next) => {
             .populate("createdBy", "name")
             .populate("orderUnits.mediatorId", "name mediatorCode teamCode")
             .populate("orderUnits.settledBy", "name")
-            .sort({ "orderUnits.settledAt": -1, createdAt: -1 });
+            .sort({ "orderUnits.settledAt": -1, createdAt: -1 })
+            .lean();
 
         const mappedOrders = orders.map((order) => {
-            const orderObj = order.toObject();
-            orderObj.orderUnits = orderObj.orderUnits.filter((unit) => {
+            const orderObj = { ...order };
+            orderObj.orderUnits = (orderObj.orderUnits || []).filter((unit) => {
                 const uMedId = (unit.mediatorId?._id || unit.mediatorId)?.toString();
                 return (
                     uMedId === mediatorId.toString() &&
@@ -1200,7 +1209,7 @@ const getMediatorEarnings = async (req, res, next) => {
         const mediatorId = req.user.id || req.user._id;
         const medIdStr = mediatorId.toString();
 
-        const mediatorUser = await User.findById(mediatorId).select("name mediatorCode teamCode email phone role");
+        const mediatorUser = await User.findById(mediatorId).select("name mediatorCode teamCode email phone role").lean();
 
         // Find all orders that have units assigned to this mediator or refunded by this mediator
         const orders = await Order.find({
@@ -1211,7 +1220,8 @@ const getMediatorEarnings = async (req, res, next) => {
         })
             .populate("brandUserId", "name brand role")
             .populate("orderUnits.settledBy", "name")
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean();
 
         let completedUnitsCount = 0;
         let settledUnitsCount = 0;
@@ -1305,7 +1315,8 @@ const getMediatorEarnings = async (req, res, next) => {
         })
             .populate("sender", "name mediatorCode role")
             .populate("receiver", "name mediatorCode role")
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean();
 
         let totalBalanceReceived = 0; // Received by mediator (from Executive)
         let totalBalanceReturned = 0; // Sent by mediator (to Executive)

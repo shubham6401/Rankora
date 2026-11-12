@@ -210,7 +210,8 @@ const getOrders = async (req, res, next) => {
             .populate("brandUserId", "name brand role")
             .populate("createdBy", "name")
             .populate("orderUnits.mediatorId", "name mediatorCode teamCode")
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean();
 
         return res.status(200).json({
             success: true,
@@ -243,7 +244,8 @@ const getPendingOrders = async (req, res, next) => {
             .populate("brandUserId", "name brand role")
             .populate("createdBy", "name")
             .populate("orderUnits.mediatorId", "name mediatorCode teamCode")
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean();
 
         return res.status(200).json({
             success: true,
@@ -276,11 +278,12 @@ const getPendingPaymentOrders = async (req, res, next) => {
             .populate("brandUserId", "name brand role")
             .populate("createdBy", "name")
             .populate("orderUnits.mediatorId", "name mediatorCode teamCode")
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean();
 
         const filteredOrders = orders
             .map((order) => {
-                const orderObj = order.toObject();
+                const orderObj = typeof order.toObject === "function" ? order.toObject() : { ...order };
                 orderObj.orderUnits = (orderObj.orderUnits || []).filter(
                     (u) => u.status === "pending_payment" && !u.rejectedAt
                 );
@@ -328,11 +331,12 @@ const getAdvancePaymentHistory = async (req, res, next) => {
             .populate("brandUserId", "name brand role")
             .populate("createdBy", "name")
             .populate("orderUnits.mediatorId", "name mediatorCode teamCode")
-            .sort({ updatedAt: -1, createdAt: -1 });
+            .sort({ updatedAt: -1, createdAt: -1 })
+            .lean();
 
         const filteredOrders = orders
             .map((order) => {
-                const orderObj = order.toObject();
+                const orderObj = order;
                 orderObj.orderUnits = (orderObj.orderUnits || []).filter(
                     (u) => Boolean(u.paymentScreenshot) || Boolean(u.paymentSentAt)
                 );
@@ -371,7 +375,8 @@ const getAssignedOrders = async (req, res, next) => {
             .populate("brandUserId", "name brand role")
             .populate("createdBy", "name")
             .populate("orderUnits.mediatorId", "name mediatorCode teamCode")
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean();
 
         return res.status(200).json({
             success: true,
@@ -404,7 +409,8 @@ const getInProgressOrders = async (req, res, next) => {
             .populate("brandUserId", "name brand role")
             .populate("createdBy", "name")
             .populate("orderUnits.mediatorId", "name mediatorCode teamCode")
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean();
 
         return res.status(200).json({
             success: true,
@@ -437,7 +443,8 @@ const getPendingRefundOrders = async (req, res, next) => {
             .populate("brandUserId", "name brand role")
             .populate("createdBy", "name")
             .populate("orderUnits.mediatorId", "name mediatorCode teamCode")
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean();
 
         return res.status(200).json({
             success: true,
@@ -479,7 +486,8 @@ const getCompletedOrders = async (req, res, next) => {
             .populate("brandUserId", "name brand role")
             .populate("createdBy", "name")
             .populate("orderUnits.mediatorId", "name mediatorCode teamCode")
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean();
 
         return res.status(200).json({
             success: true,
@@ -513,7 +521,8 @@ const getSettledOrders = async (req, res, next) => {
             .populate("createdBy", "name")
             .populate("orderUnits.mediatorId", "name mediatorCode teamCode")
             .populate("orderUnits.settledBy", "name")
-            .sort({ "orderUnits.settledAt": -1, createdAt: -1 });
+            .sort({ "orderUnits.settledAt": -1, createdAt: -1 })
+            .lean();
 
         return res.status(200).json({
             success: true,
@@ -673,7 +682,8 @@ const getPendingVerificationOrders = async (req, res, next) => {
             .populate("brandUserId", "name brand role")
             .populate("createdBy", "name")
             .populate("orderUnits.mediatorId", "name mediatorCode teamCode email phone")
-            .sort({ updatedAt: -1 });
+            .sort({ updatedAt: -1 })
+            .lean();
 
         return res.status(200).json({
             success: true,
@@ -1013,12 +1023,13 @@ const getMediatorSentOrders = async (req, res, next) => {
             .populate("brandUserId", "name brand role")
             .populate("createdBy", "name")
             .populate("orderUnits.mediatorId", "name mediatorCode teamCode")
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean();
 
         const filteredOrders = orders
             .map((order) => {
-                const orderObj = order.toObject();
-                orderObj.orderUnits = orderObj.orderUnits.filter(
+                const orderObj = typeof order.toObject === "function" ? order.toObject() : { ...order };
+                orderObj.orderUnits = (orderObj.orderUnits || []).filter(
                     (u) =>
                         u.status === "pending_payment" &&
                         (u.rejectedAt != null || u.mediatorPaymentScreenshot != null)
@@ -1295,7 +1306,8 @@ const getExecutiveBrandDetails = async (req, res, next) => {
             .populate("brandUserId", "name brand role")
             .populate("createdBy", "name")
             .populate("orderUnits.mediatorId", "name mediatorCode teamCode")
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean();
 
         return res.status(200).json({
             success: true,
@@ -1559,7 +1571,7 @@ const getExecutiveMediatorEarnings = async (req, res, next) => {
         const medQuery = { role: "mediator" };
         if (teamCode) medQuery.teamCode = teamCode;
 
-        const mediators = await User.find(medQuery).select("name mediatorCode teamCode email phone role createdAt").sort({ name: 1 });
+        const mediators = await User.find(medQuery).select("name mediatorCode teamCode email phone role createdAt").sort({ name: 1 }).lean();
 
         // Find all orders for this team
         const orderQuery = teamCode ? { teamCode } : {};
@@ -1567,14 +1579,16 @@ const getExecutiveMediatorEarnings = async (req, res, next) => {
             .populate("brandUserId", "name brand role")
             .populate("orderUnits.mediatorId", "name mediatorCode teamCode")
             .populate("orderUnits.settledBy", "name")
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean();
 
         // Find all balance transactions for this team
         const txQuery = teamCode ? { teamCode } : {};
         const transactions = await BalanceTransaction.find(txQuery)
             .populate("sender", "name mediatorCode role")
             .populate("receiver", "name mediatorCode role")
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean();
 
         // Aggregate per mediator
         const mediatorDataMap = {};

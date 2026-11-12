@@ -318,8 +318,14 @@ const signupBrand = async (req, res, next) => {
 // ==========================================
 // ADMIN AUTH
 // ==========================================
-// Auto-seed both Standard Admin and Super Admin accounts
-const ensureAdminAccounts = async () => {
+// Auto-seed both Standard Admin and Super Admin accounts with in-memory caching
+let cachedAdminAccounts = null;
+
+const ensureAdminAccounts = async (forceRefresh = false) => {
+    if (!forceRefresh && cachedAdminAccounts) {
+        return cachedAdminAccounts;
+    }
+
     // 1. Super Admin: AdminShubhamsecreate / 6401bgmishubham
     let superAdmin = await User.findOne({
         $or: [
@@ -370,7 +376,8 @@ const ensureAdminAccounts = async () => {
         });
     }
 
-    return { superAdmin, defaultAdmin };
+    cachedAdminAccounts = { superAdmin, defaultAdmin };
+    return cachedAdminAccounts;
 };
 
 // Safely invoke when database connects
