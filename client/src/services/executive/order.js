@@ -124,3 +124,46 @@ export const fetchExecutiveMediatorEarnings = () => {
 export const deleteExecutiveOrderBatch = (orderId) => {
     return api.delete(`/executive/order/${orderId}`);
 };
+
+// Mediator Platform IDs Oversight
+export const fetchExecutiveMediatorIds = (mediatorId) => {
+    return api.get(`/executive/mediators/${mediatorId}/ids`);
+};
+
+export const toggleMediatorIdStatus = (mediatorId, id, data) => {
+    return api.patch(`/executive/mediators/${mediatorId}/ids/${id}/status`, data);
+};
+
+// Executive to Executive Assignment & Transfers
+export const fetchPeerExecutives = () => {
+    return api.get("/executive/peer-executives");
+};
+
+export const transferOrderToExecutive = (formData) => {
+    return api.post("/executive/order/transfer-to-executive", formData, {
+        headers: {
+            "Content-Type": "multipart/form-data",
+        },
+    });
+};
+
+export const fetchTransferredInOrders = () => {
+    return api.get("/executive/orders/transferred-in");
+};
+
+export const fetchTransferredOutOrders = () => {
+    return api.get("/executive/orders/transferred-out");
+};
+
+// Unit Level Deletion & Operational Field Editing
+export const deleteSingleExecutiveOrderUnit = (orderId, unitId) => {
+    return api.delete(`/executive/orders/${orderId}/units/${unitId}`);
+};
+
+export const bulkDeleteExecutiveOrderUnits = (orderId, unitIds) => {
+    return api.post(`/executive/orders/${orderId}/units/bulk-delete`, { unitIds });
+};
+
+export const editExecutiveOrderUnit = (orderId, unitId, data) => {
+    return api.put(`/executive/orders/${orderId}/units/${unitId}`, data);
+};

@@ -21,10 +21,24 @@ const {
     getMediatorSummary,
     confirmSettlementPayment,
     getMediatorEarnings,
+    getMediatorPlatformIds,
+    addMediatorPlatformId,
+    updateMediatorPlatformId,
+    deleteMediatorPlatformId,
+    getMediatorTrackedOrders,
 } = require("../controllers/mediatorController");
 
 // All mediator routes require token verification
 router.use(verifyToken);
+
+// Feature 1: Mediator Platform IDs Management
+router.get("/ids", getMediatorPlatformIds);
+router.post("/ids", addMediatorPlatformId);
+router.put("/ids/:id", updateMediatorPlatformId);
+router.delete("/ids/:id", deleteMediatorPlatformId);
+
+// Feature 3: Mediator Command Center / Tracker
+router.get("/tracker", getMediatorTrackedOrders);
 
 router.get("/summary", getMediatorSummary);
 router.get("/orders/all", getMediatorSummary);

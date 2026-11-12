@@ -201,6 +201,51 @@ const orderUnitSchema = new mongoose.Schema({
         type: Date,
         default: null,
     },
+    // Feature 1: Mediator Platform ID linking
+    platformId: {
+        type: mongoose.Schema.Types.ObjectId,
+        default: null,
+    },
+    reviewerPlatform: {
+        type: String,
+        default: null,
+    },
+    reviewerProfileUrl: {
+        type: String,
+        default: null,
+    },
+    // Feature 2: Executive-to-Executive Transfer
+    assignedExecutiveId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null,
+    },
+    assignedExecutiveTeamCode: {
+        type: String,
+        default: null,
+    },
+    transferredByExecutiveId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null,
+    },
+    executiveTransferStatus: {
+        type: String,
+        enum: ["none", "transferred", "accepted", "in_progress", "completed", null],
+        default: "none",
+    },
+    executiveTransferPaymentScreenshot: {
+        type: String,
+        default: null,
+    },
+    executiveTransferPaymentMessage: {
+        type: String,
+        default: null,
+    },
+    executiveTransferSentAt: {
+        type: Date,
+        default: null,
+    },
     postDeliveryDetails: {
         type: postDeliveryDetailsSchema,
         default: () => ({}),
@@ -294,7 +339,7 @@ const orderSchema = new mongoose.Schema({
     quantity: {
         type: Number,
         required: true,
-        min: 1,
+        min: 0,
     },
     orderPlatform: {
         type: String,

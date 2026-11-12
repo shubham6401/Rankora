@@ -1,5 +1,53 @@
 const mongoose = require("mongoose");
 
+const platformIdSchema = new mongoose.Schema({
+    platform: {
+        type: String,
+        enum: ["amazon", "flipkart", "myntra", "nykaa", "meesho", "other", "Amazon", "Flipkart", "Myntra", "Nykaa", "Meesho", "Other"],
+        required: true,
+        trim: true,
+    },
+    profileName: {
+        type: String,
+        required: true,
+        trim: true,
+    },
+    profileUrl: {
+        type: String,
+        trim: true,
+        default: null,
+    },
+    identifier: {
+        type: String,
+        trim: true,
+        default: null,
+    },
+    notes: {
+        type: String,
+        trim: true,
+        default: null,
+    },
+    status: {
+        type: String,
+        enum: ["active", "inactive"],
+        default: "active",
+    },
+    deactivatedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null,
+    },
+    deactivationReason: {
+        type: String,
+        trim: true,
+        default: null,
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now,
+    },
+});
+
 const userSchema = new mongoose.Schema({
     name: {
         type: String,
@@ -44,6 +92,7 @@ const userSchema = new mongoose.Schema({
         ref: "User",
         default: null,
     },
+    platformIds: [platformIdSchema],
 }, {
     timestamps: true,
 });

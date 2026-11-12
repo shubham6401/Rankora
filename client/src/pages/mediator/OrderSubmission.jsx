@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { mediatorOrderSubmit, getOrder } from "../../services/orders";
+import { fetchMediatorPlatformIds } from "../../services/mediator/orders";
 import { useParams, useNavigate } from "react-router-dom";
 import ProofThumbnail from "../../component/common/ProofThumbnail";
 import ProofPreviewModal from "../../component/common/ProofPreviewModal";
@@ -17,6 +18,8 @@ export default function OrderSubmission() {
     const [copied, setCopied] = useState(false);
     const [previewModalUrl, setPreviewModalUrl] = useState(null);
     const [newFilePreview, setNewFilePreview] = useState(null);
+    const [platformIds, setPlatformIds] = useState([]);
+    const [selectedPlatformId, setSelectedPlatformId] = useState("");
 
     // Price state (single price option)
     const [purchasePrice, setPurchasePrice] = useState("");
@@ -53,16 +56,54 @@ export default function OrderSubmission() {
             setFormData({
                 orderId: unit.orderId || "",
                 reviewerName: unit.reviewerName || "",
+                reviewerPlatform: unit.reviewerPlatform || ord.orderPlatform || "",
+                reviewerProfileUrl: unit.reviewerProfileUrl || "",
+                platformId: unit.platformId || "",
                 expectedArrivalDate: formattedArrival,
                 address: initialAddress,
                 addressType: isExecProvided ? "executive_provided" : "yourself",
                 orderReceivedOn: orderDateStr,
             });
+
+            // Fetch active platform IDs for quick selection
+            try {
+                const pRes = await fetchMediatorPlatformIds();
+                if (pRes.data?.success) {
+                    const activeOnes = (pRes.data.platformIds || []).filter((p) => p.status === "active");
+                    setPlatformIds(activeOnes);
+                    if (unit.platformId) {
+                        setSelectedPlatformId(unit.platformId);
+                    }
+                }
+            } catch (pErr) {
+                console.warn("Could not load mediator platform IDs:", pErr);
+            }
         } catch (err) {
             console.error("Failed to load order:", err);
             setError("Could not retrieve order details.");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleSelectPlatformId = (idVal) => {
+        setSelectedPlatformId(idVal);
+        const found = platformIds.find((p) => p._id === idVal);
+        if (found) {
+            setFormData((prev) => ({
+                ...prev,
+                platformId: found._id,
+                reviewerName: found.profileName,
+                reviewerPlatform: found.platform,
+                reviewerProfileUrl: found.profileUrl || "",
+            }));
+        } else {
+            setFormData((prev) => ({
+                ...prev,
+                platformId: "",
+                reviewerPlatform: "",
+                reviewerProfileUrl: "",
+            }));
         }
     };
 
@@ -93,6 +134,16 @@ export default function OrderSubmission() {
             data.append("totalPurchasedAmount", totalPurchasedAmount);
 
             await mediatorOrderSubmit(id, data);
+
+            // Save last submitted order ID for quick filter memory
+            if (formData.orderId) {
+                try {
+                    localStorage.setItem("lastSubmittedOrderId", formData.orderId.trim());
+                } catch (e) {
+                    console.warn("LocalStorage write failed:", e);
+                }
+            }
+
             alert("✓ Unit placement details submitted successfully!");
             navigate("/mediator-pending-orders", { replace: true });
         } catch (err) {
@@ -463,6 +514,39 @@ export default function OrderSubmission() {
                             </span>
                         </div>
                     </div>
+
+                    {/* Saved Platform ID Quick Selector */}
+                    {platformIds.length > 0 && (
+                        <div className="form-field" style={{ background: "#f8fafc", padding: "14px 16px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                                <label className="form-field-label" style={{ margin: 0, color: "#1e293b", fontWeight: 700 }}>
+                                    💳 Select Registered Buyer ID (Auto-Fill)
+                                </label>
+                                <span style={{ fontSize: "11.5px", color: "#64748b" }}>
+                                    Optional quick selection
+                                </span>
+                            </div>
+                            <select
+                                className="form-input-text"
+                                value={selectedPlatformId}
+                                onChange={(e) => handleSelectPlatformId(e.target.value)}
+                                style={{ background: "#ffffff" }}
+                            >
+                                <option value="">-- Choose from your active buyer accounts --</option>
+                                {platformIds.map((p) => (
+                                    <option key={p._id} value={p._id}>
+                                        {p.platform}: {p.profileName} {p.identifier ? `(#${p.identifier})` : ""}
+                                    </option>
+                                ))}
+                            </select>
+                            {selectedPlatformId && (
+                                <div style={{ marginTop: "6px", fontSize: "11.5px", color: "#059669", display: "flex", alignItems: "center", gap: "6px" }}>
+                                    <span>✓</span>
+                                    <span>Reviewer credentials auto-filled from selected buyer profile.</span>
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     {/* Reviewer Account Name */}
                     <div className="form-field">

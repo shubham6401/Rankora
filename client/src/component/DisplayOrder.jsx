@@ -4,10 +4,13 @@ import {
     verifyExecutiveOrderUnit,
     rejectExecutiveOrderUnitVerification,
     deleteExecutiveOrderBatch,
+    deleteSingleExecutiveOrderUnit,
+    bulkDeleteExecutiveOrderUnits,
 } from "../services/executive/order";
 import { isSuperAdminSessionActive } from "../utils/authUtils";
 import SuperAdminUnitEditorModal from "./admin/SuperAdminUnitEditorModal";
 import SuperAdminOrderEditorModal from "./admin/SuperAdminOrderEditorModal";
+import ExecutiveUnitEditorModal from "./executive/ExecutiveUnitEditorModal";
 import ProofThumbnail from "./common/ProofThumbnail";
 import ProofPreviewModal from "./common/ProofPreviewModal";
 import PriceDisplay from "./common/PriceDisplay";
@@ -50,6 +53,16 @@ export default function DisplayOrder({ order }) {
         isOpen: false,
     });
 
+    // Executive Unit Editing & Deletion
+    const [selectedUnitIds, setSelectedUnitIds] = useState([]);
+    const [executiveUnitModal, setExecutiveUnitModal] = useState({
+        isOpen: false,
+        unit: null,
+        unitNumber: 1,
+    });
+    const [deletingUnitId, setDeletingUnitId] = useState(null);
+    const [bulkDeleting, setBulkDeleting] = useState(false);
+
     useEffect(() => {
         if (order) {
             setCurrentOrder(order);
@@ -76,6 +89,80 @@ export default function DisplayOrder({ order }) {
             if (updatedOrder.orderUnits) {
                 setUnitsList(updatedOrder.orderUnits);
             }
+        }
+    };
+
+    const handleExecutiveUnitSaved = (updatedOrder, updatedUnit) => {
+        if (updatedOrder) {
+            setCurrentOrder(updatedOrder);
+            setUnitsList(updatedOrder.orderUnits || []);
+        } else if (updatedUnit) {
+            setUnitsList((prev) =>
+                prev.map((u) => (u._id === updatedUnit._id ? updatedUnit : u))
+            );
+        }
+    };
+
+    const handleToggleSelectUnit = (unitId) => {
+        setSelectedUnitIds((prev) =>
+            prev.includes(unitId) ? prev.filter((id) => id !== unitId) : [...prev, unitId]
+        );
+    };
+
+    const handleSelectAllVisible = (visibleList) => {
+        const visibleIds = visibleList.map((u) => u._id);
+        const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedUnitIds.includes(id));
+        if (allSelected) {
+            setSelectedUnitIds((prev) => prev.filter((id) => !visibleIds.includes(id)));
+        } else {
+            setSelectedUnitIds((prev) => Array.from(new Set([...prev, ...visibleIds])));
+        }
+    };
+
+    const handleDeleteSingleUnit = async (unit, unitNumber) => {
+        const confirmMsg = `Are you sure you want to permanently delete Unit #${unitNumber} (ID: ${unit._id})?\n\nThe order batch total quantity will be reduced by 1, and financials recalculated.`;
+        if (!window.confirm(confirmMsg)) return;
+
+        try {
+            setDeletingUnitId(unit._id);
+            const res = await deleteSingleExecutiveOrderUnit(activeOrder._id, unit._id);
+            if (res.data?.success) {
+                alert(`✓ Unit #${unitNumber} deleted successfully.`);
+                setUnitsList((prev) => prev.filter((u) => u._id !== unit._id));
+                if (res.data.order) {
+                    setCurrentOrder(res.data.order);
+                }
+                setSelectedUnitIds((prev) => prev.filter((id) => id !== unit._id));
+            }
+        } catch (err) {
+            console.error("Failed to delete unit:", err);
+            alert(err.response?.data?.message || "Failed to delete order unit.");
+        } finally {
+            setDeletingUnitId(null);
+        }
+    };
+
+    const handleBulkDeleteUnits = async () => {
+        if (selectedUnitIds.length === 0) return;
+        const confirmMsg = `Are you sure you want to permanently delete ${selectedUnitIds.length} selected unit(s)?\n\nThis will reduce total order quantity by ${selectedUnitIds.length} and recalculate batch totals.`;
+        if (!window.confirm(confirmMsg)) return;
+
+        try {
+            setBulkDeleting(true);
+            const res = await bulkDeleteExecutiveOrderUnits(activeOrder._id, selectedUnitIds);
+            if (res.data?.success) {
+                alert(`✓ ${res.data.deletedCount || selectedUnitIds.length} unit(s) deleted successfully.`);
+                setUnitsList((prev) => prev.filter((u) => !selectedUnitIds.includes(u._id)));
+                if (res.data.order) {
+                    setCurrentOrder(res.data.order);
+                }
+                setSelectedUnitIds([]);
+            }
+        } catch (err) {
+            console.error("Failed to bulk delete units:", err);
+            alert(err.response?.data?.message || "Failed to delete selected units.");
+        } finally {
+            setBulkDeleting(false);
         }
     };
 
@@ -836,6 +923,77 @@ export default function DisplayOrder({ order }) {
                     📋 Order Units Breakdown ({filteredUnits.length} Displayed)
                 </h2>
 
+                {/* Bulk Actions Bar for Executive */}
+                {isExecutive && filteredUnits.length > 0 && (
+                    <div style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                        gap: "10px",
+                        background: selectedUnitIds.length > 0 ? "#fff1f2" : "#f8fafc",
+                        border: selectedUnitIds.length > 0 ? "1px solid #fecdd3" : "1px solid #e2e8f0",
+                        borderRadius: "8px",
+                        padding: "10px 14px",
+                        marginBottom: "14px",
+                        transition: "all 0.15s ease"
+                    }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                            <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "13px", fontWeight: 700, color: "#334155" }}>
+                                <input
+                                    type="checkbox"
+                                    checked={filteredUnits.length > 0 && filteredUnits.every((u) => selectedUnitIds.includes(u._id))}
+                                    onChange={() => handleSelectAllVisible(filteredUnits)}
+                                    style={{ width: "16px", height: "16px", cursor: "pointer" }}
+                                />
+                                <span>Select All Visible Units ({filteredUnits.length})</span>
+                            </label>
+                            {selectedUnitIds.length > 0 && (
+                                <span style={{ fontSize: "12px", fontWeight: 700, color: "#be123c", background: "#ffe4e6", padding: "2px 8px", borderRadius: "10px" }}>
+                                    {selectedUnitIds.length} Selected
+                                </span>
+                            )}
+                        </div>
+
+                        {selectedUnitIds.length > 0 && (
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                <button
+                                    type="button"
+                                    disabled={bulkDeleting}
+                                    onClick={handleBulkDeleteUnits}
+                                    style={{
+                                        padding: "6px 14px",
+                                        fontSize: "12.5px",
+                                        fontWeight: 700,
+                                        backgroundColor: "#dc2626",
+                                        color: "#ffffff",
+                                        border: "none",
+                                        borderRadius: "6px",
+                                        cursor: bulkDeleting ? "not-allowed" : "pointer"
+                                    }}
+                                >
+                                    {bulkDeleting ? "Deleting..." : `🗑️ Delete Selected Units (${selectedUnitIds.length})`}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedUnitIds([])}
+                                    style={{
+                                        padding: "6px 10px",
+                                        fontSize: "12px",
+                                        color: "#64748b",
+                                        background: "transparent",
+                                        border: "1px solid #cbd5e1",
+                                        borderRadius: "6px",
+                                        cursor: "pointer"
+                                    }}
+                                >
+                                    Clear Selection
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {/* Unit Selector Tabs for multi-unit orders */}
                 {filteredUnits.length > 1 && (
                     <div className="unit-tabs-nav">
@@ -892,8 +1050,17 @@ export default function DisplayOrder({ order }) {
                                 >
                                     {/* Unit Header */}
                                     <div className="unit-item-header">
-                                        <div className="unit-item-title">
-                                            Unit #{unitNumber}
+                                        <div className="unit-item-title" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                            {isExecutive && (
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedUnitIds.includes(unit._id)}
+                                                    onChange={() => handleToggleSelectUnit(unit._id)}
+                                                    style={{ width: "16px", height: "16px", cursor: "pointer" }}
+                                                    title="Select unit for bulk actions"
+                                                />
+                                            )}
+                                            <span>Unit #{unitNumber}</span>
                                             <span className="unit-item-id">
                                                 ID: {unit._id}
                                             </span>
@@ -912,6 +1079,45 @@ export default function DisplayOrder({ order }) {
                                                 >
                                                     👑 Edit Unit &amp; Proofs
                                                 </button>
+                                            )}
+                                            {isExecutive && (
+                                                <>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setExecutiveUnitModal({ isOpen: true, unit, unitNumber })}
+                                                        style={{
+                                                            fontSize: "11.5px",
+                                                            fontWeight: 700,
+                                                            padding: "3px 9px",
+                                                            borderRadius: "5px",
+                                                            border: "1px solid #bfdbfe",
+                                                            background: "#eff6ff",
+                                                            color: "#1d4ed8",
+                                                            cursor: "pointer"
+                                                        }}
+                                                        title="Edit operational details for this unit"
+                                                    >
+                                                        ✏️ Edit Unit
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        disabled={deletingUnitId === unit._id}
+                                                        onClick={() => handleDeleteSingleUnit(unit, unitNumber)}
+                                                        style={{
+                                                            fontSize: "11.5px",
+                                                            fontWeight: 700,
+                                                            padding: "3px 9px",
+                                                            borderRadius: "5px",
+                                                            border: "1px solid #fecdd3",
+                                                            background: "#fff1f2",
+                                                            color: "#be123c",
+                                                            cursor: deletingUnitId === unit._id ? "not-allowed" : "pointer"
+                                                        }}
+                                                        title="Permanently delete this individual unit"
+                                                    >
+                                                        {deletingUnitId === unit._id ? "..." : "🗑️ Delete"}
+                                                    </button>
+                                                </>
                                             )}
                                             {isExecutive && (
                                                 <span className={`unit-spec-chip ${unit.unitType || "unclassified"}`}>
@@ -1481,6 +1687,18 @@ export default function DisplayOrder({ order }) {
                     unit={superAdminUnitModal.unit}
                     unitNumber={superAdminUnitModal.unitNumber}
                     onSuccess={handleSuperAdminUnitSaved}
+                />
+            )}
+
+            {/* EXECUTIVE OPERATIONAL UNIT EDITOR MODAL */}
+            {isExecutive && executiveUnitModal.isOpen && (
+                <ExecutiveUnitEditorModal
+                    isOpen={executiveUnitModal.isOpen}
+                    onClose={() => setExecutiveUnitModal({ isOpen: false, unit: null, unitNumber: 1 })}
+                    order={activeOrder}
+                    unit={executiveUnitModal.unit}
+                    unitNumber={executiveUnitModal.unitNumber}
+                    onSuccess={handleExecutiveUnitSaved}
                 />
             )}
 

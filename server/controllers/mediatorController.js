@@ -213,6 +213,9 @@ const submitOrderDetails = async (req, res, next) => {
         if (req.body.address) unit.address = req.body.address;
         if (req.body.addressType) unit.addressType = req.body.addressType;
         if (req.body.reviewerName) unit.reviewerName = req.body.reviewerName;
+        if (req.body.platformId) unit.platformId = req.body.platformId;
+        if (req.body.reviewerPlatform) unit.reviewerPlatform = req.body.reviewerPlatform;
+        if (req.body.reviewerProfileUrl) unit.reviewerProfileUrl = req.body.reviewerProfileUrl;
 
         // Record the exact time and date when mediator entered the order details
         unit.orderedAt = req.body.orderedAt ? new Date(req.body.orderedAt) : new Date();
@@ -1364,6 +1367,309 @@ const getMediatorEarnings = async (req, res, next) => {
     }
 };
 
+// ==========================================
+// FEATURE 1: MEDIATOR PLATFORM IDS
+// ==========================================
+const getMediatorPlatformIds = async (req, res, next) => {
+    try {
+        const user = await User.findById(req.user.id).select("platformIds").lean();
+        return res.status(200).json({
+            success: true,
+            platformIds: user?.platformIds || [],
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+const addMediatorPlatformId = async (req, res, next) => {
+    try {
+        const { platform, profileName, profileUrl, identifier, notes } = req.body;
+        if (!platform || !profileName) {
+            return res.status(400).json({
+                success: false,
+                message: "Platform (e.g. Amazon, Flipkart) and Profile Name are required",
+            });
+        }
+
+        const validPlatforms = ["amazon", "flipkart", "myntra", "nykaa", "meesho", "other"];
+        const cleanPlatform = String(platform).toLowerCase().trim();
+        if (!validPlatforms.includes(cleanPlatform)) {
+            return res.status(400).json({
+                success: false,
+                message: `Invalid platform. Allowed: ${validPlatforms.join(", ")}`,
+            });
+        }
+        const platformFormatted = cleanPlatform.charAt(0).toUpperCase() + cleanPlatform.slice(1);
+
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        if (!user.platformIds) user.platformIds = [];
+
+        const newId = {
+            platform: platformFormatted,
+            profileName: String(profileName).trim(),
+            profileUrl: profileUrl ? String(profileUrl).trim() : null,
+            identifier: identifier ? String(identifier).trim() : null,
+            notes: notes ? String(notes).trim() : null,
+            status: "active",
+            createdAt: new Date(),
+        };
+
+        user.platformIds.push(newId);
+        await user.save();
+
+        const createdId = user.platformIds[user.platformIds.length - 1];
+        return res.status(201).json({
+            success: true,
+            message: `Platform ID "${profileName}" added successfully`,
+            platformId: createdId,
+            platformIds: user.platformIds,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+const updateMediatorPlatformId = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { platform, profileName, profileUrl, identifier, notes } = req.body;
+
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        const target = user.platformIds.id(id);
+        if (!target) {
+            return res.status(404).json({ success: false, message: "Platform ID not found" });
+        }
+
+        if (platform) {
+            const cleanPlatform = String(platform).toLowerCase().trim();
+            const validPlatforms = ["amazon", "flipkart", "myntra", "nykaa", "meesho", "other"];
+            if (validPlatforms.includes(cleanPlatform)) target.platform = cleanPlatform.charAt(0).toUpperCase() + cleanPlatform.slice(1);
+        }
+        if (profileName) target.profileName = String(profileName).trim();
+        if (profileUrl !== undefined) target.profileUrl = profileUrl ? String(profileUrl).trim() : null;
+        if (identifier !== undefined) target.identifier = identifier ? String(identifier).trim() : null;
+        if (notes !== undefined) target.notes = notes ? String(notes).trim() : null;
+
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Platform ID updated successfully",
+            platformId: target,
+            platformIds: user.platformIds,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+const deleteMediatorPlatformId = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        user.platformIds.pull({ _id: id });
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Platform ID deleted successfully",
+            platformIds: user.platformIds,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ==========================================
+// FEATURE 3: MEDIATOR ORDER TRACKER & COMMAND CENTER
+// ==========================================
+const getMediatorTrackedOrders = async (req, res, next) => {
+    try {
+        const mediatorId = req.user.id;
+        const { startDate, endDate, datePreset, dateFilter, search, brand, status, lastOrderId } = req.query;
+        const preset = dateFilter || datePreset;
+
+        // Base query: find all orders where at least one unit is assigned to this mediator
+        const orders = await Order.find({ "orderUnits.mediatorId": mediatorId })
+            .populate("brandUserId", "name brand")
+            .populate("createdBy", "name teamCode")
+            .sort({ createdAt: -1 })
+            .lean();
+
+        let trackedUnits = [];
+        const brandStatsMap = {};
+
+        orders.forEach((order) => {
+            const bName = order.brand || "Unspecified";
+            if (!brandStatsMap[bName]) {
+                brandStatsMap[bName] = {
+                    brand: bName,
+                    totalUnits: 0,
+                    completedUnits: 0,
+                    inProgressUnits: 0,
+                    pendingRefundUnits: 0,
+                    pendingVerificationUnits: 0,
+                    pendingPaymentUnits: 0,
+                    settledUnits: 0,
+                    totalEarnings: 0,
+                };
+            }
+
+            (order.orderUnits || []).forEach((unit, idx) => {
+                if (unit.mediatorId && unit.mediatorId.toString() === mediatorId.toString()) {
+                    const unitPrice = Number(unit.purchasePrice) || Number(order.price) || 0;
+
+                    brandStatsMap[bName].totalUnits++;
+                    if (unit.status === "completed") {
+                        brandStatsMap[bName].completedUnits++;
+                        brandStatsMap[bName].totalEarnings += unitPrice;
+                        if (unit.settlementStatus === "settled") brandStatsMap[bName].settledUnits++;
+                    } else if (unit.status === "in_progress") {
+                        brandStatsMap[bName].inProgressUnits++;
+                    } else if (unit.status === "pending_refund") {
+                        brandStatsMap[bName].pendingRefundUnits++;
+                    } else if (unit.status === "pending_verification") {
+                        brandStatsMap[bName].pendingVerificationUnits++;
+                    } else if (unit.status === "pending_payment") {
+                        brandStatsMap[bName].pendingPaymentUnits++;
+                    }
+
+                    trackedUnits.push({
+                        ...unit,
+                        unitIndex: idx + 1,
+                        orderMongoId: order._id,
+                        productName: order.productName,
+                        productLink: order.productLink,
+                        brand: order.brand,
+                        orderPlatform: order.orderPlatform,
+                        executiveName: order.executiveName,
+                        teamCode: order.teamCode,
+                        basePrice: order.price,
+                        orderCreatedAt: order.createdAt,
+                    });
+                }
+            });
+        });
+
+        // 1. Date Filtering
+        if (preset && preset !== "all" && preset !== "custom") {
+            const now = new Date();
+            let start = null;
+            let end = null;
+
+            if (preset === "today") {
+                start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+            } else if (preset === "yesterday") {
+                const y = new Date(now);
+                y.setDate(now.getDate() - 1);
+                start = new Date(y.getFullYear(), y.getMonth(), y.getDate());
+                end = new Date(y.getFullYear(), y.getMonth(), y.getDate(), 23, 59, 59, 999);
+            } else if (preset === "7days") {
+                start = new Date(now);
+                start.setDate(now.getDate() - 7);
+                start.setHours(0, 0, 0, 0);
+            } else if (preset === "30days" || preset === "thisMonth") {
+                start = new Date(now.getFullYear(), now.getMonth(), 1);
+            }
+
+            if (start) {
+                trackedUnits = trackedUnits.filter((u) => {
+                    const d = new Date(u.assignedAt || u.orderedAt || u.createdAt || u.orderCreatedAt);
+                    if (end) return d >= start && d <= end;
+                    return d >= start;
+                });
+            }
+        } else if (startDate || endDate) {
+            const start = startDate ? new Date(startDate) : null;
+            const end = endDate ? new Date(endDate) : null;
+            if (end) end.setHours(23, 59, 59, 999);
+
+            trackedUnits = trackedUnits.filter((u) => {
+                const d = new Date(u.assignedAt || u.orderedAt || u.createdAt || u.orderCreatedAt);
+                if (start && end) return d >= start && d <= end;
+                if (start) return d >= start;
+                if (end) return d <= end;
+                return true;
+            });
+        }
+
+        // 2. Status Filtering
+        if (status && status !== "all") {
+            trackedUnits = trackedUnits.filter((u) => u.status === status);
+        }
+
+        // 3. Brand Filtering
+        if (brand && brand !== "all") {
+            const targetBrand = brand.toLowerCase().trim();
+            trackedUnits = trackedUnits.filter((u) => (u.brand || "").toLowerCase() === targetBrand);
+        }
+
+        // 4. Last Order ID Filter
+        if (lastOrderId) {
+            const targetId = lastOrderId.toLowerCase().trim();
+            trackedUnits = trackedUnits.filter((u) => (u.orderId || "").toLowerCase().includes(targetId));
+        }
+
+        // 5. Free Search (Order ID, Product Name, Reviewer, Brand)
+        if (search) {
+            const q = search.toLowerCase().trim();
+            trackedUnits = trackedUnits.filter((u) =>
+                (u.orderId && u.orderId.toLowerCase().includes(q)) ||
+                (u.productName && u.productName.toLowerCase().includes(q)) ||
+                (u.reviewerName && u.reviewerName.toLowerCase().includes(q)) ||
+                (u.brand && u.brand.toLowerCase().includes(q))
+            );
+        }
+
+        const brandsList = Object.keys(brandStatsMap);
+        const summary = {
+            totalUnits: trackedUnits.length,
+            completedUnits: trackedUnits.filter((u) => u.status === "completed" || u.status === "settled").length,
+            pendingUnits: trackedUnits.filter((u) => u.status !== "completed" && u.status !== "settled").length,
+            totalEarnings: trackedUnits.reduce((acc, u) => acc + (u.settlementStatus === "settled" ? Number(u.settlementAmount || 20) : 0), 0),
+            activeCapital: trackedUnits.reduce((acc, u) => acc + (["in_progress", "pending_refund", "pending_verification"].includes(u.status) ? Number(u.purchasePrice || u.price || 0) : 0), 0),
+        };
+
+        const brandStatsObj = {};
+        Object.values(brandStatsMap).forEach((b) => {
+            brandStatsObj[b.brand] = {
+                brand: b.brand,
+                total: b.totalUnits,
+                completed: b.completedUnits,
+                pending: b.inProgressUnits + b.pendingRefundUnits + b.pendingVerificationUnits + b.pendingPaymentUnits,
+                earnings: b.totalEarnings,
+                completionRate: b.totalUnits > 0 ? Math.round((b.completedUnits / b.totalUnits) * 100) : 0,
+            };
+        });
+
+        return res.status(200).json({
+            success: true,
+            totalFound: trackedUnits.length,
+            orders: trackedUnits,
+            trackedUnits,
+            summary,
+            brandsList,
+            brandStats: brandStatsObj,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
 module.exports = {
     getNewOrders,
     acceptOrder,
@@ -1383,4 +1689,9 @@ module.exports = {
     getMediatorSummary,
     confirmSettlementPayment,
     getMediatorEarnings,
+    getMediatorPlatformIds,
+    addMediatorPlatformId,
+    updateMediatorPlatformId,
+    deleteMediatorPlatformId,
+    getMediatorTrackedOrders,
 };

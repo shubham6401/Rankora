@@ -1,5 +1,12 @@
 import { useState, useEffect } from "react";
-import { AssignOrderToMediator, fetchExecutiveAddresses } from "../../services/executive/order";
+import {
+    AssignOrderToMediator,
+    fetchExecutiveAddresses,
+    fetchPeerExecutives,
+    transferOrderToExecutive,
+} from "../../services/executive/order";
+import ProofThumbnail from "../common/ProofThumbnail";
+import ProofPreviewModal from "../common/ProofPreviewModal";
 import "../../styles/appLayout.css";
 
 export default function AssignMediatorModal({
@@ -9,19 +16,41 @@ export default function AssignMediatorModal({
     onSuccess,
 }) {
     const unassignedUnits = order.summary?.unassigned || 0;
+    const [mode, setMode] = useState("mediator"); // "mediator" | "executive"
+
+    // Mediator assignment state
     const [selectedMediator, setSelectedMediator] = useState("");
     const [quantity, setQuantity] = useState(unassignedUnits > 0 ? 1 : 0);
     const [assigning, setAssigning] = useState(false);
     const [savedAddresses, setSavedAddresses] = useState([]);
     const [unitAddresses, setUnitAddresses] = useState({});
 
+    // Executive-to-Executive transfer state
+    const [peerExecutives, setPeerExecutives] = useState([]);
+    const [loadingPeers, setLoadingPeers] = useState(false);
+    const [selectedExecutive, setSelectedExecutive] = useState("");
+    const [execQuantity, setExecQuantity] = useState(unassignedUnits > 0 ? 1 : 0);
+    const [execPaymentProof, setExecPaymentProof] = useState(null);
+    const [execProofPreview, setExecProofPreview] = useState(null);
+    const [execPaymentMessage, setExecPaymentMessage] = useState("");
+    const [previewModalUrl, setPreviewModalUrl] = useState(null);
+
     const priceNum = Number(order.price) || 0;
     const currentQty = Math.min(Math.max(1, Number(quantity) || 1), unassignedUnits);
     const totalAdvanceAmount = priceNum * currentQty;
 
+    const currentExecQty = Math.min(Math.max(1, Number(execQuantity) || 1), unassignedUnits);
+    const totalExecTransferAmount = priceNum * currentExecQty;
+
     useEffect(() => {
         loadAddresses();
     }, []);
+
+    useEffect(() => {
+        if (mode === "executive" && peerExecutives.length === 0) {
+            loadPeerExecutives();
+        }
+    }, [mode]);
 
     const loadAddresses = async () => {
         try {
@@ -31,6 +60,20 @@ export default function AssignMediatorModal({
             }
         } catch (err) {
             console.error("Failed to load saved addresses:", err);
+        }
+    };
+
+    const loadPeerExecutives = async () => {
+        try {
+            setLoadingPeers(true);
+            const res = await fetchPeerExecutives();
+            if (res.data?.success) {
+                setPeerExecutives(res.data.executives || []);
+            }
+        } catch (err) {
+            console.error("Failed to load peer executives:", err);
+        } finally {
+            setLoadingPeers(false);
         }
     };
 
@@ -99,6 +142,43 @@ export default function AssignMediatorModal({
         }
     };
 
+    const handleConfirmExecutiveTransfer = async () => {
+        if (!selectedExecutive) {
+            alert("Please select a target executive to transfer units to.");
+            return;
+        }
+        if (!currentExecQty || currentExecQty < 1 || currentExecQty > unassignedUnits) {
+            alert("Please enter a valid transfer quantity within available units.");
+            return;
+        }
+
+        const execObj = peerExecutives.find((e) => e._id === selectedExecutive);
+        const confirmMsg = `Transfer ${currentExecQty} unit(s) of "${order.productName}" to Executive "${execObj?.name || "Peer Executive"}" (${execObj?.teamCode || "N/A"})?\n\nTransfer Amount: ₹${totalExecTransferAmount.toLocaleString()}\nTarget executive will receive these units directly into their unassigned queue to fulfill with their mediators.`;
+        if (!window.confirm(confirmMsg)) return;
+
+        try {
+            setAssigning(true);
+            const data = new FormData();
+            data.append("orderId", order._id);
+            data.append("targetExecutiveId", selectedExecutive);
+            data.append("quantity", currentExecQty);
+            if (execPaymentMessage) data.append("paymentMessage", execPaymentMessage);
+            if (execPaymentProof) data.append("paymentScreenshot", execPaymentProof);
+
+            const res = await transferOrderToExecutive(data);
+            if (res.data?.success) {
+                alert(`✓ Successfully transferred ${currentExecQty} unit(s) to Executive "${execObj?.name || "Peer Executive"}"!`);
+                if (onSuccess) onSuccess();
+                onClose();
+            }
+        } catch (err) {
+            console.error("Failed to transfer order to executive:", err);
+            alert(err?.response?.data?.message || "Failed to transfer order to executive.");
+        } finally {
+            setAssigning(false);
+        }
+    };
+
     return (
         <div className="app-modal-overlay" onClick={onClose}>
             <div
@@ -124,6 +204,48 @@ export default function AssignMediatorModal({
 
                 {/* Body */}
                 <div className="app-modal-body">
+                    {/* Mode Switch: Mediator vs Executive Transfer */}
+                    <div style={{ display: "flex", gap: "8px", marginBottom: "14px", background: "#f1f5f9", padding: "4px", borderRadius: "8px" }}>
+                        <button
+                            type="button"
+                            onClick={() => setMode("mediator")}
+                            style={{
+                                flex: 1,
+                                padding: "8px 12px",
+                                fontSize: "13px",
+                                fontWeight: 700,
+                                borderRadius: "6px",
+                                border: "none",
+                                cursor: "pointer",
+                                background: mode === "mediator" ? "#ffffff" : "transparent",
+                                color: mode === "mediator" ? "#1e293b" : "#64748b",
+                                boxShadow: mode === "mediator" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                                transition: "all 0.15s ease",
+                            }}
+                        >
+                            👤 Assign to Mediator
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setMode("executive")}
+                            style={{
+                                flex: 1,
+                                padding: "8px 12px",
+                                fontSize: "13px",
+                                fontWeight: 700,
+                                borderRadius: "6px",
+                                border: "none",
+                                cursor: "pointer",
+                                background: mode === "executive" ? "#ffffff" : "transparent",
+                                color: mode === "executive" ? "#1e293b" : "#64748b",
+                                boxShadow: mode === "executive" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                                transition: "all 0.15s ease",
+                            }}
+                        >
+                            👔 Transfer to Another Executive
+                        </button>
+                    </div>
+
                     {/* Order Details Brief */}
                     <div
                         style={{
@@ -173,174 +295,384 @@ export default function AssignMediatorModal({
                         </div>
                     </div>
 
-                    {/* Choose Mediator */}
-                    <div>
-                        <label
-                            style={{
-                                display: "block",
-                                fontSize: "13px",
-                                fontWeight: "700",
-                                color: "#334155",
-                                marginBottom: "6px",
-                            }}
-                        >
-                            Select Destination Mediator:
-                        </label>
-                        <select
-                            value={selectedMediator}
-                            onChange={(e) => setSelectedMediator(e.target.value)}
-                            style={{
-                                width: "100%",
-                                padding: "10px 14px",
-                                borderRadius: "8px",
-                                border: "1px solid #cbd5e1",
-                                fontSize: "14px",
-                                outline: "none",
-                                background: "#ffffff",
-                                boxSizing: "border-box",
-                            }}
-                        >
-                            <option value="">-- Choose a team mediator --</option>
-                            {mediators.map((med) => (
-                                <option key={med._id} value={med._id}>
-                                    {med.name} — Code: {med.mediatorCode || "N/A"}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                    {mode === "mediator" ? (
+                        <>
+                            {/* Choose Mediator */}
+                            <div>
+                                <label
+                                    style={{
+                                        display: "block",
+                                        fontSize: "13px",
+                                        fontWeight: "700",
+                                        color: "#334155",
+                                        marginBottom: "6px",
+                                    }}
+                                >
+                                    Select Destination Mediator:
+                                </label>
+                                <select
+                                    value={selectedMediator}
+                                    onChange={(e) => setSelectedMediator(e.target.value)}
+                                    style={{
+                                        width: "100%",
+                                        padding: "10px 14px",
+                                        borderRadius: "8px",
+                                        border: "1px solid #cbd5e1",
+                                        fontSize: "14px",
+                                        outline: "none",
+                                        background: "#ffffff",
+                                        boxSizing: "border-box",
+                                    }}
+                                >
+                                    <option value="">-- Choose a team mediator --</option>
+                                    {mediators.map((med) => (
+                                        <option key={med._id} value={med._id}>
+                                            {med.name} — Code: {med.mediatorCode || "N/A"}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
 
-                    {/* Quantity Stepper */}
-                    <div>
-                        <label
-                            style={{
-                                display: "block",
-                                fontSize: "13px",
-                                fontWeight: "700",
-                                color: "#334155",
-                                marginBottom: "6px",
-                            }}
-                        >
-                            Number of Units to Assign:
-                        </label>
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                            <button
-                                type="button"
-                                onClick={() => setQuantity(Math.max(1, currentQty - 1))}
-                                disabled={currentQty <= 1 || assigning}
-                                className="app-btn app-btn-secondary"
-                                style={{ width: "42px", height: "42px", fontSize: "18px", padding: 0 }}
-                            >
-                                -
-                            </button>
-                            <input
-                                type="number"
-                                min={1}
-                                max={unassignedUnits}
-                                value={quantity}
-                                onChange={(e) => {
-                                    const val = parseInt(e.target.value, 10);
-                                    if (!isNaN(val)) {
-                                        setQuantity(Math.min(Math.max(1, val), unassignedUnits));
-                                    }
-                                }}
-                                style={{
-                                    width: "90px",
-                                    height: "42px",
-                                    textAlign: "center",
-                                    fontSize: "16px",
-                                    fontWeight: "800",
-                                    border: "1px solid #cbd5e1",
-                                    borderRadius: "8px",
-                                    boxSizing: "border-box",
-                                }}
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setQuantity(Math.min(unassignedUnits, currentQty + 1))}
-                                disabled={currentQty >= unassignedUnits || assigning}
-                                className="app-btn app-btn-secondary"
-                                style={{ width: "42px", height: "42px", fontSize: "18px", padding: 0 }}
-                            >
-                                +
-                            </button>
-                            <span style={{ fontSize: "13px", color: "#64748b", fontWeight: "600" }}>
-                                out of <b>{unassignedUnits}</b> available
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* Per-Unit Delivery Address Allocation */}
-                    <div style={{ marginTop: "8px" }}>
-                        <label
-                            style={{
-                                display: "block",
-                                fontSize: "13px",
-                                fontWeight: "700",
-                                color: "#334155",
-                                marginBottom: "6px",
-                            }}
-                        >
-                            📍 Delivery Shipping Address for each unit:
-                        </label>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "160px", overflowY: "auto", paddingRight: "4px" }}>
-                            {Array.from({ length: currentQty }).map((_, idx) => (
-                                <div key={idx} style={{ display: "flex", alignItems: "center", gap: "10px", background: "#f8fafc", padding: "8px 12px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
-                                    <span style={{ fontSize: "12px", fontWeight: "700", color: "#64748b", minWidth: "55px" }}>
-                                        Unit #{idx + 1}:
-                                    </span>
-                                    <select
-                                        value={unitAddresses[idx] || "yourself"}
-                                        onChange={(e) => handleAddressChangeForUnit(idx, e.target.value)}
+                            {/* Quantity Stepper */}
+                            <div>
+                                <label
+                                    style={{
+                                        display: "block",
+                                        fontSize: "13px",
+                                        fontWeight: "700",
+                                        color: "#334155",
+                                        marginBottom: "6px",
+                                    }}
+                                >
+                                    Number of Units to Assign:
+                                </label>
+                                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setQuantity(Math.max(1, currentQty - 1))}
+                                        disabled={currentQty <= 1 || assigning}
+                                        className="app-btn app-btn-secondary"
+                                        style={{ width: "42px", height: "42px", fontSize: "18px", padding: 0 }}
+                                    >
+                                        -
+                                    </button>
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        max={unassignedUnits}
+                                        value={quantity}
+                                        onChange={(e) => {
+                                            const val = parseInt(e.target.value, 10);
+                                            if (!isNaN(val)) {
+                                                setQuantity(Math.min(Math.max(1, val), unassignedUnits));
+                                            }
+                                        }}
                                         style={{
-                                            flex: 1,
-                                            padding: "6px 10px",
-                                            borderRadius: "6px",
+                                            width: "90px",
+                                            height: "42px",
+                                            textAlign: "center",
+                                            fontSize: "16px",
+                                            fontWeight: "800",
                                             border: "1px solid #cbd5e1",
-                                            fontSize: "12.5px",
+                                            borderRadius: "8px",
+                                            boxSizing: "border-box",
+                                        }}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setQuantity(Math.min(unassignedUnits, currentQty + 1))}
+                                        disabled={currentQty >= unassignedUnits || assigning}
+                                        className="app-btn app-btn-secondary"
+                                        style={{ width: "42px", height: "42px", fontSize: "18px", padding: 0 }}
+                                    >
+                                        +
+                                    </button>
+                                    <span style={{ fontSize: "13px", color: "#64748b", fontWeight: "600" }}>
+                                        out of <b>{unassignedUnits}</b> available
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Per-Unit Delivery Address Allocation */}
+                            <div style={{ marginTop: "8px" }}>
+                                <label
+                                    style={{
+                                        display: "block",
+                                        fontSize: "13px",
+                                        fontWeight: "700",
+                                        color: "#334155",
+                                        marginBottom: "6px",
+                                    }}
+                                >
+                                    📍 Delivery Shipping Address for each unit:
+                                </label>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "160px", overflowY: "auto", paddingRight: "4px" }}>
+                                    {Array.from({ length: currentQty }).map((_, idx) => (
+                                        <div key={idx} style={{ display: "flex", alignItems: "center", gap: "10px", background: "#f8fafc", padding: "8px 12px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                                            <span style={{ fontSize: "12px", fontWeight: "700", color: "#64748b", minWidth: "55px" }}>
+                                                Unit #{idx + 1}:
+                                            </span>
+                                            <select
+                                                value={unitAddresses[idx] || "yourself"}
+                                                onChange={(e) => handleAddressChangeForUnit(idx, e.target.value)}
+                                                style={{
+                                                    flex: 1,
+                                                    padding: "6px 10px",
+                                                    borderRadius: "6px",
+                                                    border: "1px solid #cbd5e1",
+                                                    fontSize: "12.5px",
+                                                    background: "#ffffff",
+                                                }}
+                                            >
+                                                <option value="yourself">👤 Yourself (Mediator inputs their own address)</option>
+                                                {savedAddresses.map((addr) => (
+                                                    <option key={addr._id} value={addr._id}>
+                                                        📍 Executive Address: {addr.label} — {addr.recipientName}, {addr.city} ({addr.pincode})
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    ))}
+                                </div>
+                                {savedAddresses.length === 0 && (
+                                    <span style={{ fontSize: "11px", color: "#64748b", marginTop: "6px", display: "inline-block" }}>
+                                        💡 Want to assign a specific address? Add locations in your <b>Address Book</b> to choose from executive options!
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Financial Preview Box */}
+                            <div
+                                style={{
+                                    background: "#eff6ff",
+                                    border: "1px solid #bfdbfe",
+                                    borderRadius: "10px",
+                                    padding: "14px 16px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                }}
+                            >
+                                <div>
+                                    <div style={{ fontSize: "12px", color: "#1e40af", fontWeight: "700" }}>
+                                        Advance Payment Calculation:
+                                    </div>
+                                    <div style={{ fontSize: "13px", color: "#3b82f6", marginTop: "2px" }}>
+                                        ₹{priceNum.toLocaleString()} × {currentQty} unit{currentQty > 1 ? "s" : ""}
+                                    </div>
+                                </div>
+                                <div style={{ fontSize: "20px", fontWeight: "800", color: "#1d4ed8" }}>
+                                    ₹{totalAdvanceAmount.toLocaleString()}
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            {/* Executive Transfer Mode */}
+                            <div>
+                                <label
+                                    style={{
+                                        display: "block",
+                                        fontSize: "13px",
+                                        fontWeight: "700",
+                                        color: "#334155",
+                                        marginBottom: "6px",
+                                    }}
+                                >
+                                    Select Colleague Executive:
+                                </label>
+                                {loadingPeers ? (
+                                    <div style={{ fontSize: "13px", color: "#64748b" }}>Loading peer executives...</div>
+                                ) : (
+                                    <select
+                                        value={selectedExecutive}
+                                        onChange={(e) => setSelectedExecutive(e.target.value)}
+                                        style={{
+                                            width: "100%",
+                                            padding: "10px 14px",
+                                            borderRadius: "8px",
+                                            border: "1px solid #cbd5e1",
+                                            fontSize: "14px",
+                                            outline: "none",
                                             background: "#ffffff",
+                                            boxSizing: "border-box",
                                         }}
                                     >
-                                        <option value="yourself">👤 Yourself (Mediator inputs their own address)</option>
-                                        {savedAddresses.map((addr) => (
-                                            <option key={addr._id} value={addr._id}>
-                                                📍 Executive Address: {addr.label} — {addr.recipientName}, {addr.city} ({addr.pincode})
+                                        <option value="">-- Choose target executive --</option>
+                                        {peerExecutives.map((exec) => (
+                                            <option key={exec._id} value={exec._id}>
+                                                {exec.name} — Team: {exec.teamCode || "Default"} ({exec.email})
                                             </option>
                                         ))}
                                     </select>
-                                </div>
-                            ))}
-                        </div>
-                        {savedAddresses.length === 0 && (
-                            <span style={{ fontSize: "11px", color: "#64748b", marginTop: "6px", display: "inline-block" }}>
-                                💡 Want to assign a specific address? Add locations in your <b>Address Book</b> to choose from executive options!
-                            </span>
-                        )}
-                    </div>
+                                )}
+                            </div>
 
-                    {/* Financial Preview Box */}
-                    <div
-                        style={{
-                            background: "#eff6ff",
-                            border: "1px solid #bfdbfe",
-                            borderRadius: "10px",
-                            padding: "14px 16px",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                        }}
-                    >
-                        <div>
-                            <div style={{ fontSize: "12px", color: "#1e40af", fontWeight: "700" }}>
-                                Advance Payment Calculation:
+                            {/* Quantity Stepper */}
+                            <div>
+                                <label
+                                    style={{
+                                        display: "block",
+                                        fontSize: "13px",
+                                        fontWeight: "700",
+                                        color: "#334155",
+                                        marginBottom: "6px",
+                                    }}
+                                >
+                                    Units to Transfer to Executive:
+                                </label>
+                                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setExecQuantity(Math.max(1, currentExecQty - 1))}
+                                        disabled={currentExecQty <= 1 || assigning}
+                                        className="app-btn app-btn-secondary"
+                                        style={{ width: "42px", height: "42px", fontSize: "18px", padding: 0 }}
+                                    >
+                                        -
+                                    </button>
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        max={unassignedUnits}
+                                        value={execQuantity}
+                                        onChange={(e) => {
+                                            const val = parseInt(e.target.value, 10);
+                                            if (!isNaN(val)) {
+                                                setExecQuantity(Math.min(Math.max(1, val), unassignedUnits));
+                                            }
+                                        }}
+                                        style={{
+                                            width: "90px",
+                                            height: "42px",
+                                            textAlign: "center",
+                                            fontSize: "16px",
+                                            fontWeight: "800",
+                                            border: "1px solid #cbd5e1",
+                                            borderRadius: "8px",
+                                            boxSizing: "border-box",
+                                        }}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setExecQuantity(Math.min(unassignedUnits, currentExecQty + 1))}
+                                        disabled={currentExecQty >= unassignedUnits || assigning}
+                                        className="app-btn app-btn-secondary"
+                                        style={{ width: "42px", height: "42px", fontSize: "18px", padding: 0 }}
+                                    >
+                                        +
+                                    </button>
+                                    <span style={{ fontSize: "13px", color: "#64748b", fontWeight: "600" }}>
+                                        out of <b>{unassignedUnits}</b> available
+                                    </span>
+                                </div>
                             </div>
-                            <div style={{ fontSize: "13px", color: "#3b82f6", marginTop: "2px" }}>
-                                ₹{priceNum.toLocaleString()} × {currentQty} unit{currentQty > 1 ? "s" : ""}
+
+                            {/* Transfer Advance Payment Screenshot */}
+                            <div style={{ background: "#f8fafc", padding: "14px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
+                                <label style={{ display: "block", fontSize: "13px", fontWeight: "700", color: "#334155", marginBottom: "4px" }}>
+                                    💳 Advance Payment Receipt / Proof (Optional):
+                                </label>
+                                <span style={{ fontSize: "11.5px", color: "#64748b", display: "block", marginBottom: "8px" }}>
+                                    Upload payment screenshot or PDF voucher sent to the target executive.
+                                </span>
+                                {execProofPreview && (
+                                    <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
+                                        <ProofThumbnail
+                                            url={execProofPreview.file}
+                                            alt="Executive Transfer Proof"
+                                            size={48}
+                                            onClick={() => setPreviewModalUrl(execProofPreview.url)}
+                                        />
+                                        <div style={{ flex: 1, fontSize: "12px", color: "#1e293b", fontWeight: 600 }}>
+                                            {execProofPreview.file.name}
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (execProofPreview?.url) URL.revokeObjectURL(execProofPreview.url);
+                                                setExecPaymentProof(null);
+                                                setExecProofPreview(null);
+                                            }}
+                                            style={{
+                                                padding: "4px 8px",
+                                                fontSize: "11px",
+                                                background: "#fee2e2",
+                                                color: "#991b1b",
+                                                border: "1px solid #fca5a5",
+                                                borderRadius: "4px",
+                                                cursor: "pointer"
+                                            }}
+                                        >
+                                            ✕ Remove
+                                        </button>
+                                    </div>
+                                )}
+                                <input
+                                    type="file"
+                                    accept="image/*,application/pdf"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            setExecPaymentProof(file);
+                                            setExecProofPreview({ file, url: URL.createObjectURL(file) });
+                                        }
+                                    }}
+                                    style={{
+                                        fontSize: "12.5px",
+                                        width: "100%",
+                                    }}
+                                />
                             </div>
-                        </div>
-                        <div style={{ fontSize: "20px", fontWeight: "800", color: "#1d4ed8" }}>
-                            ₹{totalAdvanceAmount.toLocaleString()}
-                        </div>
-                    </div>
+
+                            {/* UTR / Transaction Message */}
+                            <div>
+                                <label style={{ display: "block", fontSize: "13px", fontWeight: "700", color: "#334155", marginBottom: "6px" }}>
+                                    Payment Note / UTR / Reference:
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. UTR #9876543210 - Advance settled via ICICI bank transfer"
+                                    value={execPaymentMessage}
+                                    onChange={(e) => setExecPaymentMessage(e.target.value)}
+                                    style={{
+                                        width: "100%",
+                                        padding: "9px 12px",
+                                        borderRadius: "6px",
+                                        border: "1px solid #cbd5e1",
+                                        fontSize: "13px",
+                                        outline: "none",
+                                        boxSizing: "border-box"
+                                    }}
+                                />
+                            </div>
+
+                            {/* Transfer Financial Preview Box */}
+                            <div
+                                style={{
+                                    background: "#f0fdf4",
+                                    border: "1px solid #bbf7d0",
+                                    borderRadius: "10px",
+                                    padding: "14px 16px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                }}
+                            >
+                                <div>
+                                    <div style={{ fontSize: "12px", color: "#15803d", fontWeight: "700" }}>
+                                        Executive Transfer Total Value:
+                                    </div>
+                                    <div style={{ fontSize: "13px", color: "#16a34a", marginTop: "2px" }}>
+                                        ₹{priceNum.toLocaleString()} × {currentExecQty} unit{currentExecQty > 1 ? "s" : ""}
+                                    </div>
+                                </div>
+                                <div style={{ fontSize: "20px", fontWeight: "800", color: "#15803d" }}>
+                                    ₹{totalExecTransferAmount.toLocaleString()}
+                                </div>
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 {/* Footer */}
@@ -353,15 +685,34 @@ export default function AssignMediatorModal({
                     >
                         Cancel
                     </button>
-                    <button
-                        type="button"
-                        className="app-btn app-btn-primary"
-                        disabled={!selectedMediator || currentQty < 1 || assigning}
-                        onClick={handleConfirmAssign}
-                    >
-                        {assigning ? "Assigning..." : `Confirm Assign (${currentQty} Units)`}
-                    </button>
+                    {mode === "mediator" ? (
+                        <button
+                            type="button"
+                            className="app-btn app-btn-primary"
+                            disabled={!selectedMediator || currentQty < 1 || assigning}
+                            onClick={handleConfirmAssign}
+                        >
+                            {assigning ? "Assigning..." : `Confirm Assign (${currentQty} Units)`}
+                        </button>
+                    ) : (
+                        <button
+                            type="button"
+                            className="app-btn app-btn-primary"
+                            style={{ background: "#16a34a", borderColor: "#15803d" }}
+                            disabled={!selectedExecutive || currentExecQty < 1 || assigning}
+                            onClick={handleConfirmExecutiveTransfer}
+                        >
+                            {assigning ? "Transferring..." : `Confirm Transfer to Executive (${currentExecQty} Units)`}
+                        </button>
+                    )}
                 </div>
+
+                {previewModalUrl && (
+                    <ProofPreviewModal
+                        url={previewModalUrl}
+                        onClose={() => setPreviewModalUrl(null)}
+                    />
+                )}
             </div>
         </div>
     );

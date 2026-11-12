@@ -67,3 +67,25 @@ export const FetchAllSettledOrders = () => {
 export const fetchMediatorEarnings = () => {
     return api.get("/mediator/earnings");
 };
+
+// Platform IDs Management
+export const fetchMediatorPlatformIds = () => {
+    return api.get("/mediator/ids");
+};
+
+export const addMediatorPlatformId = (data) => {
+    return api.post("/mediator/ids", data);
+};
+
+export const updateMediatorPlatformId = (id, data) => {
+    return api.put(`/mediator/ids/${id}`, data);
+};
+
+export const deleteMediatorPlatformId = (id) => {
+    return api.delete(`/mediator/ids/${id}`);
+};
+
+// Mediator Order Command Center / Tracker
+export const fetchMediatorTrackedOrders = (params) => {
+    return api.get("/mediator/tracker", { params });
+};

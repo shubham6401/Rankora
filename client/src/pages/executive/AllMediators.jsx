@@ -1,6 +1,7 @@
 import { fetchAllMediators } from "../../services/executive/order";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import MediatorIdsModal from "../../component/executive/MediatorIdsModal";
 import "../../styles/ordersTable.css";
 
 export default function AllMediator() {
@@ -8,6 +9,7 @@ export default function AllMediator() {
     const [mediators, setMediators] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
+    const [selectedMediatorForIds, setSelectedMediatorForIds] = useState(null);
 
     useEffect(() => {
         handleFetchAllMediator();
@@ -104,6 +106,7 @@ export default function AllMediator() {
                                     <th>Mediator Name</th>
                                     <th>Mediator Code</th>
                                     <th>Team Code</th>
+                                    <th>Platform Accounts</th>
                                     <th>Registered On</th>
                                     <th>Status</th>
                                 </tr>
@@ -121,6 +124,27 @@ export default function AllMediator() {
                                             </span>
                                         </td>
                                         <td>{m.teamCode || "Default"}</td>
+                                        <td>
+                                            <button
+                                                type="button"
+                                                onClick={() => setSelectedMediatorForIds(m)}
+                                                className="table-btn table-btn-outline"
+                                                style={{
+                                                    fontSize: "12px",
+                                                    padding: "5px 12px",
+                                                    display: "inline-flex",
+                                                    alignItems: "center",
+                                                    gap: "6px",
+                                                    fontWeight: 700,
+                                                    color: "#2563eb",
+                                                    borderColor: "#bfdbfe",
+                                                    backgroundColor: "#eff6ff"
+                                                }}
+                                            >
+                                                <span>💳</span>
+                                                <span>Manage Buyer IDs</span>
+                                            </button>
+                                        </td>
                                         <td>
                                             {m.createdAt ? new Date(m.createdAt).toLocaleDateString() : "Active"}
                                         </td>
@@ -143,6 +167,14 @@ export default function AllMediator() {
                         {search ? "No mediators match your search filter." : "No mediators are currently registered."}
                     </p>
                 </div>
+            )}
+
+            {selectedMediatorForIds && (
+                <MediatorIdsModal
+                    mediator={selectedMediatorForIds}
+                    isOpen={!!selectedMediatorForIds}
+                    onClose={() => setSelectedMediatorForIds(null)}
+                />
             )}
         </div>
     );

@@ -19,6 +19,8 @@ import MediatorPendingVerification from "../pages/mediator/MediatorPendingVerifi
 import MediatorBalance from "../pages/mediator/MediatorBalance";
 import MediatorDetailedOrdersBreakdown from "../pages/mediator/MediatorDetailedOrdersBreakdown";
 import NewOrders from "../pages/mediator/NewOrders";
+import MediatorPlatformIds from "../pages/mediator/MediatorPlatformIds";
+import MediatorOrderTracker from "../pages/mediator/MediatorOrderTracker";
 
 import LandingPage from "../pages/LandingPage";
 import RoleSelection from "../pages/RoleSelection";
@@ -93,6 +95,10 @@ export default function AppRoutes() {
             <Route path="/mediator-pending_payment-orders" element={<ProtectedLayout><MediatorPendingPayment /></ProtectedLayout>} />
             <Route path="/mediator-pending-payment-orders" element={<ProtectedLayout><MediatorPendingPayment /></ProtectedLayout>} />
             <Route path="/mediator-balance" element={<ProtectedLayout><MediatorBalance /></ProtectedLayout>} />
+            <Route path="/mediator-ids" element={<ProtectedLayout><MediatorPlatformIds /></ProtectedLayout>} />
+            <Route path="/mediator-platform-ids" element={<ProtectedLayout><MediatorPlatformIds /></ProtectedLayout>} />
+            <Route path="/mediator-tracker" element={<ProtectedLayout><MediatorOrderTracker /></ProtectedLayout>} />
+            <Route path="/mediator-order-tracker" element={<ProtectedLayout><MediatorOrderTracker /></ProtectedLayout>} />
             <Route path="/mediator-assigned-orders-breakdown" element={<ProtectedLayout><MediatorDetailedOrdersBreakdown /></ProtectedLayout>} />
             <Route path="/mediator-detailed-orders" element={<ProtectedLayout><MediatorDetailedOrdersBreakdown /></ProtectedLayout>} />
             <Route path="/mediator-order-submission/:id" element={<ProtectedLayout><OrderSubmission /></ProtectedLayout>} />

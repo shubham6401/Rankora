@@ -172,6 +172,13 @@ export default function AppLayout({ children }) {
 
     const mediatorNavSections = [
         {
+            title: "Command Center",
+            items: [
+                { title: "Order Tracker", path: "/mediator-tracker", icon: "🎯" },
+                { title: "Buyer Platform IDs", path: "/mediator-ids", icon: "💳" },
+            ],
+        },
+        {
             title: "Campaign Operations",
             items: [
                 { title: "New Offers", path: "/mediator-neworders", icon: "📥" },

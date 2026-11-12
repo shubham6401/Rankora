@@ -119,9 +119,16 @@ const assignOrder = async (req, res, next) => {
             });
         }
 
-        const unassignedUnits = order.orderUnits.filter(
-            (unit) => unit.status === "unassigned"
+        // Check for units specifically transferred to this executive first, then fallback to unassigned
+        let availableUnits = order.orderUnits.filter(
+            (unit) => unit.status === "unassigned" && unit.assignedExecutiveId?.toString() === req.user.id.toString()
         );
+        if (availableUnits.length < (quantity !== undefined ? Number(quantity) : 1)) {
+            const generalUnits = order.orderUnits.filter(
+                (unit) => unit.status === "unassigned" && !unit.assignedExecutiveId
+            );
+            availableUnits = [...availableUnits, ...generalUnits];
+        }
 
         const assignQty = quantity !== undefined ? Number(quantity) : 1;
 
@@ -132,15 +139,15 @@ const assignOrder = async (req, res, next) => {
             });
         }
 
-        if (unassignedUnits.length < assignQty) {
+        if (availableUnits.length < assignQty) {
             return res.status(400).json({
                 success: false,
-                message: `Not enough unassigned units. Available: ${unassignedUnits.length}, Requested: ${assignQty}`,
+                message: `Not enough unassigned units. Available: ${availableUnits.length}, Requested: ${assignQty}`,
             });
         }
 
         // Slice unassigned units and assign them
-        const unitsToAssign = unassignedUnits.slice(0, assignQty);
+        const unitsToAssign = availableUnits.slice(0, assignQty);
         const now = new Date();
 
         const paymentScreenshot = req.file?.path || req.body.paymentScreenshot || null;
@@ -224,7 +231,13 @@ const getPendingOrders = async (req, res, next) => {
         const query = {
             "summary.unassigned": { $gt: 0 },
         };
-        if (teamCode) query.teamCode = teamCode;
+        if (teamCode) {
+            query.$or = [
+                { teamCode: { $regex: new RegExp(`^${teamCode}$`, "i") } },
+                { createdBy: req.user.id },
+                { "orderUnits.assignedExecutiveId": req.user.id },
+            ];
+        }
 
         const orders = await Order.find(query)
             .populate("brandUserId", "name brand role")
@@ -255,6 +268,7 @@ const getPendingPaymentOrders = async (req, res, next) => {
             query.$or = [
                 { teamCode: { $regex: new RegExp(`^${teamCode}$`, "i") } },
                 { createdBy: req.user.id },
+                { "orderUnits.assignedExecutiveId": req.user.id },
             ];
         }
 
@@ -306,6 +320,7 @@ const getAdvancePaymentHistory = async (req, res, next) => {
             query.$or = [
                 { teamCode: { $regex: new RegExp(`^${teamCode}$`, "i") } },
                 { createdBy: req.user.id },
+                { "orderUnits.assignedExecutiveId": req.user.id },
             ];
         }
 
@@ -344,7 +359,13 @@ const getAssignedOrders = async (req, res, next) => {
         const query = {
             "summary.assigned": { $gt: 0 },
         };
-        if (teamCode) query.teamCode = teamCode;
+        if (teamCode) {
+            query.$or = [
+                { teamCode: { $regex: new RegExp(`^${teamCode}$`, "i") } },
+                { createdBy: req.user.id },
+                { "orderUnits.assignedExecutiveId": req.user.id },
+            ];
+        }
 
         const orders = await Order.find(query)
             .populate("brandUserId", "name brand role")
@@ -371,7 +392,13 @@ const getInProgressOrders = async (req, res, next) => {
         const query = {
             "summary.inProgress": { $gt: 0 },
         };
-        if (teamCode) query.teamCode = teamCode;
+        if (teamCode) {
+            query.$or = [
+                { teamCode: { $regex: new RegExp(`^${teamCode}$`, "i") } },
+                { createdBy: req.user.id },
+                { "orderUnits.assignedExecutiveId": req.user.id },
+            ];
+        }
 
         const orders = await Order.find(query)
             .populate("brandUserId", "name brand role")
@@ -398,7 +425,13 @@ const getPendingRefundOrders = async (req, res, next) => {
         const query = {
             "summary.pendingRefund": { $gt: 0 },
         };
-        if (teamCode) query.teamCode = teamCode;
+        if (teamCode) {
+            query.$or = [
+                { teamCode: { $regex: new RegExp(`^${teamCode}$`, "i") } },
+                { createdBy: req.user.id },
+                { "orderUnits.assignedExecutiveId": req.user.id },
+            ];
+        }
 
         const orders = await Order.find(query)
             .populate("brandUserId", "name brand role")
@@ -434,7 +467,13 @@ const getCompletedOrders = async (req, res, next) => {
                     },
                 },
             };
-        if (teamCode) query.teamCode = teamCode;
+        if (teamCode) {
+            query.$or = [
+                { teamCode: { $regex: new RegExp(`^${teamCode}$`, "i") } },
+                { createdBy: req.user.id },
+                { "orderUnits.assignedExecutiveId": req.user.id },
+            ];
+        }
 
         const orders = await Order.find(query)
             .populate("brandUserId", "name brand role")
@@ -461,7 +500,13 @@ const getSettledOrders = async (req, res, next) => {
         const query = {
             "orderUnits.settlementStatus": "settled",
         };
-        if (teamCode) query.teamCode = teamCode;
+        if (teamCode) {
+            query.$or = [
+                { teamCode: { $regex: new RegExp(`^${teamCode}$`, "i") } },
+                { createdBy: req.user.id },
+                { "orderUnits.assignedExecutiveId": req.user.id },
+            ];
+        }
 
         const orders = await Order.find(query)
             .populate("brandUserId", "name brand role")
@@ -891,7 +936,13 @@ const submitExecutivePayment = async (req, res, next) => {
             "orderUnits.status": { $in: ["pending_payment", "assigned"] },
             "orderUnits.rejectedAt": null,
         };
-        if (teamCode) query.teamCode = teamCode;
+        if (teamCode) {
+            query.$or = [
+                { teamCode: { $regex: new RegExp(`^${teamCode}$`, "i") } },
+                { createdBy: req.user.id },
+                { "orderUnits.assignedExecutiveId": req.user.id },
+            ];
+        }
 
         const orders = await Order.find(query);
 
@@ -950,7 +1001,13 @@ const getMediatorSentOrders = async (req, res, next) => {
         const query = {
             "orderUnits.status": "pending_payment",
         };
-        if (teamCode) query.teamCode = teamCode;
+        if (teamCode) {
+            query.$or = [
+                { teamCode: { $regex: new RegExp(`^${teamCode}$`, "i") } },
+                { createdBy: req.user.id },
+                { "orderUnits.assignedExecutiveId": req.user.id },
+            ];
+        }
 
         const orders = await Order.find(query)
             .populate("brandUserId", "name brand role")
@@ -1764,6 +1821,344 @@ const deleteOrderBatch = async (req, res, next) => {
     }
 };
 
+// ==========================================
+// FEATURE 1 (EXECUTIVE): MEDIATOR IDS AUDIT & ACTIVE/INACTIVE TOGGLE
+// ==========================================
+const getExecutiveMediatorIds = async (req, res, next) => {
+    try {
+        const { mediatorId } = req.params;
+        const mediator = await User.findById(mediatorId).select("name mediatorCode teamCode platformIds role").lean();
+        if (!mediator || mediator.role !== "mediator") {
+            return res.status(404).json({ success: false, message: "Mediator not found" });
+        }
+
+        return res.status(200).json({
+            success: true,
+            mediator: {
+                id: mediator._id,
+                name: mediator.name,
+                mediatorCode: mediator.mediatorCode,
+                teamCode: mediator.teamCode,
+            },
+            platformIds: mediator.platformIds || [],
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+const toggleMediatorIdStatus = async (req, res, next) => {
+    try {
+        const { mediatorId, id } = req.params;
+        const { status, reason } = req.body;
+
+        if (!status || !["active", "inactive"].includes(status)) {
+            return res.status(400).json({ success: false, message: "Valid status ('active' or 'inactive') is required" });
+        }
+
+        const mediator = await User.findById(mediatorId);
+        if (!mediator || mediator.role !== "mediator") {
+            return res.status(404).json({ success: false, message: "Mediator not found" });
+        }
+
+        if (!mediator.platformIds) mediator.platformIds = [];
+        const targetId = mediator.platformIds.id(id);
+        if (!targetId) {
+            return res.status(404).json({ success: false, message: "Platform ID not found on this mediator" });
+        }
+
+        targetId.status = status;
+        if (status === "inactive") {
+            targetId.deactivatedBy = req.user.id;
+            targetId.deactivationReason = reason ? String(reason).trim() : "Deactivated by Executive";
+        } else {
+            targetId.deactivatedBy = null;
+            targetId.deactivationReason = null;
+        }
+
+        await mediator.save();
+
+        return res.status(200).json({
+            success: true,
+            message: `Platform ID "${targetId.profileName}" status set to ${status.toUpperCase()}`,
+            platformId: targetId,
+            platformIds: mediator.platformIds,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ==========================================
+// FEATURE 2: EXECUTIVE-TO-EXECUTIVE ORDER ASSIGNMENT
+// ==========================================
+const getPeerExecutives = async (req, res, next) => {
+    try {
+        const currentExecId = req.user.id;
+        const peers = await User.find({
+            role: "executive",
+            _id: { $ne: currentExecId },
+        }).select("name teamCode").lean();
+
+        return res.status(200).json({
+            success: true,
+            executives: peers,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+const transferOrderToExecutive = async (req, res, next) => {
+    try {
+        const { orderId, targetExecutiveId, quantity, paymentMessage } = req.body;
+
+        if (!orderId || !targetExecutiveId) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide orderId and targetExecutiveId",
+            });
+        }
+
+        const targetExec = await User.findById(targetExecutiveId);
+        if (!targetExec || targetExec.role !== "executive") {
+            return res.status(404).json({
+                success: false,
+                message: "Target executive not found",
+            });
+        }
+
+        const order = await Order.findById(orderId);
+        if (!order) {
+            return res.status(404).json({ success: false, message: "Order not found" });
+        }
+
+        const assignQty = quantity ? Number(quantity) : 1;
+        if (isNaN(assignQty) || assignQty < 1) {
+            return res.status(400).json({
+                success: false,
+                message: "Quantity must be a positive number",
+            });
+        }
+
+        const availableUnits = order.orderUnits.filter((u) => u.status === "unassigned");
+        if (availableUnits.length < assignQty) {
+            return res.status(400).json({
+                success: false,
+                message: `Not enough unassigned units. Available: ${availableUnits.length}, Requested: ${assignQty}`,
+            });
+        }
+
+        const unitsToTransfer = availableUnits.slice(0, assignQty);
+        const paymentScreenshot = req.file?.path || null;
+        const now = new Date();
+
+        unitsToTransfer.forEach((u) => {
+            u.assignedExecutiveId = targetExec._id;
+            u.assignedExecutiveTeamCode = targetExec.teamCode;
+            u.transferredByExecutiveId = req.user.id;
+            u.executiveTransferStatus = "transferred";
+            if (paymentScreenshot) {
+                u.executiveTransferPaymentScreenshot = paymentScreenshot;
+                u.executiveTransferSentAt = now;
+            }
+            if (paymentMessage) {
+                u.executiveTransferPaymentMessage = paymentMessage;
+            }
+        });
+
+        order.recalculateSummary();
+        await order.save();
+
+        return res.status(200).json({
+            success: true,
+            message: `Successfully transferred ${assignQty} unit(s) to Executive "${targetExec.name}" (${targetExec.teamCode})`,
+            transferredUnitsCount: assignQty,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+const getTransferredInOrders = async (req, res, next) => {
+    try {
+        const executiveId = req.user.id;
+        const orders = await Order.find({ "orderUnits.assignedExecutiveId": executiveId })
+            .populate("brandUserId", "name brand")
+            .populate("createdBy", "name teamCode")
+            .populate("orderUnits.mediatorId", "name mediatorCode")
+            .sort({ createdAt: -1 })
+            .lean();
+
+        // Filter units specifically transferred to this executive
+        const formattedOrders = orders.map((ord) => {
+            const myUnits = (ord.orderUnits || []).filter(
+                (u) => u.assignedExecutiveId && u.assignedExecutiveId.toString() === executiveId.toString()
+            );
+            return {
+                ...ord,
+                orderUnits: myUnits,
+            };
+        }).filter((ord) => ord.orderUnits.length > 0);
+
+        return res.status(200).json({
+            success: true,
+            orders: formattedOrders,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+const getTransferredOutOrders = async (req, res, next) => {
+    try {
+        const executiveId = req.user.id;
+        const orders = await Order.find({ "orderUnits.transferredByExecutiveId": executiveId })
+            .populate("brandUserId", "name brand")
+            .populate("orderUnits.assignedExecutiveId", "name teamCode")
+            .populate("orderUnits.mediatorId", "name mediatorCode")
+            .sort({ createdAt: -1 })
+            .lean();
+
+        return res.status(200).json({
+            success: true,
+            orders,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ==========================================
+// FEATURE 4: EXECUTIVE SINGLE & BULK UNIT DELETION & FIELD EDITING
+// ==========================================
+const deleteSingleOrderUnit = async (req, res, next) => {
+    try {
+        const { orderId, unitId } = req.params;
+        const order = await Order.findById(orderId);
+        if (!order) {
+            return res.status(404).json({ success: false, message: "Order not found" });
+        }
+
+        const initialLength = order.orderUnits.length;
+        order.orderUnits.pull({ _id: unitId });
+
+        if (order.orderUnits.length === initialLength) {
+            return res.status(404).json({ success: false, message: "Unit not found in this order" });
+        }
+
+        order.quantity = Math.max(0, (order.quantity || initialLength) - 1);
+        order.recalculateSummary();
+        await order.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Order unit deleted successfully",
+            remainingUnits: order.orderUnits.length,
+            order,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+const bulkDeleteOrderUnits = async (req, res, next) => {
+    try {
+        const { orderId } = req.params;
+        const { unitIds } = req.body;
+
+        if (!Array.isArray(unitIds) || unitIds.length === 0) {
+            return res.status(400).json({ success: false, message: "Please provide an array of unit IDs to delete" });
+        }
+
+        const order = await Order.findById(orderId);
+        if (!order) {
+            return res.status(404).json({ success: false, message: "Order not found" });
+        }
+
+        const initialLength = order.orderUnits.length;
+        unitIds.forEach((uid) => {
+            order.orderUnits.pull({ _id: uid });
+        });
+
+        const deletedCount = initialLength - order.orderUnits.length;
+        order.quantity = Math.max(0, (order.quantity || initialLength) - deletedCount);
+        order.recalculateSummary();
+        await order.save();
+
+        return res.status(200).json({
+            success: true,
+            message: `${deletedCount} unit(s) deleted successfully`,
+            deletedCount,
+            remainingUnits: order.orderUnits.length,
+            order,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+const editExecutiveOrderUnit = async (req, res, next) => {
+    try {
+        const { orderId, unitId } = req.params;
+        const {
+            orderId: marketplaceOrderId,
+            purchasePrice,
+            totalPurchasedAmount,
+            deliveryFee,
+            reviewerName,
+            expectedArrivalDate,
+            orderReceivedOn,
+            address,
+            deliveryAddress,
+            addressType,
+            unitType,
+            season,
+            paymentMessage,
+        } = req.body;
+
+        const order = await Order.findById(orderId);
+        if (!order) {
+            return res.status(404).json({ success: false, message: "Order not found" });
+        }
+
+        const unit = order.orderUnits.id(unitId);
+        if (!unit) {
+            return res.status(404).json({ success: false, message: "Unit not found in this order" });
+        }
+
+        if (marketplaceOrderId !== undefined) unit.orderId = marketplaceOrderId ? String(marketplaceOrderId).trim() : null;
+        if (purchasePrice !== undefined) unit.purchasePrice = purchasePrice === "" ? null : Number(purchasePrice);
+        if (totalPurchasedAmount !== undefined) unit.totalPurchasedAmount = totalPurchasedAmount === "" ? null : Number(totalPurchasedAmount);
+        if (deliveryFee !== undefined) unit.deliveryFee = deliveryFee === "" ? 0 : Number(deliveryFee);
+        if (reviewerName !== undefined) unit.reviewerName = reviewerName ? String(reviewerName).trim() : null;
+        if (expectedArrivalDate !== undefined) unit.expectedArrivalDate = expectedArrivalDate ? new Date(expectedArrivalDate) : null;
+        if (orderReceivedOn !== undefined) unit.orderReceivedOn = orderReceivedOn ? new Date(orderReceivedOn) : null;
+        if (deliveryAddress !== undefined) unit.deliveryAddress = deliveryAddress ? String(deliveryAddress).trim() : null;
+        if (address !== undefined) unit.address = address ? String(address).trim() : null;
+        if (addressType !== undefined) {
+            unit.addressType = ["custom", "executive_provided", "yourself"].includes(addressType) ? addressType : null;
+        }
+        if (unitType !== undefined) {
+            unit.unitType = ["warehouse", "empty"].includes(unitType) ? unitType : null;
+        }
+        if (season !== undefined) unit.season = season ? String(season).trim() : null;
+        if (paymentMessage !== undefined) unit.paymentMessage = paymentMessage ? String(paymentMessage).trim() : null;
+
+        order.recalculateSummary();
+        await order.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Unit details updated successfully by Executive",
+            unit,
+            order,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
 module.exports = {
     addOrder,
     assignOrder,
@@ -1794,4 +2189,13 @@ module.exports = {
     settleExecutivePayout,
     getExecutiveMediatorEarnings,
     deleteOrderBatch,
+    getExecutiveMediatorIds,
+    toggleMediatorIdStatus,
+    getPeerExecutives,
+    transferOrderToExecutive,
+    getTransferredInOrders,
+    getTransferredOutOrders,
+    deleteSingleOrderUnit,
+    bulkDeleteOrderUnits,
+    editExecutiveOrderUnit,
 };

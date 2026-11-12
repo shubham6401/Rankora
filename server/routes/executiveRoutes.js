@@ -32,6 +32,15 @@ const {
     settleExecutivePayout,
     getExecutiveMediatorEarnings,
     deleteOrderBatch,
+    getExecutiveMediatorIds,
+    toggleMediatorIdStatus,
+    getPeerExecutives,
+    transferOrderToExecutive,
+    getTransferredInOrders,
+    getTransferredOutOrders,
+    deleteSingleOrderUnit,
+    bulkDeleteOrderUnits,
+    editExecutiveOrderUnit,
 } = require("../controllers/executiveController");
 
 // All executive routes require token verification
@@ -92,5 +101,24 @@ router.get("/analytics", getExecutiveMasterAnalytics);
 // Mediator Earnings & Remaining Balances Oversight
 router.get("/mediators-earnings", getExecutiveMediatorEarnings);
 router.get("/earnings", getExecutiveMediatorEarnings);
+
+// Mediator Platform IDs Oversight
+router.get("/mediators/:mediatorId/ids", getExecutiveMediatorIds);
+router.patch("/mediators/:mediatorId/ids/:id/status", toggleMediatorIdStatus);
+
+// Executive to Executive Assignment & Transfers
+router.get("/peer-executives", getPeerExecutives);
+router.post(
+    "/order/transfer-to-executive",
+    upload.single("paymentScreenshot"),
+    transferOrderToExecutive
+);
+router.get("/orders/transferred-in", getTransferredInOrders);
+router.get("/orders/transferred-out", getTransferredOutOrders);
+
+// Unit Level Deletion & Editing
+router.delete("/orders/:orderId/units/:unitId", deleteSingleOrderUnit);
+router.post("/orders/:orderId/units/bulk-delete", bulkDeleteOrderUnits);
+router.put("/orders/:orderId/units/:unitId", editExecutiveOrderUnit);
 
 module.exports = router;
